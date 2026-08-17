@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+
+# Editors and IDEs
+.idea/
+.vscode/
+
+# Rust harness build output
+target/
+
+# Local agent configuration overrides
+.claude/settings.local.json
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
