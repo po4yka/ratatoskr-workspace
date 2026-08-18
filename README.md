@@ -47,7 +47,7 @@ repos/
     └── export-agent/
 ```
 
-The existing `ratatoskr` backend and `ratatoskr-web` client may also be pinned during migration.
+The legacy `ratatoskr` backend and `ratatoskr-web` client are retired. They are kept only as local read-only archives and are not pinned in this workspace.
 
 Three files jointly define workspace state:
 
@@ -194,12 +194,12 @@ Planned profiles:
 
 ## Initial milestones
 
-1. Pin the current backend and web repositories.
+1. Pin the `ratatoskr-contracts` and `ratatoskr-platform` repositories.
 2. Implement `workspace.toml`, `ws status`, `ws doctor`, and `ws sync`.
 3. Add task worktree creation and cleanup.
 4. Add Claude Code and Codex runners.
-5. Complete one real backend-and-web cross-repository changeset.
-6. Introduce contracts and platform repositories.
+5. Complete one real contracts-and-platform cross-repository changeset.
+6. Pin the remaining service and client repositories.
 7. Expand the workspace as new Ratatoskr services are bootstrapped.
 
 ## Project status
