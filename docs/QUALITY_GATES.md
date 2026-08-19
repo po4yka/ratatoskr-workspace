@@ -302,22 +302,24 @@ fixed time window.
 CI has not reported this failure yet. The test is timing-sensitive, so a green run is not evidence
 that the test is correct.
 
-### A self-hosted runner on a public repository
+### A self-hosted runner on a public repository — closed
 
-`docs/DEPLOYMENT_TARGET.md` states that the `po4yka-RIPDPI` self-hosted runner "is removed as part of
-the cleanup". That statement was false when this document was written. `po4yka/RIPDPI` is public, is
-not archived, and has one runner registered: `raspi-ripdpi-evidence`, online, with the labels
-`self-hosted`, `Linux`, `ARM64`, `ripdpi-network-evidence` and `physical-android`.
+`docs/DEPLOYMENT_TARGET.md` stated that the `po4yka-RIPDPI` self-hosted runner "is removed as part of
+the cleanup". It was not: `raspi-ripdpi-evidence` was registered and online on a repository that is
+public and not archived. The runner is now removed, and `total_count` is 0 on all seventeen
+repositories of the account.
 
-A public repository accepts a pull request from any fork, and for a `pull_request` event GitHub reads
-the workflow definitions from the pull request head. GitHub's own guidance is to use a self-hosted
-runner with a private repository only, for that reason. The 16 Ratatoskr repositories have no runner —
-that was verified for each one — so the exposure is in `RIPDPI` alone. It is recorded here because
-`DEPLOYMENT_TARGET.md` names the same class of host as the one that will hold `identity.sessions`.
+The exposure was narrower than it first looked, and the measurement is worth keeping. One workflow of
+twenty-four referenced the self-hosted label, and it is `workflow_dispatch` only, which a fork cannot
+trigger. No job had ever run on the runner, and no fork had ever run a workflow there. The real path
+was a fork proposing a NEW workflow on `pull_request`, which GitHub reads from the pull request head —
+gated by an approval policy of `first_time_contributors`, which stops a first-time contributor and not
+a returning one. With four forks and sixteen open issues, that gate opens on the day a first outside
+contribution is merged.
 
-This needs a decision rather than a check: remove the runner, make the repository private, or require
-approval for every outside contributor. `DEPLOYMENT_TARGET.md` now states what is registered instead of
-asserting a control that does not exist.
+Two notes for whoever reintroduces one. Deleting a registration does not stop the runner service on
+the host, which must be stopped and uninstalled there. And a self-hosted runner on a public repository
+needs `approval_policy=all_external_contributors` in the same change, not afterwards.
 
 ### The gate matched itself, and the local test could not see it
 

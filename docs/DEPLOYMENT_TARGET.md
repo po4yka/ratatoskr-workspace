@@ -217,23 +217,40 @@ whatever the tunnel overwrites. A service may trust no inbound header it did not
 The trust boundary is the whole host: every Ratatoskr service shares one kernel, so OS-level
 isolation between them defends against a compromised process, not against a compromised host. The
 `po4yka-RIPDPI` self-hosted GitHub Actions runner — which ran as a user in both `sudo` and `docker`,
-with no hardening, on the machine that will hold `identity.sessions` — **is still registered**, and
-this paragraph said otherwise until it was checked. Verified on 2026-08-19:
-`gh api repos/po4yka/RIPDPI/actions/runners` reports one runner, `raspi-ripdpi-evidence`, online, with
-the labels `self-hosted`, `Linux`, `ARM64`, `ripdpi-network-evidence` and `physical-android`.
-`po4yka/RIPDPI` is public and is not archived. None of the sixteen Ratatoskr repositories has a runner;
-that was checked for each one.
+with no hardening, on the machine that will hold `identity.sessions` — **is removed**. This paragraph
+claimed that before it was true, so the claim now carries its evidence.
 
-The residual risk is the one GitHub's own guidance describes when it recommends a self-hosted runner for
-a private repository only: a public repository accepts a pull request from any fork, and for a
-`pull_request` event the workflow definitions come from the pull request head, so a job can be made to
-run on that machine. The runner also persists state between jobs, so one compromised job reaches the
-next.
+Verified on 2026-08-19. Before: `gh api repos/po4yka/RIPDPI/actions/runners` reported one runner,
+`raspi-ripdpi-evidence`, id 21, Linux, ARM64, online, with the custom labels
+`ripdpi-network-evidence` and `physical-android`. The registration was deleted, and the same command
+now reports `total_count=0`; so does every one of the sixteen Ratatoskr repositories.
 
-Three ways to close it, and the choice is a decision rather than a cleanup step: remove the runner, make
-`RIPDPI` private, or require approval for every outside contributor before a fork workflow runs. Re-run
-the command above after the change and correct this paragraph to match; a paragraph that asserts a
-control which does not exist is the failure this document exists to prevent.
+Removing it cost nothing measurable. One workflow of the twenty-four in `RIPDPI` referenced that
+label, `phase16-matrix.yml`, and it is `workflow_dispatch` only. No job had run on the runner across
+the last forty workflow runs, and no pull request from a fork had ever run a workflow in that
+repository.
+
+Two things still follow from this, and neither is done by deleting a registration.
+
+**The runner service on the host is a separate thing.** Deleting the registration stops GitHub handing
+it work; it does not stop the process. On the machine, in the `actions-runner` directory:
+`sudo ./svc.sh stop && sudo ./svc.sh uninstall`. Until then a service runs as a user in `sudo` and
+`docker` and retries a connection it can no longer make.
+
+**Re-registering one is a decision.** `RIPDPI` is public, and for a `pull_request` event GitHub reads
+the workflow definitions from the pull request head, so a fork can propose a workflow that targets a
+self-hosted label. That repository's approval policy is `first_time_contributors`, which stops a
+first-time contributor and not a returning one. If a runner is ever needed there again, set the policy
+to `all_external_contributors` in the same change:
+
+```bash
+gh api -X PUT repos/po4yka/RIPDPI/actions/permissions/fork-pr-contributor-approval \
+  -f approval_policy=all_external_contributors
+```
+
+`phase16-matrix.yml` is left in place and will queue without a runner if it is dispatched against a
+self-hosted matrix entry. That is the honest failure: it waits visibly rather than silently doing
+nothing.
 
 ## What the reflash resets
 
