@@ -317,9 +317,11 @@ gated by an approval policy of `first_time_contributors`, which stops a first-ti
 a returning one. With four forks and sixteen open issues, that gate opens on the day a first outside
 contribution is merged.
 
-Two notes for whoever reintroduces one. Deleting a registration does not stop the runner service on
-the host, which must be stopped and uninstalled there. And a self-hosted runner on a public repository
-needs `approval_policy=all_external_contributors` in the same change, not afterwards.
+The host-side service was removed as well, reported on 2026-08-19 and not verifiable through the API;
+`DEPLOYMENT_TARGET.md` records that distinction and how to re-check it on the machine.
+
+One note for whoever reintroduces a runner: on a public repository it needs
+`approval_policy=all_external_contributors` in the same change, not afterwards.
 
 ### The gate matched itself, and the local test could not see it
 

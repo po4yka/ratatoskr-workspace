@@ -230,14 +230,16 @@ label, `phase16-matrix.yml`, and it is `workflow_dispatch` only. No job had run 
 the last forty workflow runs, and no pull request from a fork had ever run a workflow in that
 repository.
 
-Two things still follow from this, and neither is done by deleting a registration.
+**The host-side service is removed too**, reported by the repository owner on 2026-08-19. That half is
+not observable through the GitHub API — deleting a registration stops GitHub handing the runner work
+and does not stop the process — so this line records what was done rather than what was measured. To
+re-check it, look on the host: no `Runner.Listener` process, and no `actions-runner` service. The
+commands are `sudo ./svc.sh stop && sudo ./svc.sh uninstall` in the `actions-runner` directory. This
+mattered because the service ran as a user in both `sudo` and `docker`.
 
-**The runner service on the host is a separate thing.** Deleting the registration stops GitHub handing
-it work; it does not stop the process. On the machine, in the `actions-runner` directory:
-`sudo ./svc.sh stop && sudo ./svc.sh uninstall`. Until then a service runs as a user in `sudo` and
-`docker` and retries a connection it can no longer make.
+One thing still follows, and it is a decision rather than a step.
 
-**Re-registering one is a decision.** `RIPDPI` is public, and for a `pull_request` event GitHub reads
+**Re-registering a runner is a decision.** `RIPDPI` is public, and for a `pull_request` event GitHub reads
 the workflow definitions from the pull request head, so a fork can propose a workflow that targets a
 self-hosted label. That repository's approval policy is `first_time_contributors`, which stops a
 first-time contributor and not a returning one. If a runner is ever needed there again, set the policy
