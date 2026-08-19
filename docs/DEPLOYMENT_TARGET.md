@@ -314,6 +314,14 @@ that changed in this document is marked above; what it proved is:
 - the dump restores, on this cluster, into an ICU-collated scratch database with every constraint
   and index intact.
 
+Measured while it ran, which closes a guess this document has carried since it was written: the
+three services use **3, 2 and 2 MiB** of resident memory serving traffic, and NATS 7 MiB. The
+`MemoryMax=` ceilings in the units — 768M, 512M and 256M — were sized by analogy to the host's other
+containers, and are two orders of magnitude above what the processes actually take. They stay: a
+ceiling exists to catch a leak, not to predict a working set, and one that has never been approached
+is one that will only be noticed when something is wrong. The binaries are 127, 115 and 112 MB
+because the release profile keeps line tables for backtraces; that is read-only after install.
+
 Two things it corrected in the software rather than in a document: a startup rule that checked
 whether the bus credential EXISTS rather than whether the process could read it, and a database
 grant written from reading a request handler instead of everything the handler calls.
