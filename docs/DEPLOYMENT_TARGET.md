@@ -217,8 +217,23 @@ whatever the tunnel overwrites. A service may trust no inbound header it did not
 The trust boundary is the whole host: every Ratatoskr service shares one kernel, so OS-level
 isolation between them defends against a compromised process, not against a compromised host. The
 `po4yka-RIPDPI` self-hosted GitHub Actions runner — which ran as a user in both `sudo` and `docker`,
-with no hardening, on the machine that will hold `identity.sessions` — is removed as part of the
-cleanup. It is named here so that reintroducing one is a decision rather than an accident.
+with no hardening, on the machine that will hold `identity.sessions` — **is still registered**, and
+this paragraph said otherwise until it was checked. Verified on 2026-08-19:
+`gh api repos/po4yka/RIPDPI/actions/runners` reports one runner, `raspi-ripdpi-evidence`, online, with
+the labels `self-hosted`, `Linux`, `ARM64`, `ripdpi-network-evidence` and `physical-android`.
+`po4yka/RIPDPI` is public and is not archived. None of the sixteen Ratatoskr repositories has a runner;
+that was checked for each one.
+
+The residual risk is the one GitHub's own guidance describes when it recommends a self-hosted runner for
+a private repository only: a public repository accepts a pull request from any fork, and for a
+`pull_request` event the workflow definitions come from the pull request head, so a job can be made to
+run on that machine. The runner also persists state between jobs, so one compromised job reaches the
+next.
+
+Three ways to close it, and the choice is a decision rather than a cleanup step: remove the runner, make
+`RIPDPI` private, or require approval for every outside contributor before a fork workflow runs. Re-run
+the command above after the change and correct this paragraph to match; a paragraph that asserts a
+control which does not exist is the failure this document exists to prevent.
 
 ## What the reflash resets
 
