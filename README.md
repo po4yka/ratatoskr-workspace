@@ -135,6 +135,14 @@ The workspace `main` branch represents the latest fully verified compatible syst
 
 ## Integration environment
 
+The profiles below are **developer-machine artifacts**, sized for a workstation and meant to be run
+in parallel per task. They are not the deployment. Ratatoskr deploys to one Raspberry Pi 5 supervised
+by systemd, described in [`docs/DEPLOYMENT_TARGET.md`](docs/DEPLOYMENT_TARGET.md) — a single,
+non-parallel arrangement with its own storage layout, port allocations and resource budget. A
+service's Compose entry here says nothing about whether it can run there, which is the confusion
+worth naming: a dependency that exists only in a Compose profile is a dependency that is installed
+nowhere.
+
 This repository will own cross-service Docker Compose profiles and end-to-end fixtures:
 
 ```text

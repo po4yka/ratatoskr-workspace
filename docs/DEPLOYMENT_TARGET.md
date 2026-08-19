@@ -1,0 +1,152 @@
+# Deployment target
+
+> Status: Accepted  
+> Owner: `ratatoskr-workspace`  
+> Last reviewed: 2026-08-19
+
+Ratatoskr runs on **one machine**, and there will not be a second one. This document is the
+canonical description of that machine and the contracts that depend on it: the storage layout, the
+port allocations, and who supervises what. Every repository's `AGENTS.md` carries a short
+`## Deployment target` section stating the same constraints in the form an agent needs while working
+inside that repository alone; this file is where the detail lives, and it is the one to change first.
+
+Before this file existed, the only place in the workspace that named the machine was
+`legacy/ratatoskr/.claude/skills/pi-deploy/SKILL.md` — the retired archive that `README.md` tells
+everyone to ignore. Sixteen live repositories describe PostgreSQL, NATS, Chromium, pgvector, S3 and
+"horizontal instances" and name no machine at all, so the default inference was a cloud. That is the
+gap this file closes.
+
+## The host
+
+| | |
+|---|---|
+| Board | Raspberry Pi 5 Model B Rev 1.1 |
+| CPU | 4 × Cortex-A76, 2.4 GHz |
+| Memory | 15 GiB usable. Swap is 4 GiB of zram; **there is no disk swap** |
+| Architecture | `aarch64` |
+| Kernel page size | **16 KiB** (`kernel_2712.img`). `kernel8.img` in `/boot/firmware` is the 4 KiB fallback, selectable with one `kernel=` line |
+| Userland | Debian 12 (bookworm) class, **glibc 2.36**, arm64 |
+| Release target triple | `aarch64-unknown-linux-gnu` |
+| Boot | `BOOT_ORDER=0xf416`, `PCIE_PROBE=1` — the bootloader already prefers NVMe over the SD card |
+
+Verified on the running machine, not inferred. A binary built in a `debian:12` arm64 container starts
+and completes a full lifecycle here — bind, `/health/ready` 200, `/metrics`, SIGTERM, exit 0 — with
+no page-size, glibc or `ring`/rustls problem. Re-run that check after the reflash; it is cheap and it
+is the only thing that proves the ABI.
+
+## Storage
+
+The root filesystem is currently an SD card. **PostgreSQL and JetStream must never write to the boot
+device**: their pattern is small synchronous fsyncs, which is the worst case for flash wear, and an
+SD card that wears out takes the root filesystem with it.
+
+The bootloader is already configured to prefer NVMe, so the reflash should put the root filesystem
+there and retire the SD card from the write path entirely. Until it does, the layout below is what
+keeps durable state off it either way.
+
+| Purpose | Path | Device |
+|---|---|---|
+| PostgreSQL data | `/mnt/nvme/ratatoskr/postgres` | NVMe, 466 GB |
+| `JetStream` store | `/mnt/nvme/ratatoskr/nats` | NVMe |
+| Service logs | `/mnt/nvme/ratatoskr/logs` | NVMe |
+| Database dumps | `/mnt/nvme/backups/ratatoskr` | NVMe |
+| Off-host copies | `/mnt/backup/borg` | SATA SSD, 954 GB |
+
+Two rules follow, and both are contracts rather than advice:
+
+- **An absolute path, never a named volume.** A named Docker volume lands wherever `DockerRootDir`
+  points, which is host state no repository owns and which a reflash resets to the boot device.
+- **`/mnt/backup` is a second volume on the same machine.** It survives a disk failure and does not
+  survive losing the Pi. Nothing may treat it as an off-host replica — `vault`'s policy of blocking
+  `healthy` until a verified remote copy exists is not satisfied by it.
+
+## Supervision
+
+**systemd units, one per role.** Not Compose. The reasons that decide it:
+
+- per-service Unix users and `ProtectSystem=`/`NoNewPrivileges=` are the isolation this host needs,
+  and they become meaningful once the co-resident CI runner is gone;
+- cgroup v2 is available (`cpuset cpu io memory pids`), so `MemoryMax=` and `CPUQuota=` are real.
+
+Three consequences that must be written into every unit, because each is a live failure on this host
+rather than a precaution:
+
+- **`TimeoutStopSec=` must exceed the process's own shutdown ceiling.** Platform validates
+  `drain + grace <= 120s`; systemd's default `TimeoutStopSec` is 90s, so a configuration the process
+  accepts would be `SIGKILL`ed 30 seconds early. Set `130s`.
+- **Journald is not a safe default here.** `/var/log` is a 128 MiB log2ram tmpfs, already ~79% full,
+  and the two journald drop-ins disagree (`SystemMaxUse=500M` on a 128 MiB filesystem). A service
+  writing JSON to stdout at volume either fills it or forces a flush onto the boot device. Write logs
+  to `/mnt/nvme/ratatoskr/logs` and rotate them, or bound the unit's journald use explicitly.
+- **Start ordering is load-bearing.** Only one process applies migrations; the others check the
+  schema and refuse to start without it. An `After=`/`Requires=` chain is required, and
+  `StartLimitIntervalSec=`/`StartLimitBurst=` must be loose enough that the first boot after a schema
+  change does not latch a dependent unit into `failed` with nothing to retry it.
+- **`Type=exec`, never `Type=notify`.** No Ratatoskr binary calls `sd_notify`, so `notify` would time
+  out and kill a healthy process, and `WatchdogSec=` would `SIGABRT` it on the first interval.
+
+A service that must be scraped by the container-resident metrics stack is reached from a container
+through `host.docker.internal` with `extra_hosts: host-gateway` — the bridge gateway address itself
+is not stable across a network recreation.
+
+## PostgreSQL
+
+Ratatoskr uses the **existing 17.7 cluster** on this host rather than its own instance. The check
+that permits it: that cluster has exactly one superuser and one login role and holds no other
+tenant's databases, so a database owned by a Ratatoskr role is as isolated as a separate instance
+would be, and a second `shared_buffers`, WAL writer and checkpointer on four cores is avoided.
+
+Two properties of that cluster are now contracts:
+
+- **Major version 17.** Development and CI must pin the same major, or the only verification the SQL
+  gets is against a version the deployment does not run.
+- **Collation.** The deployed databases are `datlocprovider=c`, `datcollate=en_US.utf8` (glibc 2.36).
+  Development and CI must create their databases the same way. A glibc collation change silently
+  corrupts text btree indexes, and on this host `apt-daily-upgrade.timer` is enabled.
+
+Roles are provisioned once, by hand, from a checked-in SQL file. A container's
+`docker-entrypoint-initdb.d` never runs again against a non-empty data directory, so it is not a
+provisioning mechanism for a cluster that already exists.
+
+## Ports
+
+A port on this host is an **allocation**, not a default. Never answer a bind failure by widening a
+bind to `0.0.0.0`.
+
+| Port | Owner | Reachability |
+|---|---|---|
+| 8080 | `ratatoskr-edge` public API | `cloudflared` tunnel |
+| 8181 | `ratatoskr-ingest` webhook adapter | `cloudflared` tunnel |
+| 9464 / 9465 / 9466 | edge / ingest / scheduler operator listener | host only |
+| 4222 | NATS | host only |
+| 5432 | PostgreSQL | host only |
+
+Already held by other software at the time of writing, and not available: 22, 3001, 3003, 4318,
+6060, 6333, 6334, **8081**, 8090, 8428, 9093, 20241. `8081` is why `ratatoskr-ingest` does not use it:
+it is held by a process that could not be attributed to an owner, and it must be identified during
+the cleanup.
+
+## Exposure
+
+`cloudflared` is the only public path and it reaches the public listeners only. Operator surfaces —
+`/health/*`, `/metrics`, `/version`, PostgreSQL, NATS — are never reachable from outside the host;
+operators reach them over Tailscale.
+
+Because the tunnel terminates TLS and adds its own headers, "internal headers are not trusted from
+public ingress" means the header set arriving at a public listener is attacker-influenced up to
+whatever the tunnel overwrites. A service may trust no inbound header it did not itself mint.
+
+The trust boundary is the whole host: every Ratatoskr service shares one kernel, so OS-level
+isolation between them defends against a compromised process, not against a compromised host. The
+`po4yka-RIPDPI` self-hosted GitHub Actions runner — which ran as a user in both `sudo` and `docker`,
+with no hardening, on the machine that will hold `identity.sessions` — is removed as part of the
+cleanup. It is named here so that reintroducing one is a decision rather than an accident.
+
+## What the reflash resets
+
+Every host-side fact outside this document is a property of the current installation and returns to
+its default on a clean install: `DockerRootDir`, the `noatime,discard,commit=60` mount options,
+log2ram, the Docker log caps, the crowdsec and cloudflared configuration, and the metrics stack's
+network name. That is precisely why the storage layout and the port table are written down here
+rather than left as host state — and it also means any observation elsewhere that begins "already
+correct on this host" expires on reflash and must be re-verified.

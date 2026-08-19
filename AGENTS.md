@@ -144,6 +144,7 @@ When the relevant tooling exists, workspace verification should include:
 - dependency graph cycle detection;
 - contract producer/consumer compatibility;
 - generated client and agent-config drift;
+- each repository's `## Deployment target` section against `docs/DEPLOYMENT_TARGET.md`;
 - selected Compose profile startup;
 - cross-service integration and upgrade/rollback tests;
 - absence of dirty baseline submodules.
