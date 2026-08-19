@@ -152,10 +152,35 @@ target; the entry lands with the deployment units.
 VictoriaMetrics is started without `-promscrape.configCheckInterval`, so a change to that file takes
 effect on `docker kill -s HUP victoriametrics` and not before.
 
-**Alertmanager's only receiver, `local-only`, is empty** — no webhook, no email, nothing. Every alert
-on this box already resolves into its own UI and notifies nobody, which is true today and has nothing
-to do with Ratatoskr. Alert rules are worth writing only behind a receiver that reaches a person, so
-that is a prerequisite rather than a follow-up.
+**Alerts go to Telegram.** Alertmanager's only receiver, `local-only`, was empty — no webhook, no
+email, nothing — so every alert on this box resolved into its own UI and notified nobody. That was
+true before Ratatoskr and independent of it, and alert rules are worth writing only behind a receiver
+that reaches a person.
+
+The bot token is read from a file, never inlined: Alertmanager 0.32 supports `bot_token_file`, the
+configuration is world-readable in the repository sense, and a token in it would be a credential in
+a mounted config.
+
+```yaml
+# /home/po4yka/monitoring/alertmanager.yml
+receivers:
+  - name: local-only
+    telegram_configs:
+      - bot_token_file: /etc/alertmanager/telegram_token
+        chat_id: <numeric chat id>
+        parse_mode: ""            # alert text is not markup and must not be parsed as any
+        send_resolved: true
+```
+
+The token file needs a second read-only mount on the Alertmanager service, at mode `0600`:
+
+```yaml
+      - /home/po4yka/monitoring/telegram_token:/etc/alertmanager/telegram_token:ro
+```
+
+`parse_mode` is emptied deliberately. Alertmanager's default is HTML, and an alert body carries
+labels and annotations that come from the metric — an underscore or an angle bracket in one of them
+makes Telegram reject the whole message, which loses the alert at exactly the moment it matters.
 
 The node-exporter runs with `--collector.disable-defaults`, so the host has no filesystem or disk
 series at all: the two failure modes that matter most here — storage wear and a full `/var/log` —
