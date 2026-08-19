@@ -100,9 +100,18 @@ Two properties of that cluster are now contracts:
 
 - **Major version 17.** Development and CI must pin the same major, or the only verification the SQL
   gets is against a version the deployment does not run.
-- **Collation.** The deployed databases are `datlocprovider=c`, `datcollate=en_US.utf8` (glibc 2.36).
-  Development and CI must create their databases the same way. A glibc collation change silently
-  corrupts text btree indexes, and on this host `apt-daily-upgrade.timer` is enabled.
+- **Collation is stated, never inherited.** The cluster's existing databases use the libc provider
+  (`datlocprovider=c`, glibc 2.36). Ratatoskr's database is **not** created that way: it is created
+  explicitly with `template template0 locale_provider icu icu_locale 'und-x-icu'`, which the same
+  cluster supports per database, and development and CI create theirs identically.
+
+  The direction matters and is deliberate. A glibc collation changes silently across a distribution
+  upgrade — and `apt-daily-upgrade.timer` is enabled on this host — while PostgreSQL tracks the ICU
+  version and warns on a mismatch. A text btree index that no longer holds is not a performance
+  problem: if `identities_provider_external_id_key` stops holding, one external account maps to two
+  internal users, which is an authentication defect. Inheriting from `template1` is what produced
+  three different collations across the three environments that are supposed to be checking each
+  other, so no `create database` anywhere may omit the locale.
 
 Roles are provisioned once, by hand, from a checked-in SQL file. A container's
 `docker-entrypoint-initdb.d` never runs again against a non-empty data directory, so it is not a
