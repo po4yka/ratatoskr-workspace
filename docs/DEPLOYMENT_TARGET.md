@@ -160,9 +160,14 @@ on the host side of that boundary, and nobody re-checked. At milestone 10 the co
 reach any of the three until the rule above existed. A verification is only evidence for the
 arrangement it was performed on.
 
-With the rule in place, verified from inside the collector's own namespace: all three
-`/health/ready` answered, and `platform_readiness`, `platform_capability_available`,
-`platform_operations{status}`, `platform_auth_decisions_total` and the rest arrived.
+One detail the rule depends on: `host-gateway` resolves to the address of the DEFAULT bridge,
+172.17.0.1, not to the gateway of the network the collector is on. ufw matches on SOURCE, so the
+rule names the subnet the collector lives on and not the address it dials — a rule written the other
+way round looks right and matches nothing.
+
+With both in place, verified end to end: all three targets report `up` in VictoriaMetrics, and
+`platform_readiness` for each role, `platform_capability_available` for each capability, and the
+outbox and operation gauges are in the time series database.
 
 ```yaml
 # /home/po4yka/monitoring/promscrape.yml
