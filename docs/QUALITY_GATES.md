@@ -18,6 +18,14 @@ to find the policy in one place.
 Every number in this document comes from a command that was run. If you change a control, run the
 command again and correct the number.
 
+The fleet is 16 repositories, and that number is now measured rather than asserted. On 2026-08-19
+`users/po4yka/repos` lists exactly 16 non-archived, non-fork repositories whose name begins
+`ratatoskr-`, and `repos/po4yka/ratatoskr-web` answers 404. An earlier version of this paragraph
+described `ratatoskr-web` as a seventeenth repository that was bootstrapping. It does not exist on
+the account; the clone of that name in the local workspace is a retired archive. The drift check
+below discovers the list instead of counting to 16, so a repository created later is covered on its
+first run without an edit here.
+
 ## What each repository has
 
 All 16 repositories are public. The default branch of each repository is `main`.
@@ -27,7 +35,7 @@ All 16 repositories are public. The default branch of each repository is `main`.
 | `.gitattributes` | 16 of 16 | One line: `* text=auto eol=lf` |
 | `.editorconfig` | 16 of 16 | Editor defaults. No check enforces the file |
 | `.githooks/pre-commit` | 16 of 16 | Identical file. See [Git hooks](#git-hooks) |
-| Branch ruleset on `main` | 16 of 16 | The `deletion` rule only |
+| Branch ruleset on `main` | 16 of 16 | `deletion`, `required_signatures` and `required_status_checks` |
 | Dependabot alerts | 16 of 16 | GitHub reports a vulnerable dependency |
 | `.github/dependabot.yml` | 16 of 16 | Version updates for the `github-actions` ecosystem, grouped, monthly, with a seven-day cooldown |
 | Secret scanning and push protection | 16 of 16 | GitHub gives these to a public repository |
@@ -35,10 +43,60 @@ All 16 repositories are public. The default branch of each repository is `main`.
 | The fleet gate, `.github/workflows/fleet.yml` | 16 of 16 | Identical file. See [The fleet gate](#the-fleet-gate) |
 | The workflow gate, `.github/workflows/zizmor.yml` | 16 of 16 | Identical file. See [The workflow gate](#the-workflow-gate) |
 | A repository gate, `.github/workflows/ci.yml` | 2 of 16 | `ratatoskr-contracts` and `ratatoskr-platform` |
+| The advisory check, `.github/workflows/advisories.yml` | 2 of 16 | Identical file, in the two repositories that have code. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
+| The drift check, `.github/workflows/drift.yml` | 1 of 16 | In `ratatoskr-workspace`, and it reads all 16. See [The drift check](#the-drift-check) |
+| The release, `.github/workflows/release.yml` | 1 of 16 | In `ratatoskr-platform`. See [Deployment](#deployment) |
+
+### What the ruleset requires, and what it cannot
 
 The ruleset does not include the `non_fast_forward` rule. The account has one administrator, and
 agents push with the same token. A bypass for that administrator makes the rule apply to nobody, and
 a rule that applies to nobody is a control that protects nothing.
+
+`required_status_checks` was added anyway, with a bypass for that same administrator, and the
+difference from the paragraph above is worth stating exactly rather than leaving it to look like an
+inconsistency.
+
+A force-push is something only the administrator does here, so an administrator bypass empties that
+rule completely. A required check is not like that. Three classes of actor are bound by it and none
+of them holds the administrator role: a pull request from Dependabot, which this fleet now receives
+every month; the `GITHUB_TOKEN` a workflow runs with; and any pull request from outside. For all of
+those the rule is absolute — a red check blocks the merge and no bypass exists.
+
+For the administrator's own direct push to `main` the check is advisory, and that is a real
+limitation, not a solved problem. What makes it different from a silent hole is that GitHub prints
+the bypass on the push itself:
+
+```
+remote: Bypassed rule violations for refs/heads/main:
+remote: - 2 of 2 required status checks are expected.
+```
+
+So every push that skipped the gate says so, in the terminal, at the moment it happens. A
+`non_fast_forward` bypass produces no such line, which is the other half of why that rule was left
+out and this one was not.
+
+Measured on `ratatoskr-vault` before the fleet-wide change, in this order:
+
+| Configuration | A signed direct push to `main` |
+|---|---|
+| `deletion` only | accepted |
+| `+ required_status_checks`, no bypass | rejected: `GH013 ... 2 of 2 required status checks are expected` |
+| `+ bypass for the administrator role` | accepted, with the bypass printed |
+
+The required check names are the names GitHub publishes for the jobs, not the workflow names:
+`invariants` from `fleet.yml`, `audit` from `zizmor.yml`, and in the two repositories with code
+`gate` and, in `ratatoskr-platform`, `linux/arm64 artifact`. Each is pinned to integration 15368,
+the GitHub Actions application, so a check of the same name from another application cannot satisfy
+it. A wrong name here does not fail open — it blocks every pull request forever, which is why a
+control pull request was opened on `ratatoskr-vault` to confirm that GitHub reported
+`mergeStateStatus: CLEAN` against the names as written.
+
+`advisories`, `drift` and `release` are deliberately NOT required. None of them runs on `push` or
+`pull_request`, so requiring one would block every merge and never be satisfied.
+
+`required_signatures` costs nothing here: every commit in the recent history of these repositories
+already verifies, and GitHub signs the commits it makes itself, so Dependabot is unaffected.
 
 The `deletion` rule works. A test confirmed this on a temporary branch: with the rule, the API
 refuses the deletion and answers `422 Cannot delete this branch`. Without the rule, the same request
@@ -111,6 +169,40 @@ prose: a branch moves, and a tag can be moved, so neither one pins. In `ratatosk
 `[sources] unknown-git = "deny"` is a publication requirement. Cargo refuses to publish a crate that
 has a git dependency. Without the rule, that failure first appears at milestone 10.
 
+### The advisory check that runs when nothing has changed
+
+`cargo deny check` runs in `ci.yml`, on `push` and `pull_request`. That trigger can only answer one
+question: does this change introduce a problem. It cannot answer the other one, because the thing
+that changes is not the tree. RustSec publishes continuously, and a crate is yanked with no commit
+here.
+
+The five advisories in the table above are the measurement. They were in the graph for six
+milestones. No commit in those six milestones would have turned the gate red, because the gate was
+correct about every tree it was shown.
+
+`.github/workflows/advisories.yml` asks the second question on a daily schedule, in both repositories
+that have code. The file is identical in the two.
+
+| Choice | Why |
+|---|---|
+| `advisories` only, not a full `cargo deny check` | `bans`, `licenses` and `sources` are functions of the tree alone. Running them on a timer can only repeat what the gate already said about the commit that produced that tree. `advisories` is the one section whose answer changes with no commit at all |
+| Daily | RustSec publishes on no schedule of its own, and a run costs about one minute of a runner that is free on a public repository |
+| `cron: "17 6 * * *"`, not on the hour | GitHub queues every `0 * * * *` in the world together and delays them |
+| No cache | The job never invokes `rustc`. It reads `Cargo.lock` and the manifests behind it, and nothing else |
+| `cancel-in-progress: false` | A scheduled run has nothing newer to yield to. `true` would let a manual dispatch cancel the nightly answer |
+| It files an issue as well as failing | A workflow log is deleted after 90 days, and an advisory can outlive that |
+| One open issue, commented on | Not one issue per night. The open issues are listed and filtered exactly rather than searched: GitHub's search index is eventually consistent, so a search is how a duplicate check files a duplicate |
+
+Both halves were tested. The passing half ran on `main` in both repositories and reported
+`advisories ok`, with the reporting step skipped. The failing half ran on a temporary branch whose
+check command was replaced by one that fails: the job ended red, the issue was created with the log
+in it, and a second run of the same branch added a comment instead of a second issue. The branch and
+the issue were then deleted.
+
+GitHub disables a scheduled workflow after 60 days with no commit to the repository, and reports
+that by email only. `workflow_dispatch` is on the file so the check can be run by hand, and the drift
+check below is what notices that the file has been deleted.
+
 ### Clippy lints
 
 Each workspace denies `unsafe_code`, `missing_docs`, `panic`, `unwrap_used` and `expect_used`. These
@@ -179,6 +271,11 @@ draft tried to BE the gate, by running the Rust commands itself. That draft knew
 it was permanently green in the three repositories whose first code is Kotlin, TypeScript and Swift —
 green on exactly the commit it existed to catch. The version that shipped fails closed for every
 language in the fleet.
+
+There is one thing this file cannot do by construction. It runs inside one repository and can see
+only that repository, so it can assert that a file EXISTS and never that it is the same file as the
+one in the other fifteen. [The drift check](#the-drift-check) is the answer to that, and it is the
+only job in the project that reads more than one repository.
 
 ### Why the credential and key checks are not redundant
 
@@ -288,6 +385,53 @@ images in `ratatoskr-platform` are therefore outside it and stay on a tag:
 This is recorded rather than fixed. A pin that no gate reads is a pin that rots, which is the failure
 this fleet already documents for action pins, so adding one here would buy less than it looks.
 
+## The drift check
+
+Four files are the same file in every repository, and until now nothing noticed when they stopped
+being the same file. `fleet.yml`, `zizmor.yml` and `.githooks/pre-commit` are byte-identical in all
+16. `.github/dependabot.yml` has exactly two forms, one for a repository with Rust in it and one for
+a repository that has no code yet.
+
+They are identical because they were copied there, not because anything keeps them so. The next fix
+lands in whichever repository its author happened to be working in, and the other fifteen keep the
+defect with every gate green.
+
+`ratatoskr-workspace/.github/workflows/drift.yml` runs weekly and on demand. It compares git blob
+names rather than text, so the comparison is exactly git's own notion of identity, and the same tree
+read carries the file mode — which is how a `pre-commit` that has lost its executable bit is caught
+in the same pass. One `git/trees?recursive=1` call per repository, sixteen calls.
+
+| Assertion | The failure it catches |
+|---|---|
+| `fleet.yml`, `zizmor.yml` and `.githooks/pre-commit` are one blob across the fleet | A fix applied in one repository and not the other fifteen |
+| Each of them is present in every repository | A deletion, in a repository where `fleet.yml` itself was the thing deleted |
+| `.githooks/pre-commit` has mode `100755` everywhere | A hook that is committed but inert |
+| `dependabot.yml` is one blob within each of its two classes | The two forms drifting into three |
+| `advisories.yml` is present and one blob in every repository with Rust | A deletion that no `push` trigger can see, because the file has no `push` trigger |
+| `ci.yml` is PRESENT in every repository with Rust | A gate deleted from a repository that already had one |
+
+`ci.yml` is checked for presence and deliberately not for sameness. The two gates are legitimately
+different: `ratatoskr-platform` runs a PostgreSQL service, a NATS container and a native arm64 job,
+and `ratatoskr-contracts` has none of those to run. The first version of this check required them to
+be identical and reported the difference as drift on its first local run, which is how the
+distinction was found before it reached CI.
+
+The repository list is discovered, not written down. A seventeenth repository that joins the fleet
+without the shared files is the same drift, and a fixed list would report that as healthy by never
+looking. The job also fails if fewer than 16 are discovered, which is what a repository disappearing
+looks like.
+
+It runs with the repository-scoped `GITHUB_TOKEN` and no other credential. That token can read
+another repository's public data, which is all this job needs; that was the one thing about the
+design that could only be confirmed by running it, and the first run reported `fleet: 16
+repositories` and `collected 71 tracked paths`.
+
+Verified against the real fleet before it shipped, on the tree data as it actually stands: the
+passing case reports `every shared file is identical across the fleet` and exits 0, and four planted
+defects each produce a precise message and exit 1 — a changed `fleet.yml` in one repository, a
+`pre-commit` at mode `100644`, a deleted `advisories.yml`, and a seventeenth repository with none of
+the files.
+
 ## Checks that were measured and rejected
 
 Each row is the result of a command that was run against the 16 repositories.
@@ -303,6 +447,26 @@ Each row is the result of a command that was run against the 16 repositories.
 | `actionlint` | 0 findings across the 20 workflow files, with `shellcheck` 0.11.0 present | Rejected. GitHub refuses invalid workflow YAML before a job starts, and `zizmor` now covers the security surface from a gate rather than from a hand-run command. It is still worth running by hand when a `run:` block is edited: it is the tool that reads those blocks with `shellcheck` |
 | Backticked paths that look like files | 156 findings, 0 real defects | Rejected. The documents name planned files, files in other repositories, a deliberately deleted file, and a template placeholder |
 | `> Status:` vocabulary conformance | 16 findings, 0 real defects | Rejected. All sixteen are the `ARCHITECTURE.md` prose header, which is the same deliberate style in every repository |
+
+## A cancelled run is a missing verdict
+
+Every workflow in the fleet set `cancel-in-progress: true`. On a pull request that is right: only the
+newest push needs an answer, and cancelling the superseded run is what keeps the queue short. On
+`main` it is the opposite. A cancelled run leaves that commit with no verdict at all, and `main` is
+the branch whose history is meant to record whether each commit passed. Two pushes a minute apart
+erased the first result permanently, because the run log was the only place it existed.
+
+All three of `fleet.yml`, `zizmor.yml` and `ci.yml` now read:
+
+```yaml
+cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+```
+
+`advisories.yml`, `drift.yml` and `release.yml` set `false` outright. A scheduled run has nothing
+newer to yield to, and a cancelled release is a half-published one.
+
+This mattered less while the checks were advisory. With `required_status_checks` in the ruleset, a
+cancelled run is an absent check rather than a missing note.
 
 ## Git hooks
 
@@ -476,11 +640,12 @@ CI does not have this problem. Each run gets a new service container.
 There is no continuous deployment, and this section records why rather than leaving the absence to be
 inferred.
 
-`ratatoskr-platform` now builds its artifact and does not ship it. A `Dockerfile` is committed,
+`ratatoskr-platform` builds its artifact, and can now publish it. A `Dockerfile` is committed,
 `[profile.release]` is in `Cargo.toml`, and `ci.yml` has a second job on `ubuntu-24.04-arm` — a native
 arm64 runner, which a public repository gets at no cost — that builds the image, checks that each
-binary loads its configuration, and smoke-tests the running artifact through its operator plane. What
-is still absent is a systemd unit, an artifact upload, and any step that reaches the machine.
+binary loads its configuration, and smoke-tests the running artifact through its operator plane.
+`.github/workflows/release.yml` is the step that keeps the result. What is still absent is a systemd
+unit and any step that reaches the machine.
 `ratatoskr-contracts` publishes no package until its milestone 10. `docs/DEPLOYMENT_TARGET.md` fixes
 the target as one Raspberry Pi 5, `aarch64-unknown-linux-gnu`, Debian 12, glibc 2.36.
 
@@ -497,8 +662,47 @@ Two things were considered and rejected:
   long-lived credential to it. See the runner finding above for why neither is acceptable without a
   decision first.
 
-What is correct and still undone: upload the image that the arm64 job already builds, as a build
-artifact. It adds no secret, and it leaves the copy to the machine a step the maintainer runs.
+### The release, and the attestation
+
+`ci.yml` builds this image on every push and then discards it. So without this file the only way to
+deploy is to build again on the target, which means the thing that runs in production is compiled by
+a machine nobody audited from a tree nobody gated.
+
+`release.yml` triggers on a `v*.*.*` tag and on nothing else automatic. It runs on
+`ubuntu-24.04-arm`, so the artifact is the architecture it will be run on rather than a
+cross-compile, and it publishes to `ghcr.io/po4yka/ratatoskr-platform` under the version — never
+under `latest`. A moving tag is the thing this project refuses everywhere else, and a deployment that
+follows one cannot say what it is running.
+
+It then attaches a provenance attestation with `actions/attest-build-provenance`. That is a signed
+statement, made with GitHub's OIDC identity rather than with a key stored in this repository, that
+this image digest was produced by this workflow from this commit. A person holding the image checks
+it with `gh attestation verify oci://... --repo po4yka/ratatoskr-platform` and gets an answer that
+does not depend on trusting whoever handed the image over. SHA-pinning every action and
+digest-pinning the PostgreSQL service protect that property on the way in; this is the same property
+on the way out.
+
+Four things fail the release rather than shipping:
+
+| Check | The failure it catches |
+|---|---|
+| `git merge-base --is-ancestor` against `main` | A tag on a commit `main` cannot reach, which is a commit no gate ever saw. A tag is a name a person types and it can name anything in the repository |
+| The tag version equals the `Cargo.toml` version | Tagging `v0.2.0` with the manifest still on `0.1.0`, which produces an image whose name and whose `platform_build_info` disagree |
+| Each of the three binaries loads its configuration, in the image about to be published | The same assertion `ci.yml` makes, made against the artifact itself rather than against one built from the same tree. `ratatoskr-ingest` is expected to REFUSE without an explicit public bind: 78 is its correct answer and 0 would be the defect |
+| The published digest is read back from the push | The attestation must name the digest a puller resolves, and those are the same number only if it is taken from the push rather than computed locally |
+
+What has been exercised and what has not, stated plainly. A `workflow_dispatch` run with `publish`
+off ran the whole first half on a native arm64 runner: the ancestry check, the version check, the
+image build and the smoke test. The publishing half — the `ghcr.io` login, the push, the attestation
+and the GitHub release — has NOT been run. It first runs on the first `v*.*.*` tag, and that tag has
+not been created. Until then it is code that has been reviewed and linted and not executed, which is
+exactly the state this document warns about elsewhere, and the honest thing to do is say so rather
+than let the section imply otherwise.
+
+One thing is deliberately left alone. `Dockerfile` names `rust:1.97.0-slim-bookworm` and
+`debian:12-slim` by tag, not by digest. `zizmor` does not read a Dockerfile, so nothing reports it,
+and the base image of the artifact deserves the same pin the PostgreSQL service got. It is a separate
+change and it is not in this one.
 
 ## What arrives with the first code in a repository
 
@@ -507,7 +711,13 @@ Add these files in the same pull request as the first `Cargo.toml`, and not befo
 - `rustfmt.toml`, `clippy.toml`, `rust-toolchain.toml` and `deny.toml`, copied from
   `ratatoskr-contracts`;
 - `.github/workflows/ci.yml`, copied from the repository whose gate is closest;
-- `.github/dependabot.yml` for the `github-actions` ecosystem.
+- `.github/workflows/advisories.yml`, copied UNCHANGED from either repository that has it;
+- `.github/dependabot.yml` for the `github-actions` ecosystem, in the form the two Rust
+  repositories already use — it differs from the one every other repository has.
+
+`advisories.yml` is not optional and is not a matter of taste: the drift check asserts that every
+repository holding a `Cargo.toml` has it and that the file is identical in all of them, so a first
+code commit without it turns the workspace drift check red rather than being quietly incomplete.
 
 Copy each file. Do not use a symbolic link, and do not use a path reference. Invariant 5 says that
 each child repository builds independently of the workspace, and that makes an identical copy the
@@ -518,5 +728,8 @@ Do not copy `clippy.toml` without a review of its content. The file in `ratatosk
 In a connector repository, each rule is a guess until somebody decides that the service speaks a wire
 timestamp.
 
-Add a `required_status_checks` rule to the repository ruleset only after a run publishes the check
-name. A required check that no workflow produces gives a ruleset that you must bypass to work.
+Add the repository's new check names to the `required_status_checks` rule in its ruleset, and only
+after a run has published them. A required check that no workflow produces gives a ruleset you must
+bypass in order to work at all. For a Rust repository the names are `gate` from `ci.yml`, alongside
+the `invariants` and `audit` that every repository already requires. Do NOT add `advisories`: it has
+no `push` or `pull_request` trigger, so requiring it would block every merge and never be satisfied.
