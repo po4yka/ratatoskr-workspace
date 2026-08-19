@@ -2,7 +2,7 @@
 
 > Status: Proposed  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-17  
+> Last reviewed: 2026-08-19  
 > Related: `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`
 
 ## Current stage
@@ -34,3 +34,7 @@ The first implementation PR must replace these expectations with exact prerequis
 ## Quality gates
 
 Formatting, linting, tests, generated artifacts, manifest/lock consistency, contract compatibility, integration profiles, and secret scanning must pass before a release snapshot advances `main`.
+
+`docs/QUALITY_GATES.md` records which of those gates exist today, in which repository, and what each one measured before it was accepted. It also lists the checks that were rejected, with the reason, so that a later reader does not add them again.
+
+Every repository carries `.githooks/pre-commit`. It is inert until a clone runs `git config core.hooksPath .githooks`, and `git commit --no-verify` skips it. Run the command in each clone you work in, and treat the hook as a convenience rather than a control: the gate is CI and the branch ruleset.

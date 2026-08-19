@@ -1,0 +1,283 @@
+# Quality gates
+
+> Status: Implemented  
+> Owner: `ratatoskr-workspace`  
+> Last reviewed: 2026-08-19  
+> Related: `DEVELOPMENT.md`, `TESTING.md`, `THREAT_MODEL.md`, `docs/ARCHITECTURE.md` section 11
+
+## Scope
+
+This document records the static analysis, the linters, the continuous integration and the Git hooks
+that the 16 Ratatoskr repositories have today. It also records the checks that were measured and
+then rejected, and it gives the reason for each rejection.
+
+Workspace CI does not replace repository CI. Each repository owns its own gate. This document
+describes the fleet, because the controls are identical in each repository and a reader must be able
+to find the policy in one place.
+
+Every number in this document comes from a command that was run. If you change a control, run the
+command again and correct the number.
+
+## What each repository has
+
+All 16 repositories are public. The default branch of each repository is `main`.
+
+| Control | Repositories | Notes |
+|---|---|---|
+| `.gitattributes` | 16 of 16 | One line: `* text=auto eol=lf` |
+| `.editorconfig` | 16 of 16 | Editor defaults. No check enforces the file |
+| `.githooks/pre-commit` | 16 of 16 | Identical file. See [Git hooks](#git-hooks) |
+| Branch ruleset on `main` | 16 of 16 | The `deletion` rule only |
+| Dependabot alerts | 16 of 16 | Alerts only. No version-update pull requests |
+| Secret scanning and push protection | 16 of 16 | GitHub gives these to a public repository |
+| `sha_pinning_required` for Actions | 16 of 16 | A workflow must pin each action to a commit SHA |
+| Continuous integration | 2 of 16 | `ratatoskr-contracts` and `ratatoskr-platform` |
+
+The ruleset does not include the `non_fast_forward` rule. The account has one administrator, and
+agents push with the same token. A bypass for that administrator makes the rule apply to nobody, and
+a rule that applies to nobody is a control that protects nothing.
+
+The `deletion` rule works. A test confirmed this on a temporary branch: with the rule, the API
+refuses the deletion and answers `422 Cannot delete this branch`. Without the rule, the same request
+deletes the branch.
+
+## The Rust gate
+
+Two repositories contain Rust code. Each repository runs its gate in `.github/workflows/ci.yml`.
+
+`ratatoskr-contracts` runs six commands:
+
+```bash
+cargo fetch --locked
+cargo deny check
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo contracts check
+cargo test --workspace --locked
+```
+
+`ratatoskr-platform` runs seven commands:
+
+```bash
+cargo fetch --locked
+cargo deny check
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo build --workspace --locked
+cargo test --workspace --locked
+cargo build --workspace --locked --release
+```
+
+The debug build in `ratatoskr-platform` is necessary. `services/edge/tests/boot.rs` starts
+`ratatoskr-ingest` and `ratatoskr-scheduler` as child processes. `cargo test` builds the binary of
+the package under test only. It does not build the binary of a sibling package. Without the debug
+build, three of the four boot tests fail on each clean checkout.
+
+Each workflow has a final step that compares its own `- run:` lines with the command list in the
+repository's `DEVELOPMENT.md`. The step fails if the two lists are different. `AGENTS.md` and
+`DEVELOPMENT.md` both state that the two lists are one list. Before this step, no check enforced the
+rule.
+
+### `cargo deny`
+
+`deny.toml` is in each of the two repositories. The files are the same, except for the `[sources]`
+section.
+
+`cargo deny` earns its place. It is the only tool in this project that found real defects. On its
+first run against `ratatoskr-platform` it reported five advisories:
+
+| Advisory | Defect |
+|---|---|
+| RUSTSEC-2026-0049 | A certificate revocation list is not authoritative for its distribution point |
+| RUSTSEC-2026-0098 | A name constraint for a URI name is accepted incorrectly |
+| RUSTSEC-2026-0099 | A name constraint is accepted for a certificate with a wildcard name |
+| RUSTSEC-2026-0104 | A panic is reachable when the code parses a revocation list |
+| RUSTSEC-2025-0134 | `rustls-pemfile` is unmaintained, and no safe upgrade exists |
+
+Four advisories were in `rustls-webpki` 0.102.8. `async-nats` 0.42 supplied that version.
+`ratatoskr-edge` binds the public listener, and the panic was in its TLS path. The crates deny
+`panic`, `unwrap_used` and `expect_used` in their own code for this reason.
+
+The remedy in each advisory does not work here. `cargo update -p rustls-webpki` cannot go from 0.102
+to 0.103, because the minor version of a `0.x` crate is the incompatible part. `async-nats` 0.48 and
+later need `rustls-webpki` 0.103.10 or later. `async-nats` 0.50 gives `rustls-webpki` 0.103.14, and
+it removes `rustls-pemfile` from the graph. No source file needed a change.
+
+`[sources] required-git-spec = "rev"` gives an exit code to a rule that `Cargo.toml` states in
+prose: a branch moves, and a tag can be moved, so neither one pins. In `ratatoskr-contracts`,
+`[sources] unknown-git = "deny"` is a publication requirement. Cargo refuses to publish a crate that
+has a git dependency. Without the rule, that failure first appears at milestone 10.
+
+### Clippy lints
+
+Each workspace denies `unsafe_code`, `missing_docs`, `panic`, `unwrap_used` and `expect_used`. These
+lints close each explicit panic path. They do not close the most common implicit path, so each
+workspace also denies two lints from `clippy::restriction`:
+
+- `indexing_slicing` — `v[i]` and `&s[a..b]` panic when the index is out of bounds.
+- `string_slice` — `&s[..n]` panics when `n` is not a UTF-8 character boundary.
+
+`pedantic` does not enable either lint. Both lints are `allow` by default.
+
+Production code in both repositories violates neither lint. Test code violates both. `clippy.toml`
+in `ratatoskr-platform` sets `allow-indexing-slicing-in-tests = true`, beside the
+`allow-unwrap-in-tests` and `allow-expect-in-tests` settings that were already there. Clippy has no
+equivalent setting for `string_slice`, so three test files have a file-level `#![allow]` with a
+reason.
+
+Two sites were changed instead of suppressed. `windows(2)` with two indexes became `is_sorted_by`.
+`rfind` with a slice became `rsplit_once`. Both changes were confirmed to be equivalent, and not
+only quieter.
+
+### Dependabot
+
+`.github/dependabot.yml` in each Rust repository watches the `github-actions` ecosystem. The
+configuration groups the updates into one pull request each month.
+
+The `cargo` ecosystem is deliberately absent. Each repository commits its `Cargo.lock` and runs each
+command with `--locked`. A dependency bump is therefore a deliberate act. `cargo deny check` in the
+gate reports an advisory on the day it is published.
+
+An action pin is the opposite case. It rots, and it rots silently. A reader cannot find a pin whose
+`# vX.Y.Z` comment no longer agrees with its SHA. Dependabot corrects the SHA and the comment
+together.
+
+## The 13 repositories that have no code
+
+These repositories have 16 tracked files each: 14 Markdown documents, `.gitignore` and `LICENSE`.
+They have no source file.
+
+They have no CI workflow, and this is deliberate. `AGENTS.md` forbids a directory or a configuration
+field for a milestone that has not started. A Rust workflow in a repository that has no `Cargo.toml`
+does one of two things. It fails, because `cargo clippy` cannot start. Or it passes and proves
+nothing, because `cargo fmt --check` over zero files exits 0. A check that passes and proves nothing
+is worse than no check, and `platform/DEVELOPMENT.md` gives the same argument for a Compose file
+that no binary dials.
+
+Measurement removed the alternative. Each check that inspects Markdown finds zero defects in these
+repositories. See the next section.
+
+## Checks that were measured and rejected
+
+Each row is the result of a command that was run against the 16 repositories.
+
+| Check | Measurement | Decision |
+|---|---|---|
+| `typos` | 8 findings, 0 real defects | Rejected. Two findings are deliberate spelling errors in a test that asserts an unknown configuration key is refused. A correction breaks the test |
+| `markdownlint` | 0 findings, with MD013 and MD060 off | Rejected for now. The documents are correct already, so the tool guards against a regression and finds no defect. 13 near-identical workflows are a cost that this does not repay. With MD013 on, the tool reports many line lengths and no defect |
+| A link checker (`lychee` or equivalent) | 0 broken links. The 13 repositories have 0 relative links | Rejected. There is nothing to check. `lycheeverse/lychee-action` also fails by default when it finds no link |
+| `gitleaks` in CI | Push protection is on in 16 of 16 repositories | Rejected in CI. Push protection covers a provider token. It does not cover a password in a connection string, and the pre-commit hook covers that |
+| CodeQL | `code-scanning/default-setup` answers `languages: []` for each repository that has no code | Rejected. For `ratatoskr-contracts` the expected number of findings is zero, and the analysis gates nothing |
+| `taplo` | Not run | Rejected. It finds no defect that `cargo fetch --locked` does not find, and it reformats the aligned dependency tables |
+| `actionlint` | Not in a gate | Rejected. GitHub refuses invalid workflow YAML before a job starts, and `zizmor` covers the security surface |
+
+## Git hooks
+
+Each repository has the same `.githooks/pre-commit`. The file is 12 lines of POSIX shell, and it
+needs no program to be installed. It makes three checks:
+
+1. A staged line must not embed a credential in a URL.
+2. A staged line must not contain a private key header.
+3. `cargo fmt --all -- --check` must pass, if the repository has a `Cargo.toml`.
+
+The third condition lets one file be correct in a Rust repository and in a repository of documents.
+The hook does not know which repository it is in.
+
+The credential check excludes a loopback host and the names that RFC 2606 reserves. Both types
+occur correctly in these repositories: `postgres://platform:platform@127.0.0.1:5432/platform` is the
+local database, and `https://otel:LEAKME@collector.example:4317` is a test that asserts a credential
+in an OTLP endpoint is refused. The pattern was measured before it was accepted. It gives zero
+findings across the 16 repositories today, and it still finds a credential on a real host.
+
+### The known limit of the hooks
+
+**A committed hook directory does nothing on its own.** Each clone must run this command:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+A clone that did not run the command has no hook. This includes a second machine, a CI checkout, and
+a clone into a different parent directory. Git treats this as a security boundary, and a repository
+cannot opt a clone in.
+
+`git commit --no-verify` also skips the hook, and an agent can pass that option.
+
+The hooks are therefore a convenience that finds a mistake early. The gate is CI and the branch
+ruleset.
+
+The hook makes no Clippy check. A workspace-wide Clippy run competes for the same target directory
+as `rust-analyzer`, and it can block for an unbounded time. CI has the tree to itself.
+
+The hook makes no commit-message check. The subjects in the history of these repositories already
+agree with Conventional Commits. A regular expression refuses `Initial commit` and a merge subject
+that Git creates locally. Both subjects are in the real history.
+
+## Platform state
+
+The controls in the table at the top of this document are repository settings. They are not files,
+so a checkout does not show them, and a settings change removes them without a commit.
+
+Write these settings with the GitHub API, in a loop over the 16 repositories:
+
+```bash
+gh api -X PUT   "repos/po4yka/<repo>/vulnerability-alerts"
+gh api -X POST  "repos/po4yka/<repo>/rulesets" --input ruleset.json
+gh api -X PUT   "repos/po4yka/<repo>/actions/permissions" \
+  -F enabled=true -f allowed_actions=all -F sha_pinning_required=true
+```
+
+Read each setting back after you write it. A `PATCH` that sets
+`secret_scanning_non_provider_patterns` answers 200 and leaves the setting disabled, so a write that
+succeeds is not evidence that the setting changed.
+
+`sha_pinning_required` has two limits. It refuses an unpinned action from GitHub itself, so each
+`uses:` line must be in SHA form before you turn the setting on. It does not apply to a reusable
+workflow reference.
+
+## Defects that these controls found
+
+### A flaky test in `ratatoskr-platform`
+
+`each_role_boots_on_its_documented_configuration_and_reports_ready` fails about one time in three on
+a developer machine. The test failed on an unmodified `main`, on the same machine and against the
+same services, so the defect is in the test.
+
+The test has two failure modes. In the first mode, `/health/ready` does not answer 200 before the
+poll expires. In the second mode, the process does not exit 0 after SIGTERM. Each assertion has a
+fixed time window.
+
+CI has not reported this failure yet. The test is timing-sensitive, so a green run is not evidence
+that the test is correct.
+
+### Disposable test databases remain
+
+`DEVELOPMENT.md` in `ratatoskr-platform` says that the integration suite creates a database for each
+test and drops it afterwards. It also says that a test which panics leaves its database, so that a
+person can examine the failure.
+
+A developer machine had 64 databases with the name `platform_test_*`. Examine them before you drop
+them, because one database can hold a failure that somebody kept.
+
+CI does not have this problem. Each run gets a new service container.
+
+## What arrives with the first code in a repository
+
+Add these files in the same pull request as the first `Cargo.toml`, and not before:
+
+- `rustfmt.toml`, `clippy.toml`, `rust-toolchain.toml` and `deny.toml`, copied from
+  `ratatoskr-contracts`;
+- `.github/workflows/ci.yml`, copied from the repository whose gate is closest;
+- `.github/dependabot.yml` for the `github-actions` ecosystem.
+
+Copy each file. Do not use a symbolic link, and do not use a path reference. Invariant 5 says that
+each child repository builds independently of the workspace, and that makes an identical copy the
+correct answer.
+
+Do not copy `clippy.toml` without a review of its content. The file in `ratatoskr-contracts` refuses
+`std::collections::HashMap` and `std::time::SystemTime`. Both rules are correct for a contract crate.
+In a connector repository, each rule is a guess until somebody decides that the service speaks a wire
+timestamp.
+
+Add a `required_status_checks` rule to the repository ruleset only after a run publishes the check
+name. A required check that no workflow produces gives a ruleset that you must bypass to work.
