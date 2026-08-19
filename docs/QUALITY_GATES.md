@@ -8,7 +8,7 @@
 ## Scope
 
 This document records the static analysis, the linters, the continuous integration and the Git hooks
-that the 16 Ratatoskr repositories have today. It also records the checks that were measured and
+that the 17 Ratatoskr repositories have today. It also records the checks that were measured and
 then rejected, and it gives the reason for each rejection.
 
 Workspace CI does not replace repository CI. Each repository owns its own gate. This document
@@ -18,34 +18,40 @@ to find the policy in one place.
 Every number in this document comes from a command that was run. If you change a control, run the
 command again and correct the number.
 
-The fleet is 16 repositories, and that number is now measured rather than asserted. On 2026-08-19
-`users/po4yka/repos` lists exactly 16 non-archived, non-fork repositories whose name begins
-`ratatoskr-`, and `repos/po4yka/ratatoskr-web` answers 404. An earlier version of this paragraph
-described `ratatoskr-web` as a seventeenth repository that was bootstrapping. It does not exist on
-the account; the clone of that name in the local workspace is a retired archive. The drift check
-below discovers the list instead of counting to 16, so a repository created later is covered on its
-first run without an edit here.
+The fleet is 17 repositories, and that number is measured rather than asserted. On 2026-08-19
+`users/po4yka/repos` lists exactly 17 non-archived, non-fork repositories whose name begins
+`ratatoskr-`, all public and all with `main` as the default branch.
+
+This paragraph was written twice on the same day, and the reason is worth keeping. `ratatoskr-web`
+was created that afternoon, and a count taken between the two events read 16 and concluded the
+repository did not exist. Both readings were correct when they were taken. What made the second one
+wrong an hour later is that it was a count: the drift check below discovers the list instead, which
+is why it needed no edit when the seventeenth repository appeared, and why this document is the only
+thing here that did.
+
+The retired first-generation client of the same name is a separate thing entirely — a local archive
+with no Git remote, sharing no history with the repository counted above.
 
 ## What each repository has
 
-All 16 repositories are public. The default branch of each repository is `main`.
+All 17 repositories are public. The default branch of each repository is `main`.
 
 | Control | Repositories | Notes |
 |---|---|---|
-| `.gitattributes` | 16 of 16 | One line: `* text=auto eol=lf` |
-| `.editorconfig` | 16 of 16 | Editor defaults. No check enforces the file |
-| `.githooks/pre-commit` | 16 of 16 | Identical file. See [Git hooks](#git-hooks) |
-| Branch ruleset on `main` | 16 of 16 | `deletion`, `required_signatures` and `required_status_checks` |
-| Dependabot alerts | 16 of 16 | GitHub reports a vulnerable dependency |
-| `.github/dependabot.yml` | 16 of 16 | Version updates for the `github-actions` ecosystem, grouped, monthly, with a seven-day cooldown |
-| Secret scanning and push protection | 16 of 16 | GitHub gives these to a public repository |
-| `sha_pinning_required` for Actions | 16 of 16 | A workflow must pin each action to a commit SHA |
-| The fleet gate, `.github/workflows/fleet.yml` | 16 of 16 | Identical file. See [The fleet gate](#the-fleet-gate) |
-| The workflow gate, `.github/workflows/zizmor.yml` | 16 of 16 | Identical file. See [The workflow gate](#the-workflow-gate) |
-| A repository gate, `.github/workflows/ci.yml` | 2 of 16 | `ratatoskr-contracts` and `ratatoskr-platform` |
-| The advisory check, `.github/workflows/advisories.yml` | 2 of 16 | Identical file, in the two repositories that have code. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
-| The drift check, `.github/workflows/drift.yml` | 1 of 16 | In `ratatoskr-workspace`, and it reads all 16. See [The drift check](#the-drift-check) |
-| The release, `.github/workflows/release.yml` | 1 of 16 | In `ratatoskr-platform`. See [Deployment](#deployment) |
+| `.gitattributes` | 17 of 17 | One line: `* text=auto eol=lf` |
+| `.editorconfig` | 17 of 17 | Editor defaults. No check enforces the file |
+| `.githooks/pre-commit` | 17 of 17 | Identical file. See [Git hooks](#git-hooks) |
+| Branch ruleset on `main` | 17 of 17 | `deletion`, `required_signatures` and `required_status_checks` |
+| Dependabot alerts | 17 of 17 | GitHub reports a vulnerable dependency |
+| `.github/dependabot.yml` | 17 of 17 | Version updates for the `github-actions` ecosystem, grouped, monthly, with a seven-day cooldown |
+| Secret scanning and push protection | 17 of 17 | GitHub gives these to a public repository |
+| `sha_pinning_required` for Actions | 17 of 17 | A workflow must pin each action to a commit SHA |
+| The fleet gate, `.github/workflows/fleet.yml` | 17 of 17 | Identical file. See [The fleet gate](#the-fleet-gate) |
+| The workflow gate, `.github/workflows/zizmor.yml` | 17 of 17 | Identical file. See [The workflow gate](#the-workflow-gate) |
+| A repository gate, `.github/workflows/ci.yml` | 2 of 17 | `ratatoskr-contracts` and `ratatoskr-platform` |
+| The advisory check, `.github/workflows/advisories.yml` | 2 of 17 | Identical file, in the two repositories that have code. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
+| The drift check, `.github/workflows/drift.yml` | 1 of 17 | In `ratatoskr-workspace`, and it reads all 17. See [The drift check](#the-drift-check) |
+| The release, `.github/workflows/release.yml` | 1 of 17 | In `ratatoskr-platform`. See [Deployment](#deployment) |
 
 ### What the ruleset requires, and what it cannot
 
@@ -226,7 +232,7 @@ only quieter.
 
 ### Dependabot
 
-`.github/dependabot.yml` is in all 16 repositories, and each one watches the `github-actions`
+`.github/dependabot.yml` is in all 17 repositories, and each one watches the `github-actions`
 ecosystem only. The configuration groups the updates into one pull request each month.
 
 The file was in the two Rust repositories first. It is now in all 16 because each repository pins two
@@ -279,7 +285,7 @@ only job in the project that reads more than one repository.
 
 ### Why the credential and key checks are not redundant
 
-GitHub secret scanning is enabled on all sixteen repositories, and it has a pattern for a PostgreSQL
+GitHub secret scanning is enabled on all seventeen repositories, and it has a pattern for a PostgreSQL
 connection string that carries credentials and a pattern for an RSA private key. Both are classified as
 GENERIC rather than provider patterns, and generic-pattern scanning is a separate setting.
 
@@ -434,14 +440,14 @@ the files.
 
 ## Checks that were measured and rejected
 
-Each row is the result of a command that was run against the 16 repositories.
+Each row is the result of a command that was run against the fleet.
 
 | Check | Measurement | Decision |
 |---|---|---|
 | `typos` | 8 findings, 0 real defects | Rejected. Two findings are deliberate spelling errors in a test that asserts an unknown configuration key is refused. A correction breaks the test |
 | `markdownlint` | 0 findings, with MD013 and MD060 off | Rejected for now. The documents are correct already, so the tool guards against a regression and finds no defect. 13 near-identical workflows are a cost that this does not repay. With MD013 on, the tool reports many line lengths and no defect |
 | A link checker (`lychee` or equivalent) | 0 broken links. The 13 repositories have 0 relative links | Rejected. There is nothing to check. `lycheeverse/lychee-action` also fails by default when it finds no link |
-| `gitleaks` in CI | Push protection is on in 16 of 16 repositories | Rejected in CI. Push protection covers a provider token. It does not cover a password in a connection string, and the pre-commit hook covers that |
+| `gitleaks` in CI | Push protection is on in 17 of 17 repositories | Rejected in CI. Push protection covers a provider token. It does not cover a password in a connection string, and the pre-commit hook covers that |
 | CodeQL | `code-scanning/default-setup` answers `languages: []` for each repository that has no code | Rejected. For `ratatoskr-contracts` the expected number of findings is zero, and the analysis gates nothing |
 | `taplo` | Not run | Rejected. It finds no defect that `cargo fetch --locked` does not find, and it reformats the aligned dependency tables |
 | `actionlint` | 0 findings across the 20 workflow files, with `shellcheck` 0.11.0 present | Rejected. GitHub refuses invalid workflow YAML before a job starts, and `zizmor` now covers the security surface from a gate rather than from a hand-run command. It is still worth running by hand when a `run:` block is edited: it is the tool that reads those blocks with `shellcheck` |
@@ -505,7 +511,7 @@ The credential check excludes a loopback host and the names that RFC 2606 reserv
 occur correctly in these repositories: `postgres://platform:platform@127.0.0.1:5432/platform` is the
 local database, and `https://otel:LEAKME@collector.example:4317` is a test that asserts a credential
 in an OTLP endpoint is refused. The pattern was measured before it was accepted. It gives zero
-findings across the 16 repositories today, and it still finds a credential on a real host.
+findings across the 17 repositories today, and it still finds a credential on a real host.
 
 ### The known limit of the hooks
 
@@ -536,7 +542,7 @@ that Git creates locally. Both subjects are in the real history.
 The controls in the table at the top of this document are repository settings. They are not files,
 so a checkout does not show them, and a settings change removes them without a commit.
 
-Write these settings with the GitHub API, in a loop over the 16 repositories:
+Write these settings with the GitHub API, in a loop over the 17 repositories:
 
 ```bash
 gh api -X PUT   "repos/po4yka/<repo>/vulnerability-alerts"
