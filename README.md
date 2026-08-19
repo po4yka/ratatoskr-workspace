@@ -42,12 +42,16 @@ repos/
 │   ├── chatgpt/
 │   └── claude/
 └── clients/
+    ├── web/
     ├── mobile/
     ├── browser-extension/
     └── export-agent/
 ```
 
-The legacy `ratatoskr` backend and `ratatoskr-web` client are retired. They are kept only as local read-only archives and are not pinned in this workspace.
+The legacy `ratatoskr` backend and its web client are retired. They are kept only as local
+read-only archives, they have no Git remote, and they are not pinned in this workspace. The
+`ratatoskr-web` repository name is reused by the new web client and shares no history with the
+retired one.
 
 Three files jointly define workspace state:
 
@@ -185,6 +189,7 @@ Planned profiles:
 | `ratatoskr-threads` | Threads account data, explicit captures, oEmbed, and export imports |
 | `ratatoskr-chatgpt` | Immutable ChatGPT exports, projects, conversations, and assets |
 | `ratatoskr-claude` | Immutable Claude exports, projects, conversations, and artifacts |
+| `ratatoskr-web` | Browser-based search, collections, backup control, and operational views |
 | `ratatoskr-export-agent` | Local macOS ingestion of provider export archives |
 | `ratatoskr-browser-extension` | Explicit browser capture without provider cookie access |
 | `ratatoskr-mobile` | Android/iOS sharing, offline capture queue, and mobile experience |
