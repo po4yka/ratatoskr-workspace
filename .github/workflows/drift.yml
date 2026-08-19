@@ -1,0 +1,188 @@
+# Sixteen copies of four files, and nothing that notices when they stop being copies.
+#
+# `fleet.yml`, `zizmor.yml` and `.githooks/pre-commit` are byte-identical in every repository, and
+# `dependabot.yml` has exactly two forms — one for a repository that has Rust in it and one for a
+# repository that does not yet have any code. They are identical because they were copied there, not
+# because anything keeps them that way. The next fix will be made in whichever repository its author
+# happened to be working in, and the other fifteen will keep the defect silently.
+#
+# `fleet.yml` cannot check this. It runs inside one repository and can only see that repository, so
+# it can assert a file EXISTS and never that it is the same file as elsewhere. This is the one job
+# in the project that looks at more than one repository at a time, which is why it lives here: this
+# repository is the workspace, and the workspace is the only place from which the fleet is visible.
+#
+# It compares git blob names, not text. A blob name is what git itself uses for identity, so the
+# comparison covers the content exactly, and the same tree read also carries the file mode — which
+# is how a `pre-commit` that has quietly lost its executable bit is caught in the same pass.
+#
+# The repository list is DISCOVERED rather than written down. A seventeenth repository that joins
+# the fleet without the shared files is the same drift, and a hardcoded list would report it as
+# healthy by never looking.
+name: drift
+
+on:
+  schedule:
+    # Weekly. Drift is introduced by a commit, and a commit is already reported by the gates; this
+    # is the backstop for the case where every repository is individually green and they no longer
+    # agree with each other. That does not need a daily answer.
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      # The only write permission here. It files the issue below, and a job that can write issues
+      # cannot write code, publish a package, or read a secret.
+      issues: write  # to file the finding as an issue
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read every repository's tree
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The REST collection for a user's own repositories, not `gh repo list`: this job holds
+          # the repository-scoped GITHUB_TOKEN, and reading another repository's PUBLIC data is
+          # what that token can do. `ratatoskr-` and not `ratatoskr` excludes the two retired
+          # archives, whose names have no hyphen.
+          gh api --paginate 'users/po4yka/repos?type=owner&per_page=100' \
+            --jq '.[] | select(.archived | not) | select(.fork | not)
+                      | select(.name | startswith("ratatoskr-")) | .name' \
+            | sort > repos.txt
+          echo "fleet: $(wc -l < repos.txt) repositories"
+          sed 's/^/  /' repos.txt
+
+          # One tree read per repository returns every path with its mode and its blob name, so
+          # content and the executable bit arrive together and nothing needs a second call.
+          : > trees.tsv
+          while read -r r; do
+            gh api "repos/po4yka/$r/git/trees/main?recursive=1" \
+              | jq -r --arg r "$r" '.tree[]
+                  | select(.path == "Cargo.toml"
+                        or .path == ".githooks/pre-commit"
+                        or .path == ".github/dependabot.yml"
+                        or (.path | startswith(".github/workflows/")))
+                  | [$r, .path, .mode, .sha] | @tsv' >> trees.tsv
+          done < repos.txt
+          echo "collected $(wc -l < trees.tsv) tracked paths"
+
+      - name: The shared files are still one file
+        id: compare
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee drift.log
+          import collections, pathlib, sys
+
+          repos = pathlib.Path("repos.txt").read_text().split()
+          rows = [l.split("\t") for l in pathlib.Path("trees.tsv").read_text().splitlines()]
+          tree = {(r, p): (mode, sha) for r, p, mode, sha in rows}
+          rust = sorted({r for (r, p) in tree if p == "Cargo.toml"})
+          docs = [r for r in repos if r not in rust]
+
+          problems = []
+
+          def present(paths, group, label):
+              """Every repository in `group` has `path`. Says nothing about its contents."""
+              for path in paths:
+                  missing = [r for r in group if (r, path) not in tree]
+                  if missing:
+                      problems.append(f"{path} is absent from {', '.join(missing)} ({label})")
+
+          def one_of(paths, group, label):
+              """Present in every repository in `group`, AND the same blob in all of them."""
+              present(paths, group, label)
+              for path in paths:
+                  have = {r: tree[(r, path)] for r in group if (r, path) in tree}
+                  seen = collections.defaultdict(list)
+                  for r, (_mode, sha) in have.items():
+                      seen[sha].append(r)
+                  if len(seen) > 1:
+                      lines = [f"{path} has {len(seen)} different versions across {label}:"]
+                      for sha, rs in sorted(seen.items(), key=lambda kv: -len(kv[1])):
+                          lines.append(f"    {sha[:12]}  {', '.join(sorted(rs))}")
+                      problems.append("\n".join(lines))
+
+          print(f"{len(repos)} repositories, {len(rust)} with Rust: {', '.join(rust) or 'none'}")
+          if len(repos) < 16:
+              problems.append(f"only {len(repos)} repositories discovered, expected at least 16")
+
+          # Identical everywhere, with no exceptions.
+          one_of([".github/workflows/fleet.yml",
+                  ".github/workflows/zizmor.yml",
+                  ".githooks/pre-commit"], repos, "the fleet")
+
+          # `dependabot.yml` legitimately has two forms. Each form must still be one form.
+          one_of([".github/dependabot.yml"], docs, "the repositories without code")
+          if rust:
+              one_of([".github/dependabot.yml"], rust, "the repositories with Rust")
+              # `advisories.yml` is identical in both, and must stay so: it is the same question
+              # asked of the same tool. `fleet.yml` cannot assert its presence, because a scheduled
+              # workflow is invisible to a push trigger and deleting it leaves every gate green.
+              one_of([".github/workflows/advisories.yml"], rust, "the repositories with Rust")
+              # `ci.yml` is checked for presence and NOT for sameness, on purpose. The two gates are
+              # legitimately different: platform's runs a PostgreSQL service, a NATS container and a
+              # native arm64 job, and contracts has none of those to run. `fleet.yml` already fails a
+              # repository that grows a manifest without a ci.yml; this covers the deletion of one
+              # from a repository that already had it.
+              present([".github/workflows/ci.yml"], rust, "the repositories with Rust")
+
+          # A hook that is no longer executable is inert, and git records the mode.
+          for r in repos:
+              mode = tree.get((r, ".githooks/pre-commit"), ("absent", ""))[0]
+              if mode != "100755":
+                  problems.append(f".githooks/pre-commit in {r} has mode {mode}, expected 100755")
+
+          if not problems:
+              print("every shared file is identical across the fleet")
+              sys.exit(0)
+          for p in problems:
+              print(f"::error::{p}" if "\n" not in p else f"::error::{p.splitlines()[0]}")
+              if "\n" in p:
+                  print("\n".join(p.splitlines()[1:]))
+          sys.exit(1)
+          PY
+
+      - name: File the finding where it will still be visible in a month
+        if: steps.compare.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: the shared fleet files have drifted apart
+        run: |
+          set -euo pipefail
+          {
+            echo "The files that are supposed to be identical in every Ratatoskr repository are not."
+            echo
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo '```'
+            cat drift.log
+            echo '```'
+          } > issue-body.md
+          # One open issue, commented on, for the same reason as `advisories.yml` in the Rust
+          # repositories: a workflow log is deleted after 90 days. The open issues are listed and
+          # filtered exactly rather than searched, because GitHub's search index is eventually
+          # consistent and a search is how a duplicate check files a duplicate.
+          existing=$(gh issue list --state open --limit 100 --json number,title \
+                     | jq -r --arg t "$TITLE" '.[] | select(.title == $t) | .number' | head -1)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file issue-body.md
+          else
+            gh issue create --title "$TITLE" --body-file issue-body.md
+          fi
+          exit 1
