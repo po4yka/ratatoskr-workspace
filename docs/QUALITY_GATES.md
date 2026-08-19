@@ -438,6 +438,29 @@ defects each produce a precise message and exit 1 — a changed `fleet.yml` in o
 `pre-commit` at mode `100644`, a deleted `advisories.yml`, and a seventeenth repository with none of
 the files.
 
+### An empty repository crashed it, on the first day
+
+The fourth of those planted defects was simulated by adding a name to the discovered list with no
+tree rows behind it. A real seventeenth repository is not that. `ratatoskr-web` was created about an
+hour after this check shipped, and for the six minutes before its first commit it was a repository
+with no commits at all. `git/trees/main` does not answer an empty tree for one of those; it answers
+`409 Git Repository is empty`, `jq` then failed on `null`, and `set -euo pipefail` ended the step
+with exit code 5.
+
+The run was red, which is the correct colour, and for entirely the wrong reason: it died while
+reading and never reached the comparison, so it reported nothing about the repository that caused
+it. A check that fails without saying what it found is a check somebody re-runs and then ignores.
+
+The fix treats an empty repository as a finding rather than an error. It is collected into a
+separate list, reported once by name — `has no commits on main, so it carries none of the shared
+files` — and left out of the per-file comparisons, because that one sentence is already the whole of
+what there is to say about it. The job still exits 1.
+
+This is the second time the same lesson has been paid for here. [The gate matched
+itself](#the-gate-matched-itself-and-the-local-test-could-not-see-it) records the first: a control
+tested only against a fixture agrees with the fixture. A planted row in a TSV is not an empty
+repository, and only the real one had a 409 in it.
+
 ## Checks that were measured and rejected
 
 Each row is the result of a command that was run against the fleet.
