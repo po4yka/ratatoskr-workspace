@@ -102,18 +102,18 @@ jobs:
 
           repos = pathlib.Path("repos.txt").read_text().split()
           empty = set(pathlib.Path("empty.txt").read_text().split())
+          # Removed here, before the groups below are built from this list. An empty repository is
+          # reported once, by name, and must not also appear as one absence per file: the first
+          # version filtered it after `docs` had already been computed, so it produced both.
+          present_repos = [r for r in repos if r not in empty]
           rows = [l.split("\t") for l in pathlib.Path("trees.tsv").read_text().splitlines()]
           tree = {(r, p): (mode, sha) for r, p, mode, sha in rows}
           rust = sorted({r for (r, p) in tree if p == "Cargo.toml"})
-          docs = [r for r in repos if r not in rust]
+          docs = [r for r in present_repos if r not in rust]
 
-          problems = []
-          # An empty repository is reported once, by name, rather than as one absence per file. It
-          # is then left out of the per-file comparisons, because "every shared file is missing" is
-          # already the whole of what there is to say about it.
-          for r in sorted(empty):
-              problems.append(f"{r} has no commits on main, so it carries none of the shared files")
-          repos = [r for r in repos if r not in empty]
+          problems = [f"{r} has no commits on main, so it carries none of the shared files"
+                      for r in sorted(empty)]
+          total, repos = len(repos), present_repos
 
           def present(paths, group, label):
               """Every repository in `group` has `path`. Says nothing about its contents."""
@@ -136,10 +136,10 @@ jobs:
                           lines.append(f"    {sha[:12]}  {', '.join(sorted(rs))}")
                       problems.append("\n".join(lines))
 
-          print(f"{len(repos) + len(empty)} repositories, {len(empty)} empty, "
+          print(f"{total} repositories, {len(empty)} empty, "
                 f"{len(rust)} with Rust: {', '.join(rust) or 'none'}")
-          if len(repos) + len(empty) < 16:
-              problems.append(f"only {len(repos) + len(empty)} repositories discovered, expected at least 16")
+          if total < 16:
+              problems.append(f"only {total} repositories discovered, expected at least 16")
 
           # Identical everywhere, with no exceptions.
           one_of([".github/workflows/fleet.yml",
