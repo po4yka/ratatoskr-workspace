@@ -117,6 +117,50 @@ Roles are provisioned once, by hand, from a checked-in SQL file. A container's
 `docker-entrypoint-initdb.d` never runs again against a non-empty data directory, so it is not a
 provisioning mechanism for a cluster that already exists.
 
+## Metrics and alerting
+
+The host already runs VictoriaMetrics, vmalert, Grafana, Alertmanager and a node-exporter. Ratatoskr
+serves Prometheus text on its operator listener, so it fits without adding anything — but only in one
+arrangement, and the obvious one does not work.
+
+The collector is a container on the `monitoring_default` bridge. A Ratatoskr process on the host
+loopback is not reachable from there, and the bridge gateway address that would reach it is not
+stable across a network recreation. **The arrangement is: bind the operator listener to `0.0.0.0`
+inside the container or unit namespace, publish no host port for it, and scrape it by name from
+`monitoring_default`** — exactly as vmalert already reaches `victoriametrics:8428`. `0.0.0.0` there
+is not an exposure: nothing outside the host can route to it.
+
+Verified end to end on this host, with the real artifact rather than a stand-in: a `ratatoskr-scheduler`
+container joined to that network answered `/health/ready` by name from inside the collector's
+namespace, VictoriaMetrics reported the target `up`, and `platform_readiness{role="scheduler"}` and
+`platform_build_info` arrived in the time series database. The container and the scrape entry were
+then removed, because a scrape target for a service that is not deployed is a permanently failing
+target; the entry lands with the deployment units.
+
+```yaml
+# /home/po4yka/monitoring/promscrape.yml
+  - job_name: ratatoskr
+    scrape_interval: 15s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ["ratatoskr-edge:9464", "ratatoskr-ingest:9465", "ratatoskr-scheduler:9466"]
+        labels:
+          site: terrace
+          system: ratatoskr
+```
+
+VictoriaMetrics is started without `-promscrape.configCheckInterval`, so a change to that file takes
+effect on `docker kill -s HUP victoriametrics` and not before.
+
+**Alertmanager's only receiver, `local-only`, is empty** — no webhook, no email, nothing. Every alert
+on this box already resolves into its own UI and notifies nobody, which is true today and has nothing
+to do with Ratatoskr. Alert rules are worth writing only behind a receiver that reaches a person, so
+that is a prerequisite rather than a follow-up.
+
+The node-exporter runs with `--collector.disable-defaults`, so the host has no filesystem or disk
+series at all: the two failure modes that matter most here — storage wear and a full `/var/log` —
+have no expressible query.
+
 ## Ports
 
 A port on this host is an **allocation**, not a default. Never answer a bind failure by widening a
