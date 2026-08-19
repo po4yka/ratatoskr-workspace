@@ -48,8 +48,8 @@ All 17 repositories are public. The default branch of each repository is `main`.
 | `sha_pinning_required` for Actions | 17 of 17 | A workflow must pin each action to a commit SHA |
 | The fleet gate, `.github/workflows/fleet.yml` | 17 of 17 | Identical file. See [The fleet gate](#the-fleet-gate) |
 | The workflow gate, `.github/workflows/zizmor.yml` | 17 of 17 | Identical file. See [The workflow gate](#the-workflow-gate) |
-| A repository gate, `.github/workflows/ci.yml` | 2 of 17 | `ratatoskr-contracts` and `ratatoskr-platform` |
-| The advisory check, `.github/workflows/advisories.yml` | 2 of 17 | Identical file, in the two repositories that have code. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
+| A repository gate, `.github/workflows/ci.yml` | 3 of 17 | `ratatoskr-contracts`, `ratatoskr-platform` and `ratatoskr-web` |
+| The advisory check, `.github/workflows/advisories.yml` | 2 of 17 | Identical file, in the two repositories with Rust. `ratatoskr-web` audits its own tree in `ci.yml` instead, because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
 | The drift check, `.github/workflows/drift.yml` | 1 of 17 | In `ratatoskr-workspace`, and it reads all 17. See [The drift check](#the-drift-check) |
 | The release, `.github/workflows/release.yml` | 1 of 17 | In `ratatoskr-platform`. See [Deployment](#deployment) |
 
@@ -416,11 +416,17 @@ in the same pass. One `git/trees?recursive=1` call per repository, sixteen calls
 | `advisories.yml` is present and one blob in every repository with Rust | A deletion that no `push` trigger can see, because the file has no `push` trigger |
 | `ci.yml` is PRESENT in every repository with Rust | A gate deleted from a repository that already had one |
 
-`ci.yml` is checked for presence and deliberately not for sameness. The two gates are legitimately
+`ci.yml` is checked for presence and deliberately not for sameness. The gates are legitimately
 different: `ratatoskr-platform` runs a PostgreSQL service, a NATS container and a native arm64 job,
-and `ratatoskr-contracts` has none of those to run. The first version of this check required them to
-be identical and reported the difference as drift on its first local run, which is how the
-distinction was found before it reached CI.
+`ratatoskr-contracts` has none of those to run, and `ratatoskr-web` runs npm and no Rust at all. The
+first version of this check required them to be identical and reported the difference as drift on its
+first local run, which is how the distinction was found before it reached CI.
+
+The presence assertion reaches the Rust repositories only, and `ratatoskr-web` is therefore outside
+it: a `ci.yml` deleted there would pass this check. `fleet.yml` catches the same deletion from the
+other side — it fails on a manifest with no gate — so the hole is covered, but by a different file
+and only while `package.json` is still tracked. Widening the assertion to every repository with a
+manifest is the fix, and it is not made here.
 
 The repository list is discovered, not written down. A seventeenth repository that joins the fleet
 without the shared files is the same drift, and a fixed list would report that as healthy by never
