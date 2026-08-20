@@ -132,3 +132,8 @@ Measured after:
   published the name.
 - A coverage floor and mutation testing stay unadopted. Both are recorded in the rejected table of
   `docs/QUALITY_GATES.md` with what would have to be measured first.
+- The Rust arm of the test-first rule is now a vendored skill. `rust-tdd`, from
+  `po4yka/rust-skills`, is one of eighteen carried by the thirteen repositories whose stack is Rust,
+  and it states the red-green-refactor loop in the tool commands those repositories actually run.
+  This ADR is not superseded and no new one was written: the decision recorded here is unchanged,
+  and `docs/QUALITY_GATES.md` carries the catalogue, the selection rule and the drift assertion.

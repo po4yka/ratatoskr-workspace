@@ -52,6 +52,8 @@ All 17 repositories are public. The default branch of each repository is `main`.
 | `delete_branch_on_merge` | 17 of 17 | A merged branch is deleted by GitHub at the merge. See [A merged branch is deleted](#a-merged-branch-is-deleted) |
 | The spec gate, `.github/workflows/openspec.yml` | 17 of 17 | Identical file. See [The spec gate](#the-spec-gate) |
 | `openspec/config.yaml` | 17 of 17 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
+| `skills-lock.json` | 14 of 17 | The `skills` CLI lockfile. Identical in the 13 whose stack is Rust; `ratatoskr-web` has its own, for design skills |
+| The Rust skill catalogue, `.agents/skills/` | 13 of 17 | 18 skills vendored from `po4yka/rust-skills`, identical in every repository whose stack is Rust. See [The Rust skill catalogue](#the-rust-skill-catalogue) |
 | Size limits in a linter configuration | 3 of 17 | `clippy.toml` in the two with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
 | A repository gate, `.github/workflows/ci.yml` | 3 of 17 | `ratatoskr-contracts`, `ratatoskr-platform` and `ratatoskr-web` |
 | The advisory check, `.github/workflows/advisories.yml` | 2 of 17 | Identical file, in the two repositories with Rust. `ratatoskr-web` audits its own tree in `ci.yml` instead, because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
@@ -641,6 +643,102 @@ like `git config core.hooksPath .githooks`. A clone that has not registered reso
 nothing, and `openspec doctor` reports it with a pasteable fix. `DEVELOPMENT.md` in every repository
 carries the two commands.
 
+## The Rust skill catalogue
+
+Thirteen of the seventeen repositories hold Rust or plan to. `ratatoskr-contracts` and
+`ratatoskr-platform` hold it today; eleven more name Rust and Tokio in their own `DEVELOPMENT.md` as
+the intended toolchain, and `ratatoskr-workspace` plans the `ws` CLI in Rust. Each of the thirteen
+carries eighteen skills under `.agents/skills/`, with `.claude/skills/` symlinked to them so Claude
+Code and Codex read one copy rather than two.
+
+The four that do not carry it are the four whose first code is another language: `ratatoskr-web` and
+`ratatoskr-browser-extension` in TypeScript, `ratatoskr-export-agent` in Swift, and
+`ratatoskr-mobile` in Kotlin Multiplatform and Swift. No Rust in this fleet crosses a language
+boundary — there is no UniFFI, no JNI and no Swift C ABI anywhere in it — which is why the FFI half
+of the catalogue is absent from all seventeen.
+
+### Where they come from, and what a clone has to do
+
+`po4yka/rust-skills`, BSD-3-Clause, vendored at commit `cb652d08` with `npx skills add`. That is the
+same CLI and the same layout `ratatoskr-web` already uses for its ten design skills, which is why no
+second mechanism was introduced for this.
+
+A clone does nothing. This is the one control in this document that needs no per-machine step: the
+files are tracked, so a fresh checkout has them, and nothing can be silently missing for whoever did
+not run a command. `git config core.hooksPath .githooks` and `openspec store register` are both the
+other shape, and both are recorded here as limits.
+
+### Eighteen of forty-four, and the rule that chose them
+
+A skill is vendored when this fleet's own stack names the thing it covers, or when it governs how any
+Rust change is written, tested or reviewed. Each stack line was read from that repository's
+`DEVELOPMENT.md` and `openspec/config.yaml` rather than assumed.
+
+| Group | Vendored |
+|---|---|
+| Language and discipline | `rust-discipline`, `rust-code-style`, `rust-crate-architecture`, `rust-lints`, `rust-compiler-errors`, `rust-borrow-semantics`, `rust-pattern-semantics` |
+| Build and supply chain | `cargo-workflows`, `rust-security`, `rust-serde` |
+| Correctness and testing | `rust-tdd`, `rust-test-tools`, `rust-panic-safety` |
+| Runtime | `rust-async-internals`, `rust-networking`, `rust-database`, `rust-observability` |
+| Interface | `rust-cli` |
+
+Two of them earn their place twice over. `rust-lints` owns `clippy.toml`, `workspace.lints` and
+`deny.toml`, and `clippy.toml` is where this fleet's size limits live. `rust-tdd` is the Rust form of
+the task pair that every `openspec/config.yaml` in the fleet requires.
+
+### The twenty-six that were left out
+
+| Left out | Reason |
+|---|---|
+| `rust-jni`, `rust-swift-ffi`, `uniffi-boundary`, `uniffi-packaging-versioning`, `ffi-error-progress-cancel`, `rust-android-build`, `rust-ios-build`, `rust-native-linking` | No Rust here crosses a language boundary. `ratatoskr-mobile` is Kotlin Multiplatform and Swift and `ratatoskr-export-agent` is Swift; neither plans a Rust core, and nothing links a native library |
+| `rust-crate-release` | Nothing here publishes to crates.io, and its subject is SemVer bumps and deprecation, which the Development status forbids while it holds |
+| `rust-wasm`, `rust-embedded-no-std` | No repository targets WebAssembly or bare metal |
+| `rust-performance`, `rust-hot-path`, `rust-copy-on-write` | No profile has named a hot spot, because there is nothing to profile yet. This is the configuration-for-an-unstarted-milestone that this project refuses elsewhere. Add them to a repository the day a measurement asks for them |
+| `rust-unsafe`, `memory-model`, `rust-sanitizers-miri`, `rust-send-sync`, `rust-pin-projection`, `rust-variance`, `rust-type-erasure`, `rust-callback-bounds`, `rust-iterator-impl`, `rust-macros`, `rust-event-loop-state` | Advanced language material with no site in this fleet. Add one to a repository the day it writes its first `unsafe` block, hand-written `Iterator`, proc macro or `Pin` projection |
+| `rust-debugging` | Half of it is Android tombstones and `addr2line` symbolication, and this fleet deploys one Linux server. The host-first reproduction half overlaps `rust-tdd` |
+
+Adding one later is a one-line command and a thirteen-repository commit, the same shape as raising a
+pinned version.
+
+### One skill contradicts a binding rule, and the rule wins
+
+`rust-database` carries a section on deploying migrations in expand-migrate-contract phases, with
+`sqlx migrate run` in it. The Development status in every `AGENTS.md` says there are no migrations at
+all while it holds: a schema change edits the schema definition in place. That is not a defect in the
+skill, which is written for production Rust in general, but an agent that reads it and follows it
+writes what the owner has forbidden. `AGENTS.md` in each of the thirteen names the conflict and
+resolves it, at the point where an agent reads the rest.
+
+That is the only conflict found. Every other vendored skill was read against the Development status
+and against this document, and none of the others contradicts either.
+
+### What the lockfile pins, and what it does not
+
+`skills-lock.json` records the source repository, the path of each `SKILL.md` and a content hash. It
+does NOT record a commit, so `npx skills update` fetches whatever the catalogue's default branch
+holds at that moment. The pin here is the tracked bytes themselves: an update arrives as a diff in a
+pull request, and the drift check fails for as long as the thirteen disagree. That is weaker than the
+`@1.10.0` on the OpenSpec CLI and stronger than nothing, and it is stated rather than implied.
+
+### Measured before it was committed
+
+The rule this project applies to a gate that scans the repository is that the gate is tested against
+a tree that already contains what is being added. These were run against the thirteen trees with the
+skills in them, not against the trees from before:
+
+| What | Result |
+|---|---|
+| The credential-URL pattern in `fleet.yml` | 0 matches across the eighteen vendored skills, and 0 across all forty-four |
+| The private-key test in `fleet.yml` | 0 files carry a PEM header |
+| `No CRLF in a tracked text file` | 0 |
+| `Code cannot land without a gate`, and `...without its size limits` | Unchanged. No skill adds a root manifest, and the CLI is never a dependency: nothing installs it in CI |
+
+Every step of `fleet.yml` was then run against each of the thirteen trees, and all thirteen pass.
+
+The vendored bytes are identical in all thirteen, checked before the first push by comparing staged
+blob names and modes rather than text: 67 vendored paths in each repository — 48 files, 18 symlinks
+and `skills-lock.json` — and one distinct tree across the thirteen.
+
 ## The drift check
 
 Four files are the same file in every repository, and until now nothing noticed when they stopped
@@ -662,6 +760,10 @@ in the same pass. One `git/trees?recursive=1` call per repository, sixteen calls
 | `fleet.yml`, `zizmor.yml`, `openspec.yml` and `.githooks/pre-commit` are one blob across the fleet | A fix applied in one repository and not the other sixteen |
 | The 19 files `openspec init` generates are one blob each, and the SET of their paths is the same everywhere | A partial `openspec update`: the CLI raised in the repository its author was in, forgotten in the other sixteen. A release that adds a seventh command arrives as a missing path rather than a changed one |
 | `openspec/config.yaml` is PRESENT in every repository | The planning root deleted from one. Sameness is not asserted: `context:` names one repository's role, stack and tests |
+| The 66 vendored skill paths are one blob each, and the SET of them is the same, across the 13 repositories whose stack is Rust | A skill edited in place in one repository; a skill added to one and forgotten in the other twelve; a partial `npx skills update` |
+| `skills-lock.json` is one blob across those same 13 | A lockfile raised in one repository without the files it locks, or the reverse |
+| At least 13 repositories carry `.agents/skills/rust-tdd/SKILL.md`, and at least 66 vendored paths exist | The catalogue deleted from one repository, and an update that drops a skill from every repository at once |
+| Every repository with a tracked `Cargo.toml` carries the catalogue | Rust arriving in a repository that never received the skills. It is the late half of the answer, and it is the only half that is checkable: nothing in a tree of documents says which language the first commit will be in |
 | Each of them is present in every repository | A deletion, in a repository where `fleet.yml` itself was the thing deleted |
 | `.githooks/pre-commit` has mode `100755` everywhere | A hook that is committed but inert |
 | `dependabot.yml` is one blob within each of its two classes | The two forms drifting into three |
@@ -788,6 +890,10 @@ Each row is the result of a command that was run against the fleet.
 | A coverage floor per repository, at the value the tree measures today | Not run. `ratatoskr-web` has `@vitest/coverage-v8` installed and could answer in one command. `ratatoskr-platform` cannot answer without a PostgreSQL and a NATS server, so the fleet cannot be measured in one pass today | Deferred rather than rejected. The shape is the one `shadscan --fail-under 69` already uses in `ratatoskr-web`: a floor at today's value fails on a regression and does not fail on work nobody has done yet. What stops it is that a floor is worth adopting only when all three trees can be measured the same way, and two of the three have no number |
 | `cargo-mutants` | Not run | Rejected for now, and it is the most interesting rejection here. It is the only tool that measures whether a test would CATCH a defect, which is precisely what a coverage percentage does not answer and precisely what a test-first rule is for. It is also minutes per mutant, against a workspace whose suite already needs two services. Revisit it on a schedule, the way `advisories.yml` runs, rather than in the gate |
 | A check that the failing test was written before the implementation | Impossible by construction | Rejected. A gate reads the tree, not the hour each line was typed. `git log` cannot answer it either: a test and its implementation land in one commit as often as not, and splitting them in two to satisfy a check is the shape of a rule people work around. What is checkable is the artifact, and two things check it — `openspec validate --archived`, and the step in `fleet.yml` that fails on a manifest whose `ci.yml` never runs a test |
+| Vendoring all 44 Rust skills instead of 18 | 119 files and 1.67 MB per repository, against 67 files and 642 KiB for the eighteen | Rejected. Twenty-six of them have no site in this fleet and the reason for each is listed in [The Rust skill catalogue](#the-rust-skill-catalogue). A skill that cannot fire is a file to re-read on every update |
+| Installing the Rust skills per machine, with `npx skills add --global`, instead of vendoring them | Not adopted | Rejected. It is genuinely one copy, which is what a central catalogue sounds like, but it is invisible to a fresh clone, to a second machine and to review, and nothing can check it. The fleet already carries two per-machine steps and records both as limits; a third that governs how code gets written is worse than 642 KiB of tracked text |
+| A git submodule of `po4yka/rust-skills` instead of vendored copies | Not adopted | Rejected. One pinned SHA rather than 67 paths is a real advantage, and an uninitialised submodule is a silently empty directory: the agent reports nothing and simply has no skills. That is the failure mode this project refuses in a gate, and it is no better in a catalogue |
+| A step in `fleet.yml` asserting that the Rust skills are present | Not added | Rejected. `fleet.yml` is byte-identical in all 17 and four of them legitimately have no Rust, so the step has no condition it can read. `Cargo.toml` is the only Rust signal a repository can see about itself and eleven of the thirteen do not have one yet. The drift check is where it belongs, because it is the one job that sees more than one repository at a time |
 | Asserting that `openspec/config.yaml` is one blob across the fleet | 17 of 17 differ, by design | Rejected. Its `context:` block names one repository's role, its stack and where its tests live. The `rules` and `operations` beneath it ARE identical, and a tree read compares whole blobs and cannot compare a fragment of one. Presence is asserted instead |
 
 ## A cancelled run is a missing verdict
