@@ -49,6 +49,7 @@ All 17 repositories are public. The default branch of each repository is `main`.
 | The fleet gate, `.github/workflows/fleet.yml` | 17 of 17 | Identical file. See [The fleet gate](#the-fleet-gate) |
 | The workflow gate, `.github/workflows/zizmor.yml` | 17 of 17 | Identical file. See [The workflow gate](#the-workflow-gate) |
 | `specs` in `required_status_checks` | 17 of 17 | Added after the name had been published by a real run, and read back on each repository |
+| `delete_branch_on_merge` | 17 of 17 | A merged branch is deleted by GitHub at the merge. See [A merged branch is deleted](#a-merged-branch-is-deleted) |
 | The spec gate, `.github/workflows/openspec.yml` | 17 of 17 | Identical file. See [The spec gate](#the-spec-gate) |
 | `openspec/config.yaml` | 17 of 17 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
 | Size limits in a linter configuration | 3 of 17 | `clippy.toml` in the two with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
@@ -718,6 +719,50 @@ itself](#the-gate-matched-itself-and-the-local-test-could-not-see-it) records th
 tested only against a fixture agrees with the fixture. A planted row in a TSV is not an empty
 repository, and only the real one had a 409 in it.
 
+## A merged branch is deleted
+
+**A branch that has been merged into `main` is deleted. It is not kept.** `delete_branch_on_merge` is
+set on all 17 repositories, so GitHub removes the head branch at the moment the pull request merges,
+and nobody has to remember to.
+
+The rule states what to do about the branches that already existed, too: delete them. Eighty-two of
+them were, in one pass, leaving `main` alone in every repository.
+
+A merged branch holds nothing. Its head is reachable from `main` by definition, so every commit,
+every tree and every blob it names survives the deletion, and `git log` still tells the whole story.
+What it does hold is a name that looks like work in progress. A repository listing sixteen branches
+that are all finished is a list a reader has to check one by one before learning that none of them
+matters, and the pull request that merged each one is the durable record — it keeps the branch name,
+the diff, the discussion and the checks that passed.
+
+### Why this is safe, stated exactly
+
+Two things were verified before anything was deleted, and the second was re-verified for each branch
+immediately before its own `DELETE`:
+
+| Check | Result |
+|---|---|
+| Every branch head reachable from `main` | 82 of 82 compared `identical` or `behind` against `main`. None was `ahead` or `diverged` |
+| Nothing unmerged anywhere in the fleet | 0 branches in 0 repositories |
+
+The re-check per branch is the part worth keeping. A single scan taken up front is a reading of a
+moment, and the fleet has already paid once for trusting one of those — `docs/QUALITY_GATES.md`
+opens by recounting how a repository count taken an hour early was correct when it was taken and
+wrong when it was used. The loop fails closed: a branch whose status reads anything but `identical`
+or `behind`, including an empty answer, is kept and reported rather than deleted.
+
+Locally the same rule uses `git branch -d`, which refuses a branch that is not fully merged. Never
+`-d`'s uppercase form: `AGENTS.md` requires explicit approval for removing an unmerged branch, and
+`-D` is precisely the flag that removes one without asking.
+
+### It does not weaken the `deletion` ruleset rule
+
+The two look like opposites and are not. The ruleset's `deletion` rule has
+`conditions.ref_name.include: ["~DEFAULT_BRANCH"]`, so it protects `main` and nothing else. It was
+confirmed to work on a temporary branch: with the rule the API answers `422 Cannot delete this
+branch`, and without it the same request deletes it. `delete_branch_on_merge` acts on the head branch
+of a merged pull request, which is never `main`. Nothing overlaps.
+
 ## Checks that were measured and rejected
 
 Each row is the result of a command that was run against the fleet.
@@ -860,6 +905,7 @@ gh api -X PUT   "repos/po4yka/<repo>/vulnerability-alerts"
 gh api -X POST  "repos/po4yka/<repo>/rulesets" --input ruleset.json
 gh api -X PUT   "repos/po4yka/<repo>/actions/permissions" \
   -F enabled=true -f allowed_actions=all -F sha_pinning_required=true
+gh api -X PATCH "repos/po4yka/<repo>" -F delete_branch_on_merge=true
 ```
 
 Read each setting back after you write it. A `PATCH` that sets

@@ -275,6 +275,14 @@ Never run or authorize the following without explicit user approval and a verifi
 
 Prefer additive operations and dry-run/status output. Preserve unrelated user changes.
 
+A branch already merged into `main` is the one exception, and it points the other way: delete it.
+`delete_branch_on_merge` is set on all 17 repositories, so GitHub does it at the merge; a branch left
+over from before is deleted by hand. Its head is reachable from `main`, so nothing is lost, and the
+pull request keeps the name, the diff and the checks. Use `git branch -d`, which refuses a branch that
+is not fully merged, and never `-D`, which is the flag that removes one without asking.
+`ratatoskr-workspace/docs/QUALITY_GATES.md` carries the rule and what was measured before it was
+applied.
+
 ## Documentation rules
 
 - Describe current behavior separately from target architecture.
