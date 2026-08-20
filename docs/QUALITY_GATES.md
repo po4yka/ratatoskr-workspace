@@ -48,6 +48,7 @@ All 17 repositories are public. The default branch of each repository is `main`.
 | `sha_pinning_required` for Actions | 17 of 17 | A workflow must pin each action to a commit SHA |
 | The fleet gate, `.github/workflows/fleet.yml` | 17 of 17 | Identical file. See [The fleet gate](#the-fleet-gate) |
 | The workflow gate, `.github/workflows/zizmor.yml` | 17 of 17 | Identical file. See [The workflow gate](#the-workflow-gate) |
+| `specs` in `required_status_checks` | 17 of 17 | Added after the name had been published by a real run, and read back on each repository |
 | The spec gate, `.github/workflows/openspec.yml` | 17 of 17 | Identical file. See [The spec gate](#the-spec-gate) |
 | `openspec/config.yaml` | 17 of 17 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
 | Size limits in a linter configuration | 3 of 17 | `clippy.toml` in the two with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
@@ -101,6 +102,12 @@ the GitHub Actions application, so a check of the same name from another applica
 it. A wrong name here does not fail open — it blocks every pull request forever, which is why a
 control pull request was opened on `ratatoskr-vault` to confirm that GitHub reported
 `mergeStateStatus: CLEAN` against the names as written.
+
+`specs` was added to the rule in all 17 after `openspec.yml` had run once and published the name, and
+each ruleset was read back afterwards rather than trusted to the write. It is safe to require for the
+reason the three below are not: `openspec.yml` triggers on `push` and `pull_request`, so every pull
+request produces it. The pull request that added this paragraph was the control — GitHub reported
+`mergeStateStatus: CLEAN` against the four names as written.
 
 `advisories`, `drift` and `release` are deliberately NOT required. None of them runs on `push` or
 `pull_request`, so requiring one would block every merge and never be satisfied.
@@ -757,6 +764,26 @@ newer to yield to, and a cancelled release is a half-published one.
 
 This mattered less while the checks were advisory. With `required_status_checks` in the ruleset, a
 cancelled run is an absent check rather than a missing note.
+
+### A run that was never created at all
+
+Cancellation is not the only way a commit on `main` ends up with no verdict, and the fleet has now
+seen the other way. Sixteen pull requests were merged within a few minutes of each other on
+2026-08-20. Fifteen produced the expected three or five `push` runs on `main`. `ratatoskr-extractor`
+produced none: its three workflows are `active`, its own pull-request runs had passed minutes
+earlier, and GitHub simply created no run for the merge commit.
+
+The content was not left unaudited, and the distinction is worth keeping. The merge commit's tree is
+`2cc6f37b923320bd6cc9fc9666f183f6499bc8a4`, and that is the same tree the green pull-request runs
+audited — identical object name, so identical content. What is missing is the record against the
+commit on `main`, not the verdict on what it contains.
+
+There is no clean way to obtain the missing run. `fleet.yml`, `zizmor.yml` and `openspec.yml` carry
+`push` and `pull_request` and no `workflow_dispatch`, so nothing can re-ask the question without a new
+commit. The next commit to that repository answers it. Adding `workflow_dispatch` to the three shared
+workflows would make this recoverable, and it is not done here: it is a change to three files in
+seventeen repositories, and it should be decided on its own rather than folded into the change that
+happened to find the problem.
 
 ## Git hooks
 
