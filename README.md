@@ -235,4 +235,24 @@ above references it by name from its own `openspec/config.yaml`. See
 
 ## Project status
 
-Ratatoskr is currently in architectural design and repository bootstrap. Interfaces, commands, and layouts described here are targets, not claims about already implemented functionality.
+The workspace itself is still architectural: `workspace.toml`, `workspace.lock`, the submodules, the
+`ws` CLI and the agent harness described above are targets rather than claims. Everything in this
+README about *this* repository is intent.
+
+The fleet is not. Three of the sixteen product repositories hold code, and one of them is deployed:
+
+| Repository | State |
+|---|---|
+| `ratatoskr-contracts` | Rust. Four crates published — identifiers, event envelope, operation contracts, error contracts. Plan items 5 to 10 unbuilt; **Document IR is among them**. |
+| `ratatoskr-platform` | Rust. All ten milestones. **Running on the deployment target** as three systemd units, serving the first API version, publishing commands to `JetStream`. |
+| `ratatoskr-web` | TypeScript. An early React application with co-located tests. |
+| `extractor`, `knowledge`, `github`, `vault`, `telegram`, `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents, CI and quality gates. No product code. |
+
+The consequence worth stating plainly: **nothing consumes what Platform publishes.** A capture
+accepted on the target becomes an operation and a command on the bus, the command expires unread
+after seven days, and the operation stays `accepted`. The control plane is complete and the system
+does no work.
+
+`ratatoskr-extractor` is the service that closes that loop — its documented input is the command
+Platform already emits. `openspec/changes/unblock-the-first-domain-service/` decides the three
+cross-repository questions that stood in front of it.
