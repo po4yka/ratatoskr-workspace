@@ -37,4 +37,6 @@ Formatting, linting, tests, generated artifacts, manifest/lock consistency, cont
 
 `docs/QUALITY_GATES.md` records which of those gates exist today, in which repository, and what each one measured before it was accepted. It also lists the checks that were rejected, with the reason, so that a later reader does not add them again.
 
+Code size limits are part of that set. A function, a signature, a block and a file each have a maximum, the numbers live in the linter configuration of the repository they govern, and `docs/QUALITY_GATES.md` records each number with the command that measured it. The 13 repositories that hold no code yet enforce nothing today, and `fleet.yml` is what makes that safe: it fails the gate when a `Cargo.toml` arrives without a `clippy.toml`, or a `package.json` without an `eslint.config.js`, so the first code commit cannot land without the file that carries its limits.
+
 Every repository carries `.githooks/pre-commit`. It is inert until a clone runs `git config core.hooksPath .githooks`, and `git commit --no-verify` skips it. Run the command in each clone you work in, and treat the hook as a convenience rather than a control: the gate is CI and the branch ruleset.

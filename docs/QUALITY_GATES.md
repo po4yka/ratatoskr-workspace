@@ -2,7 +2,7 @@
 
 > Status: Implemented  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-19  
+> Last reviewed: 2026-08-20  
 > Related: `DEVELOPMENT.md`, `TESTING.md`, `THREAT_MODEL.md`, `docs/ARCHITECTURE.md` section 11
 
 ## Scope
@@ -48,6 +48,7 @@ All 17 repositories are public. The default branch of each repository is `main`.
 | `sha_pinning_required` for Actions | 17 of 17 | A workflow must pin each action to a commit SHA |
 | The fleet gate, `.github/workflows/fleet.yml` | 17 of 17 | Identical file. See [The fleet gate](#the-fleet-gate) |
 | The workflow gate, `.github/workflows/zizmor.yml` | 17 of 17 | Identical file. See [The workflow gate](#the-workflow-gate) |
+| Size limits in a linter configuration | 3 of 17 | `clippy.toml` in the two with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
 | A repository gate, `.github/workflows/ci.yml` | 3 of 17 | `ratatoskr-contracts`, `ratatoskr-platform` and `ratatoskr-web` |
 | The advisory check, `.github/workflows/advisories.yml` | 2 of 17 | Identical file, in the two repositories with Rust. `ratatoskr-web` audits its own tree in `ci.yml` instead, because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
 | The drift check, `.github/workflows/drift.yml` | 1 of 17 | In `ratatoskr-workspace`, and it reads all 17. See [The drift check](#the-drift-check) |
@@ -254,6 +255,137 @@ between a release and the pull request that proposes it. `zizmor` reports the ab
 
 The cost is visible and worth stating: up to 16 grouped pull requests a month, one per repository,
 each of them one or two SHA bumps with a green gate behind it.
+
+## Size limits
+
+How long a function may be, how many arguments it may take, how deep a block may nest, and how long a
+file may be. Three repositories hold code and each carries these in its own linter configuration. The
+other 14 enforce nothing yet, and one step in the fleet gate is what keeps that from being a hole.
+
+Every number below is the worst case the tree already had when it was written, plus zero or a stated
+margin. That is the same choice as `shadscan --fail-under` in `ratatoskr-web`: a limit set at the
+score a tree already has fails on a regression, and a limit set at an aspiration fails on work that
+has not been done yet. Nothing was refactored to make a number fit, and no number was raised to make
+a build pass.
+
+### The two repositories with Rust
+
+`clippy.toml` in each carries three thresholds. Only one of the three changes behaviour, and saying
+which is the reason the other two are worth writing down at all.
+
+| Limit | Value | Worst case measured | Lint | Already enforced before this? |
+|---|---|---|---|---|
+| Lines in a function | 100 | 98 — `accept`, `crates/public-api/src/captures.rs` (platform). 83 — `lint_type`, `tools/contractsc/src/lint.rs` (contracts) | `clippy::too_many_lines` | Yes. `pedantic` enables it and `-D warnings` makes it fatal. 100 is clippy's own default, written down so that a toolchain bump raising the default cannot loosen these trees silently |
+| Arguments in a signature | 7 | 7 — three functions in platform: `crates/operations/src/lib.rs:258` and `:456`, and `crates/identity/src/relay.rs:48`. 6 in contracts | `clippy::too_many_arguments` | Yes, warn-by-default in `clippy::complexity`. 7 is clippy's default, pinned for the same reason |
+| Block nesting depth | 5 | 5 — nine blocks in platform, two in contracts | `clippy::excessive_nesting` | **No.** The lint is warn-by-default, but its threshold defaults to 0 and 0 disables it. The `clippy.toml` line is what turns the lint on |
+| Lines in a tracked `.rs` file | 850 | 817 — `tools/contractsc/src/compat.rs` (contracts). 716 — `crates/operations/src/lib.rs` (platform) | none; a step in the `gate` job | **No.** Clippy has no file-length lint |
+
+Two properties of `too_many_lines` were measured rather than assumed, because both change what a
+number means. It does not count blank lines or comment-only lines: a function of five statements,
+five blank lines and five comments is silent at a threshold of 10. And clippy fires only when the
+count EXCEEDS the threshold: a ten-line body is silent at 10 and an eleven-line body reports
+`(11/10)`. So a seven-argument function at a threshold of 7 is silent, and the eighth argument is the
+failure.
+
+The worst cases were read out of the diagnostics themselves, which print the count as `(98/10)`,
+after lowering each threshold in `clippy.toml`:
+
+```bash
+cargo clippy --workspace --all-targets --locked --message-format short \
+  -- -W clippy::too_many_lines -W clippy::excessive_nesting
+```
+
+The extra `-W` on the command line is not decoration. It changes the invocation hash, which is what
+forces clippy to re-run after a `clippy.toml` edit. Without it a run can print `Finished` and no
+diagnostics, and the reading is of nothing.
+
+The file-length limit is one line in each `gate` job rather than a script:
+
+```bash
+git ls-files -z "*.rs" | xargs -0 -r wc -l | awk '$2 != "total" && $1 > 850 { print; bad = 1 } END { exit bad }'
+```
+
+`*.rs` only, which is why it needs no exclusion list. `Cargo.lock` at 3920 lines,
+`openapi/openapi.json` at 1261 and `schema.sql` at 1250 are not source, and an exclusion list would
+be a second source of truth that goes stale in silence. The limit exists because the per-function
+thresholds do not imply it, and this is not theoretical here: `crates/operations/src/lib.rs` is 716
+lines across fourteen top-level functions with a longest of 77, so it passes every clippy threshold
+in the repository and is still the largest module in the fleet.
+
+The escape is `#[expect(clippy::too_many_lines, reason = "...")]` at the site, and never a raised
+number — a raised number applies to code nobody has written yet. `expect` and not `allow`: `expect`
+reports `unfulfilled_lint_expectations` once the item drops back under the limit, so the exemption
+deletes itself instead of outliving its reason. The `allow-unwrap-in-tests` family covers none of
+these three lints and `--all-targets` measures test bodies, so a table-driven test that outgrows a
+limit takes the same attribute at the same site.
+
+`ratatoskr-contracts` carries platform's numbers and not its own tighter ones; 83 lines and 6
+arguments would both fit it today. One number per limit across the fleet is cheaper to read than two
+numbers and a footnote explaining the difference, and `clippy.toml` records the tighter values it
+could take.
+
+One function was left alone deliberately, and it is the one with two lines of headroom. `accept` in
+`crates/public-api/src/captures.rs` is 98 lines because it runs six sequential fallible steps in one
+transaction, each with an explicit early-return arm, because that workspace denies `unwrap`, `expect`
+and `panic!`. Splitting it would spread one transaction across several functions. When the limit
+eventually fires there, read the function before shortening it.
+
+### `ratatoskr-web`
+
+`eslint.config.js` carries four rules, all at severity `error`.
+
+| Limit | Value | Worst case measured | Rule |
+|---|---|---|---|
+| Lines in a file | 200 | 184 — `src/components/theme-provider.tsx` | `max-lines` |
+| Lines in a function | 120 | 115 — `ThemeProvider`, in the same file | `max-lines-per-function` |
+| Cyclomatic complexity | 8 | 7 — the keydown handler, in the same file | `complexity` |
+| Parameters | 2 | 2 — `componentDidCatch`, `src/app/error-boundary.tsx`, a signature React defines and this repository cannot change | `max-params` |
+
+`skipBlankLines` and `skipComments` are set for the two line counts. The configuration and the
+components here explain why a value is what it is, and a limit that counted prose would tax the
+practice that makes the tree readable.
+
+`error` and not `warn`, and that is the difference between a gate and the appearance of one. CI runs
+`npm run lint`, which is a bare `eslint .` with no `--max-warnings`. Measured:
+`npx eslint . --rule '{"max-lines-per-function":["warn",1]}'` prints 85 warnings and exits 0, and the
+same rule at `error` exits 1. A size rule at `warn` would report every finding and never fail a
+build, which is worse than no rule.
+
+ESLint's own defaults were not used, and neither one would have worked. `max-lines` defaults to 300,
+which nothing in this tree could reach. `max-lines-per-function` defaults to 50, which fails the tree
+today on `ThemeProvider`.
+
+The three generator-owned directories — `src/components/ui`, `src/components/canvasui` and
+`src/components/aicss` — are exempt from all four, in the same block that already exempts them from
+`react-refresh/only-export-components` and `no-empty`. Canvas UI's `Ripple.tsx` is 550 code lines and
+its `createRipple` is 317, so leaving the rules on would fail the build on five findings in files
+that the next `npm run ui:add:aicss` rewrites. A size finding there also cannot be answered with a
+one-line edit the way `no-empty` can: the answer is a refactor, and the generator undoes it. The
+alternative is setting the standard for hand-written code at the shape of a generated WebGL harness.
+
+### The 14 repositories with no code
+
+They enforce nothing, because there is nothing to enforce. What keeps that from being a hole is one
+step in `fleet.yml`, which is byte-identical in all 17 repositories and sits beside the step that
+already asserts a manifest arrives with its `ci.yml`:
+
+- a tracked `Cargo.toml` requires a tracked `clippy.toml`
+- a tracked `package.json` requires a tracked `eslint.config.*`
+
+The step asserts that the file exists. It cannot read the numbers inside it and does not try — the
+pull request that adds the file is where the numbers are read. That is the ceiling of this control,
+and it is stated in the step itself.
+
+Eleven of the 14 expect Rust and one expects TypeScript, so the assertion covers 12 of them. The gap
+is `ratatoskr-export-agent`, whose first code is Swift, and `ratatoskr-mobile`, whose first code is
+Kotlin and Swift. The fleet has chosen no linter for either language, and choosing `swiftlint` or
+`detekt` for a repository that has not started is the configuration-for-an-unstarted-milestone that
+`ratatoskr-platform`'s own rules refuse. The `DEVELOPMENT.md` in both of those repositories records
+the gap, and the scaffold pull request there names the tool and adds the assertion.
+
+Measured: the step exits 0 in all 17 repositories as they stand. A scratch repository holding a
+`Cargo.toml` and a `package.json` and neither lint file exits 1 and prints both errors. Adding an
+untracked `clippy.toml` to it still exits 1, which is the case the word "tracked" is there for.
 
 ## The fleet gate
 
@@ -482,6 +614,13 @@ Each row is the result of a command that was run against the fleet.
 | `actionlint` | 0 findings across the 20 workflow files, with `shellcheck` 0.11.0 present | Rejected. GitHub refuses invalid workflow YAML before a job starts, and `zizmor` now covers the security surface from a gate rather than from a hand-run command. It is still worth running by hand when a `run:` block is edited: it is the tool that reads those blocks with `shellcheck` |
 | Backticked paths that look like files | 156 findings, 0 real defects | Rejected. The documents name planned files, files in other repositories, a deliberately deleted file, and a template placeholder |
 | `> Status:` vocabulary conformance | 16 findings, 0 real defects | Rejected. All sixteen are the `ARCHITECTURE.md` prose header, which is the same deliberate style in every repository |
+| `clippy::cognitive_complexity` | platform's worst function scores 66 against a default of 25; contracts' worst scores 14 | Rejected. It is a `restriction` lint, so the `clippy.toml` key alone is dead config unless the lint is also named in `[workspace.lints.clippy]`. Clippy's own documentation disowns the metric and points at `too_many_lines` and `excessive_nesting`, both of which are adopted and both of which already flag the same two functions. The 66 is almost entirely early-return arms, a shape the workspace forces by denying `unwrap`, `expect` and `panic!` |
+| Tightening `clippy::type_complexity` below its default of 250 | Worst score 192, `crates/http/tests/public_faults.rs:106` | Rejected. Already enforced at the default and green in both repositories. Every site under a tighter value is test scaffolding, one function pointer in a test helper costs 50 points per nesting level, and platform and contracts would need different numbers |
+| `clippy::large_stack_frames`, and the byte-size threshold family — `enum-variant-size`, `array-size`, `pass-by-value-size-limit`, `trivial-copy-size-limit`, `future-size`, `large-error`, `vec-box-size` | All green at their defaults in both repositories | Rejected. They bound data layout rather than code size. `large_stack_frames` is `nursery`, so a toolchain bump could redden `main` with no code change, and it sums MIR locals — a documented over-count. Three of the byte-size keys have inverted polarity, where a smaller number is the more permissive setting |
+| ESLint `max-statements`, `max-depth`, `max-nested-callbacks`, `max-classes-per-file` | Worst hand-written values 9, 1, 2 and 1 | Rejected. Each measures something `max-lines-per-function` or `complexity` already gates, or cannot fire on anything a React tree plausibly writes — the idiom is early return plus JSX conditionals, so nesting stays at 1. `max-statements` also punishes hook-heavy components structurally, since every `useState` and `useEffect` is one statement. Three gates on one defect is how a limits configuration becomes something people disable |
+| `@typescript-eslint/max-params`, and `eslint-plugin-sonarjs` for cognitive complexity | Not adopted | Rejected. The core `max-params` accepts `countThis` natively on the installed ESLint, so the TypeScript variant would mean disabling the base rule and maintaining two configurations for behaviour the base rule already has. `sonarjs` would be a new dependency to gate a tree whose worst cyclomatic complexity is 7 |
+| A baseline file with a NEW/GREW comparator, as the retired Python repository used for files over 1500 LOC and classes over 1000 | The baseline would hold zero entries: every number adopted here is at or above today's worst case | Rejected. That machinery exists to grandfather violations that already exist, and there are none. It is also a second source of truth that goes stale in silence, and it can re-grandfather a function that was refactored and then regressed. `#[expect]` and `eslint-disable ... -- reason` grandfather per site, beside the code the reviewer is reading, and expire by themselves |
+| A `.rs` file-length limit at the conventional 1000 | Worst file 817 lines, so 183 lines of headroom | Rejected at 1000 and adopted at 850. A limit that cannot fire on plausible near-future code is decoration |
 
 ## A cancelled run is a missing verdict
 
