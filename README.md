@@ -25,6 +25,7 @@ It is responsible for:
 - describing repository dependencies, commands, profiles, and contract relationships;
 - creating isolated task-specific Git worktrees;
 - coordinating cross-repository changesets and pull requests;
+- holding the OpenSpec store the whole fleet plans against;
 - running system-level integration and restore tests;
 - generating shared Claude Code and Codex configuration;
 - producing reproducible deployment and release snapshots.
@@ -204,6 +205,12 @@ Planned profiles:
 | `ratatoskr-export-agent` | Local macOS ingestion of provider export archives |
 | `ratatoskr-browser-extension` | Explicit browser capture without provider cookie access |
 | `ratatoskr-mobile` | Android/iOS sharing, offline capture queue, and mobile experience |
+
+This repository is the seventeenth. Besides the responsibilities above it is the OpenSpec store,
+under the id `ratatoskr-workspace`: `openspec/specs/` holds the behaviour more than one repository
+can see, and `openspec/changes/` holds the cross-repository work in motion. Each of the sixteen
+above references it by name from its own `openspec/config.yaml`. See
+`docs/adr/0008-openspec-and-test-first.md`.
 
 ## Non-negotiable invariants
 
