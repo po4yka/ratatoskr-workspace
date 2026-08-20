@@ -2,7 +2,7 @@
 
 > Status: Accepted  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-19 (revised the same day, from installing on the machine)
+> Last reviewed: 2026-08-20 (revised from the development-status decision; no host fact re-verified)
 
 Ratatoskr runs on **one machine**, and there will not be a second one. This document is the
 canonical description of that machine and the contracts that depend on it: the storage layout, the
@@ -78,10 +78,10 @@ rather than a precaution:
   and the two journald drop-ins disagree (`SystemMaxUse=500M` on a 128 MiB filesystem). A service
   writing JSON to stdout at volume either fills it or forces a flush onto the boot device. Write logs
   to `/mnt/nvme/ratatoskr/logs` and rotate them, or bound the unit's journald use explicitly.
-- **Start ordering is load-bearing.** Only one process applies migrations; the others check the
-  schema and refuse to start without it. An `After=`/`Requires=` chain is required, and
-  `StartLimitIntervalSec=`/`StartLimitBurst=` must be loose enough that the first boot after a schema
-  change does not latch a dependent unit into `failed` with nothing to retry it.
+- **Start ordering is load-bearing.** Only one process applies the schema; the others check it and
+  refuse to start without it. An `After=`/`Requires=` chain is required, and
+  `StartLimitIntervalSec=`/`StartLimitBurst=` must be loose enough that the first boot on a fresh
+  database does not latch a dependent unit into `failed` with nothing to retry it.
 - **`Type=exec`, never `Type=notify`.** No Ratatoskr binary calls `sd_notify`, so `notify` would time
   out and kill a healthy process, and `WatchdogSec=` would `SIGABRT` it on the first interval.
 
@@ -313,6 +313,11 @@ that changed in this document is marked above; what it proved is:
   read anything in `identity`;
 - the dump restores, on this cluster, into an ICU-collated scratch database with every constraint
   and index intact.
+
+Two of those bullets name things that have changed since. The public paths are now `/v1`, and the
+migration ledger is now one `schema.sql`. The bullets keep the names the run used, because this
+evidence describes the arrangement as it stood on 2026-08-19 and not the one the repositories carry
+today. A verification is only evidence for the arrangement it was performed on.
 
 Measured while it ran, which closes a guess this document has carried since it was written: the
 three services use **3, 2 and 2 MiB** of resident memory serving traffic, and NATS 7 MiB. The

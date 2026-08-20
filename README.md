@@ -1,10 +1,21 @@
 # Ratatoskr Workspace
 
-`ratatoskr-workspace` is the coordination repository for Ratatoskr Next: a self-hosted, multi-repository platform for capturing, extracting, analysing, searching, and backing up personal knowledge from the web, GitHub, social networks, Telegram, ChatGPT, and Claude.
+`ratatoskr-workspace` is the coordination repository for Ratatoskr: a self-hosted, multi-repository platform for capturing, extracting, analysing, searching, and backing up personal knowledge from the web, GitHub, social networks, Telegram, ChatGPT, and Claude.
 
 > **Status:** architecture bootstrap. This repository currently defines the intended operating model; the workspace CLI, submodules, integration environment, and agent harness will be introduced incrementally.
 
-## Role in Ratatoskr Next
+> [!IMPORTANT]
+> **Ratatoskr is in development.** No database holds data that has to survive a schema change.
+> While this status holds, these two rules replace what the documents below plan:
+>
+> - the API and the database keep their first version. There is no `v2` and no later major
+>   version.
+> - the database has no migrations. One schema definition exists, and a schema change edits it in
+>   place.
+>
+> Only the repository owner changes this status.
+
+## Role in Ratatoskr
 
 Ratatoskr is intentionally split into independent repositories and bounded contexts. This repository gives that distributed codebase the useful properties of a monorepo without merging component histories or release lifecycles.
 
@@ -217,4 +228,4 @@ Planned profiles:
 
 ## Project status
 
-Ratatoskr Next is currently in architectural design and repository bootstrap. Interfaces, commands, and layouts described here are targets, not claims about already implemented functionality.
+Ratatoskr is currently in architectural design and repository bootstrap. Interfaces, commands, and layouts described here are targets, not claims about already implemented functionality.
