@@ -1,7 +1,7 @@
 # Workspace ADRs
 
 > Status: Proposed  
-> Last reviewed: 2026-08-17
+> Last reviewed: 2026-08-20
 
 Use `docs/adr/NNNN-short-title.md`. Status values: Proposed, Accepted, Rejected, Deprecated, or Superseded.
 
@@ -16,3 +16,7 @@ Each ADR contains context, decision drivers, considered options, decision, conse
 - ADR-0005: Neutral agent-kit and generated Claude/Codex configuration.
 - ADR-0006: Changeset lifecycle and release snapshot semantics.
 - ADR-0007: Read-only-first workspace MCP boundary.
+
+## Accepted
+
+- [ADR-0008](0008-openspec-and-test-first.md): OpenSpec as the planning layer, and a test-first task shape.

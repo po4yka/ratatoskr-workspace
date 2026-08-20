@@ -1,0 +1,68 @@
+schema: spec-driven
+
+context: |
+  This repository is the OpenSpec store for the Ratatoskr fleet. It holds the behaviour that more
+  than one repository can see: the shape of a contract, the meaning of a field, the order in which a
+  change must reach the repositories, and what a consumer may rely on. Behaviour internal to one
+  repository belongs in that repository's own openspec/, not here.
+
+  The fleet is seventeen repositories: sixteen product repositories plus this one. Three hold code
+  today — ratatoskr-contracts and ratatoskr-platform in Rust, ratatoskr-web in TypeScript. The other
+  fourteen hold documents only. A change may therefore describe behaviour for a repository that has
+  no code yet; that is the normal case here, not an error.
+
+  Dependency order, from AGENTS.md: contracts, then backward-compatible consumers, then producers,
+  then clients, then the integration environment, then the workspace pins. A different order is valid
+  only when the proposal explains why compatibility stays safe.
+
+  Development status, binding and overriding anything that plans otherwise: one version only — no v2,
+  no version negotiation, no deprecation window; no database migrations — a schema change edits the
+  schema definition in place; the product is Ratatoskr and never "Ratatoskr Next". Only the
+  repository owner changes this status.
+
+  docs/QUALITY_GATES.md is the source of truth for which gate exists in which repository and what
+  each one measured. docs/ARCHITECTURE.md, docs/REQUIREMENTS.md and docs/adr/ are source material for
+  exploration. Do not copy them into specs; a spec here grows from a change that needed it.
+
+  Artefacts are written in English.
+
+rules:
+  proposal:
+    - List every repository the change touches, in dependency order, and say which one must merge
+      first.
+    - Name what stays outside the change.
+    - State the rollback, and say plainly when there is none because nothing has shipped yet.
+  specs:
+    - Describe behaviour at the boundary between repositories, never the implementation inside one.
+    - Every scenario must be executable as a test. If you cannot name the test it becomes, the
+      scenario is too vague to accept.
+    - Scenarios use WHEN and THEN. State the observable outcome, never the implementation that
+      produces it.
+    - Write the requirement so that a consumer of the contract can check it from the outside.
+  tasks:
+    - A section named "Implementation by repository" carries one item per affected repository, in
+      dependency order.
+    - A repository's item closes only after its pull request merges, and it carries the link to that
+      pull request. OpenSpec does not route tasks to repositories, so this list is the only place the
+      completeness of a cross-repository change is visible.
+    - A task that changes behaviour is a pair. The first task adds a test that fails. The second
+      makes it pass. Never one task that does both.
+    - The failing-test task names the file, the test name, and the assertion that must fail.
+    - A refactor task comes only after the tests are green. It adds no test and changes no behaviour.
+    - A task that cannot start from a failing test states why in one line. Configuration,
+      documentation and generated files are the usual reasons.
+
+operations:
+  apply:
+    guidance:
+      - There is no code in this repository. Implementation happens through local changes in the
+        repositories the task list names, not here.
+      - Run the new test before you write the implementation. Confirm it fails for the reason the
+        task states, and not for a compile error or a typo.
+      - Run the command list in the affected repository's DEVELOPMENT.md before its item is complete.
+      - Do not tick a task whose test has not been run.
+  archive:
+    guidance:
+      - Do not archive while any item of "Implementation by repository" is open.
+      - Do not archive while any task is unticked. The openspec workflow fails on that in CI, and
+        finding it there costs a round trip.

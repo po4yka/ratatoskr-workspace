@@ -1,0 +1,3 @@
+version: 1
+id: ratatoskr-workspace
+remote: git@github.com:po4yka/ratatoskr-workspace.git

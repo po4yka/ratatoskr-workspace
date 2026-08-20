@@ -48,6 +48,8 @@ All 17 repositories are public. The default branch of each repository is `main`.
 | `sha_pinning_required` for Actions | 17 of 17 | A workflow must pin each action to a commit SHA |
 | The fleet gate, `.github/workflows/fleet.yml` | 17 of 17 | Identical file. See [The fleet gate](#the-fleet-gate) |
 | The workflow gate, `.github/workflows/zizmor.yml` | 17 of 17 | Identical file. See [The workflow gate](#the-workflow-gate) |
+| The spec gate, `.github/workflows/openspec.yml` | 17 of 17 | Identical file. See [The spec gate](#the-spec-gate) |
+| `openspec/config.yaml` | 17 of 17 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
 | Size limits in a linter configuration | 3 of 17 | `clippy.toml` in the two with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
 | A repository gate, `.github/workflows/ci.yml` | 3 of 17 | `ratatoskr-contracts`, `ratatoskr-platform` and `ratatoskr-web` |
 | The advisory check, `.github/workflows/advisories.yml` | 2 of 17 | Identical file, in the two repositories with Rust. `ratatoskr-web` audits its own tree in `ci.yml` instead, because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
@@ -92,7 +94,8 @@ Measured on `ratatoskr-vault` before the fleet-wide change, in this order:
 | `+ bypass for the administrator role` | accepted, with the bypass printed |
 
 The required check names are the names GitHub publishes for the jobs, not the workflow names:
-`invariants` from `fleet.yml`, `audit` from `zizmor.yml`, and in the two repositories with code
+`invariants` from `fleet.yml`, `audit` from `zizmor.yml`, `specs` from `openspec.yml`, and in the
+two repositories with code
 `gate` and, in `ratatoskr-platform`, `linux/arm64 artifact`. Each is pinned to integration 15368,
 the GitHub Actions application, so a check of the same name from another application cannot satisfy
 it. A wrong name here does not fail open — it blocks every pull request forever, which is why a
@@ -393,7 +396,7 @@ Each repository runs `.github/workflows/fleet.yml`. The file is identical in all
 nothing and uses one action, so it has no supply-chain surface beyond the checkout and it cannot fail
 for a reason that has nothing to do with the tree.
 
-Six steps, and each one fails only when something is really wrong:
+Seven steps, and each one fails only when something is really wrong:
 
 | Step | The failure it catches |
 |---|---|
@@ -402,7 +405,8 @@ Six steps, and each one fails only when something is really wrong:
 | No CRLF in a tracked text file | A blob written past the `.gitattributes` filter, which is what a commit through the web editor or the contents API does |
 | No credential in a tracked file | A password in a URL, or a private key, anywhere in the tree |
 | Every workflow pins each third-party action to a commit SHA | A moving ref in a workflow that `push` and `pull_request` never trigger, or a nested `uses:` in a composite action |
-| Code cannot land without a gate | A manifest arrives and no `ci.yml` arrives with it |
+| Code cannot land without a gate | A manifest arrives and no `ci.yml` arrives with it, or a `ci.yml` that never runs a test |
+| Code cannot land without its size limits | A `Cargo.toml` with no `clippy.toml`, or a `package.json` with no `eslint.config.*` |
 
 The last step deserves its name. It is not a second gate: it asserts that a gate exists. An earlier
 draft tried to BE the gate, by running the Rust commands itself. That draft knew only `Cargo.toml`, so
@@ -523,6 +527,112 @@ images in `ratatoskr-platform` are therefore outside it and stay on a tag:
 This is recorded rather than fixed. A pin that no gate reads is a pin that rots, which is the failure
 this fleet already documents for action pins, so adding one here would buy less than it looks.
 
+## The spec gate
+
+Each repository runs `.github/workflows/openspec.yml`. The file is identical in all seventeen. It
+checks the OpenSpec artifacts: the specs that say what the system does, and the changes in motion
+against them. `docs/adr/0008-openspec-and-test-first.md` records why the fleet plans this way.
+
+Where the artifacts live: `ratatoskr-workspace` is the store, under the id `ratatoskr-workspace`, and
+holds behaviour more than one repository can see. Each of the other sixteen has its own `openspec/`
+root and references the store by name. `openspec/specs/` started empty in all seventeen and grows one
+change at a time; the nine documents each repository already had were deliberately NOT converted, for
+the reason the ADR gives.
+
+Two commands, and the second is the one that earns the file:
+
+| Command | The failure it catches |
+|---|---|
+| `openspec validate --all --strict` | A malformed proposal, spec or task list. `--strict` makes a warning fatal, and a change carrying no spec delta fails unless its `.openspec.yaml` declares `skip_specs: true` |
+| `openspec validate --archived` | A change archived with a task still unticked. Archiving is what folds a delta into the specs, so this is a spec claiming behaviour that nothing proved |
+
+Both halves of the second one were measured, on a change whose task list is the pair this fleet
+requires — `1.1 Add a failing test ...`, `1.2 Make it pass`. With `1.2` unticked the command reports
+`1 incomplete task (1/2 completed)` and exits 1. With it ticked the same change passes and the
+command exits 0. That is the whole of what CI can say about test-first, and it is worth more than it
+looks: the pair shape means an unticked second task is an implementation that was never written, and
+an unticked first task is a test that was never run.
+
+### Why it runs in the fourteen repositories that have no specs yet
+
+Because it answers correctly there, which was measured rather than assumed. Against an OpenSpec root
+with no specs and no changes, `openspec validate --all --strict` prints `No items found to validate`
+and exits 0, and `openspec validate --archived` prints `No archived changes found` and exits 0. One
+identical file therefore works everywhere, and a repository is gated from the commit that writes its
+first spec rather than from a later commit that remembers to add the workflow.
+
+### Why it is a separate file from the fleet gate
+
+The same reason `zizmor.yml` is separate, and it is the reason `fleet.yml` exists in the form it
+does: `fleet.yml` installs nothing, so it cannot fail for a reason that has nothing to do with the
+tree. `openspec` is an npm package and needs Node. Two files means the check name says which of the
+two failed, and a network fault reddens `specs` and never `invariants`.
+
+### The version is pinned, and here that is load-bearing
+
+`@fission-ai/openspec@1.10.0`, pinned in the workflow the way `zizmor` is pinned to `1.29.0`.
+Dependabot moves an action SHA and does not move this input. Stores — the mechanism the fleet plans
+with — are a beta feature whose flags, file formats and JSON keys may change between releases, so an
+unpinned CLI could change the meaning of the gate without a commit here. Raising it is one commit in
+seventeen repositories, and the drift check is what says so.
+
+### What it does not do
+
+It reads the artifacts, not the code. Nothing here asserts that a spec is true of the implementation,
+that a scenario has a test, or that the test was written first. The last of those is not a gap that
+better tooling closes — see the rejected table below.
+
+`openspec/config.yaml` is the other half of this control and is not a check at all. Its `rules` and
+`operations.apply.guidance` state the test-first task shape, and OpenSpec injects them into every
+planning and implementation request. That is a rule an agent is given at the moment it plans, rather
+than one it could have read. It is advisory by construction: no exit code stands behind it.
+
+### Measured before it was turned on
+
+`openspec init` generates nineteen files per repository — six commands under `.claude/commands/opsx/`,
+six skills under `.claude/skills/openspec-*/`, six under `.agents/skills/openspec-*/` for Codex, and
+`.agents/skills/.openspec-target`. Every one of them is markdown.
+
+That made one measurement necessary before anything was committed, and it is the lesson [the gate
+matched itself](#the-gate-matched-itself-and-the-local-test-could-not-see-it) already paid for once:
+a gate that scans the repository must be tested against a tree that already contains the new files.
+`fleet.yml`'s CRLF step, credential step and private-key step were run against a tree carrying all
+nineteen. All three passed, and no file in the set holds a base64 run long enough for the private-key
+body test to consider it.
+
+`openspec store setup` was measured too, and rejected in favour of two smaller steps. It works on a
+non-empty Git repository, but it makes its own commit, with the subject
+`Initialize OpenSpec store <id>` — not a Conventional Commits subject, and not one this fleet would
+have written. `.openspec-store/store.yaml` is three lines; writing it by hand and running
+`openspec store register . --id ratatoskr-workspace` produces the same result and commits nothing.
+
+### The one suppression, and why it is not a raised threshold
+
+`zizmor --persona pedantic --min-severity low` reports one finding on this file: `adhoc-packages`,
+low severity, on the `npm install --global` line. The workflow gate runs at exactly that severity, so
+the finding would turn all seventeen repositories red, and it was found by running zizmor over the
+new file before it was committed rather than by a first red run.
+
+The audit asks for a lockfile. There is no way to have one here: a lockfile needs a `package.json`,
+and a tracked `package.json` makes `fleet.yml` demand an `eslint.config.*` in fourteen repositories
+that have no code to lint. The property the audit protects is that what executes is a known version,
+and `@fission-ai/openspec@1.10.0` is exactly that — the same pin, in the same form, as
+`version: 1.29.0` in `zizmor.yml`.
+
+So the line carries `# zizmor: ignore[adhoc-packages]` with the reason written beside it, in the same
+spirit as `#[expect(clippy::too_many_lines, reason = "...")]` at a site rather than a raised number in
+`clippy.toml`. A raised threshold would apply to findings nobody has seen yet; this applies to one
+line. With it in place, zizmor reports nothing across every workflow in every class of repository in
+the fleet.
+
+### The known limit, and it is the same shape as the hooks
+
+Registering a store is per-machine state. It lives in `~/.local/share/openspec`, not in any
+repository, so a fresh clone, a second machine and a CI checkout each know nothing about it — exactly
+like `git config core.hooksPath .githooks`. A clone that has not registered resolves `references:` to
+nothing, and `openspec doctor` reports it with a pasteable fix. `DEVELOPMENT.md` in every repository
+carries the two commands.
+
 ## The drift check
 
 Four files are the same file in every repository, and until now nothing noticed when they stopped
@@ -541,7 +651,9 @@ in the same pass. One `git/trees?recursive=1` call per repository, sixteen calls
 
 | Assertion | The failure it catches |
 |---|---|
-| `fleet.yml`, `zizmor.yml` and `.githooks/pre-commit` are one blob across the fleet | A fix applied in one repository and not the other fifteen |
+| `fleet.yml`, `zizmor.yml`, `openspec.yml` and `.githooks/pre-commit` are one blob across the fleet | A fix applied in one repository and not the other sixteen |
+| The 19 files `openspec init` generates are one blob each, and the SET of their paths is the same everywhere | A partial `openspec update`: the CLI raised in the repository its author was in, forgotten in the other sixteen. A release that adds a seventh command arrives as a missing path rather than a changed one |
+| `openspec/config.yaml` is PRESENT in every repository | The planning root deleted from one. Sameness is not asserted: `context:` names one repository's role, stack and tests |
 | Each of them is present in every repository | A deletion, in a repository where `fleet.yml` itself was the thing deleted |
 | `.githooks/pre-commit` has mode `100755` everywhere | A hook that is committed but inert |
 | `dependabot.yml` is one blob within each of its two classes | The two forms drifting into three |
@@ -621,6 +733,10 @@ Each row is the result of a command that was run against the fleet.
 | `@typescript-eslint/max-params`, and `eslint-plugin-sonarjs` for cognitive complexity | Not adopted | Rejected. The core `max-params` accepts `countThis` natively on the installed ESLint, so the TypeScript variant would mean disabling the base rule and maintaining two configurations for behaviour the base rule already has. `sonarjs` would be a new dependency to gate a tree whose worst cyclomatic complexity is 7 |
 | A baseline file with a NEW/GREW comparator, as the retired Python repository used for files over 1500 LOC and classes over 1000 | The baseline would hold zero entries: every number adopted here is at or above today's worst case | Rejected. That machinery exists to grandfather violations that already exist, and there are none. It is also a second source of truth that goes stale in silence, and it can re-grandfather a function that was refactored and then regressed. `#[expect]` and `eslint-disable ... -- reason` grandfather per site, beside the code the reviewer is reading, and expire by themselves |
 | A `.rs` file-length limit at the conventional 1000 | Worst file 817 lines, so 183 lines of headroom | Rejected at 1000 and adopted at 850. A limit that cannot fire on plausible near-future code is decoration |
+| A coverage floor per repository, at the value the tree measures today | Not run. `ratatoskr-web` has `@vitest/coverage-v8` installed and could answer in one command. `ratatoskr-platform` cannot answer without a PostgreSQL and a NATS server, so the fleet cannot be measured in one pass today | Deferred rather than rejected. The shape is the one `shadscan --fail-under 69` already uses in `ratatoskr-web`: a floor at today's value fails on a regression and does not fail on work nobody has done yet. What stops it is that a floor is worth adopting only when all three trees can be measured the same way, and two of the three have no number |
+| `cargo-mutants` | Not run | Rejected for now, and it is the most interesting rejection here. It is the only tool that measures whether a test would CATCH a defect, which is precisely what a coverage percentage does not answer and precisely what a test-first rule is for. It is also minutes per mutant, against a workspace whose suite already needs two services. Revisit it on a schedule, the way `advisories.yml` runs, rather than in the gate |
+| A check that the failing test was written before the implementation | Impossible by construction | Rejected. A gate reads the tree, not the hour each line was typed. `git log` cannot answer it either: a test and its implementation land in one commit as often as not, and splitting them in two to satisfy a check is the shape of a rule people work around. What is checkable is the artifact, and two things check it — `openspec validate --archived`, and the step in `fleet.yml` that fails on a manifest whose `ci.yml` never runs a test |
+| Asserting that `openspec/config.yaml` is one blob across the fleet | 17 of 17 differ, by design | Rejected. Its `context:` block names one repository's role, its stack and where its tests live. The `rules` and `operations` beneath it ARE identical, and a tree read compares whole blobs and cannot compare a fragment of one. Presence is asserted instead |
 
 ## A cancelled run is a missing verdict
 
@@ -888,6 +1004,17 @@ Add these files in the same pull request as the first `Cargo.toml`, and not befo
 - `.github/workflows/advisories.yml`, copied UNCHANGED from either repository that has it;
 - `.github/dependabot.yml` for the `github-actions` ecosystem, in the form the two Rust
   repositories already use — it differs from the one every other repository has.
+
+That `ci.yml` must run the tests. A step in `fleet.yml` fails a repository that has a manifest and a
+`ci.yml` with no test invocation in it, for the same reason the step beside it fails a `Cargo.toml`
+with no `clippy.toml`: every `openspec/config.yaml` in this fleet tells an agent to write the
+failing test first, and a rule with nothing behind it in CI is a rule that decays. The step reads
+for an invocation and not for a passing or a useful test — the pull request is where those are read.
+
+Nothing about OpenSpec arrives with the first code. `openspec/`, `openspec/config.yaml` and
+`.github/workflows/openspec.yml` are already in all seventeen repositories, because planning is what
+a repository with no code has most of. What the first code commit adds to `openspec/config.yaml` is
+one line in its `context:` naming where the tests now live.
 
 `advisories.yml` is not optional and is not a matter of taste: the drift check asserts that every
 repository holding a `Cargo.toml` has it and that the file is identical in all of them, so a first
