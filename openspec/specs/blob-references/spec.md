@@ -1,6 +1,11 @@
 # Stored bytes across repositories
 
-## ADDED Requirements
+## Purpose
+
+Defines how services exchange durable artifact references while preserving byte integrity and
+service ownership without introducing a shared blob service.
+
+## Requirements
 
 ### Requirement: A blob is named by a reference, not served by a service
 

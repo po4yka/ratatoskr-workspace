@@ -1,5 +1,10 @@
 # Document IR at the repository boundary
 
+## Purpose
+
+Defines the canonical document shape that extraction produces and analysis consumes across a
+repository boundary, including ordered content and provenance.
+
 ## ADDED Requirements
 
 ### Requirement: Version one is the shared intersection

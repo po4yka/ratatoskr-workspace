@@ -1,5 +1,10 @@
 # Operation progress across repositories
 
+## Purpose
+
+Defines how domain services report work to Platform and how Platform owns the complete operation
+snapshot exposed to clients.
+
 ## ADDED Requirements
 
 ### Requirement: A producer reports only what it knows
