@@ -33,8 +33,8 @@ carries the link. This list is the only place the completeness of the change is 
 
 - [ ] 3.1 Add a failing test asserting that a consumed `content.capture.requested.v1` produces one `platform.operation.reported.v1` naming the same operation. It fails because nothing consumes the command.
 - [ ] 3.2 Consume the command and emit the report through the outbox. Make 3.1 pass.
-- [ ] 3.3 Add a failing test asserting a stored artifact is announced by a `BlobRef` whose digest matches the bytes on disk. It fails because nothing stores an artifact.
-- [ ] 3.4 Store the artifact under the service's own content-addressed path and announce it by reference. Make 3.3 pass.
+- [x] 3.3 Add a failing test asserting a stored artifact is announced by a `BlobRef` whose digest matches the bytes on disk. It fails because nothing stores an artifact.
+- [x] 3.4 Store the artifact under the service's own content-addressed path and announce it by reference. Make 3.3 pass.
 
 ## Out of this change
 
