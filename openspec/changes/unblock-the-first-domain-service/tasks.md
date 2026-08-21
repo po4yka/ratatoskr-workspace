@@ -10,7 +10,7 @@ carries the full SHA. This list is the only place the completeness of the change
 - [x] 2. `ratatoskr-platform` — the projection reads the published contract.
   Commit: `88cea07ae6692ece10b208b08c7f5d07c6fd6209`
 - [x] 3. `ratatoskr-extractor` — consumes the command, emits a domain event and a report.
-  Commit: `538a480caddd7e107449ec12bdf4d4729c8df1f7`
+  Commit: `c435bb77634006d0e713693bd29694f33f0f0fc6`
 
 ## 1. ratatoskr-contracts
 
