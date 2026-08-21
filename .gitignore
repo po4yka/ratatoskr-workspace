@@ -10,6 +10,7 @@ target/
 
 # Local agent configuration overrides
 .claude/settings.local.json
+.omc/
 
 # Local environment and secrets
 .env
