@@ -239,19 +239,23 @@ The workspace itself is still architectural: `workspace.toml`, `workspace.lock`,
 `ws` CLI and the agent harness described above are targets rather than claims. Everything in this
 README about *this* repository is intent.
 
-The fleet is not. Three of the sixteen product repositories hold code, and one of them is deployed:
+The fleet is not. Three of the sixteen product repositories hold code:
 
 | Repository | State |
 |---|---|
 | `ratatoskr-contracts` | Rust. Four crates published — identifiers, event envelope, operation contracts, error contracts. Plan items 5 to 10 unbuilt; **Document IR is among them**. |
-| `ratatoskr-platform` | Rust. All ten milestones. **Running on the deployment target** as three systemd units, serving the first API version, publishing commands to `JetStream`. |
+| `ratatoskr-platform` | Rust. All ten milestones: an API, an outbox and inbox, a scheduler, and a single-host deployment profile. It was installed on the target once to prove the vertical slice; that host is now frozen and what runs on it is older than `main`. |
 | `ratatoskr-web` | TypeScript. An early React application with co-located tests. |
 | `extractor`, `knowledge`, `github`, `vault`, `telegram`, `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents, CI and quality gates. No product code. |
 
 The consequence worth stating plainly: **nothing consumes what Platform publishes.** A capture
-accepted on the target becomes an operation and a command on the bus, the command expires unread
-after seven days, and the operation stays `accepted`. The control plane is complete and the system
-does no work.
+becomes an operation and a command on the bus, the command expires unread after seven days, and the
+operation stays `accepted`. The control plane is complete and the system does no work.
+
+Which is why the deployment target is frozen and stays that way until a service exists to run on
+it. `docs/DEPLOYMENT_TARGET.md` describes the machine as a performance budget for the code being
+written now — four Cortex-A76 cores, 15 GiB, 16 KiB pages, one NVMe — and not as an environment
+anyone operates.
 
 `ratatoskr-extractor` is the service that closes that loop — its documented input is the command
 Platform already emits. `openspec/changes/unblock-the-first-domain-service/` decides the three

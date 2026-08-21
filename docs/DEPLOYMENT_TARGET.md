@@ -4,6 +4,12 @@
 > Owner: `ratatoskr-workspace`  
 > Last reviewed: 2026-08-20 (revised from the development-status decision; no host fact re-verified)
 
+> **The host is frozen as of 2026-08-21.** Nothing is deployed to it, nothing on it is changed, and
+> the drift between it and `main` is not tracked. The machine remains in scope for exactly one
+> purpose: it is the performance budget every service must fit. Read the table below as a
+> constraint on code being written, not as an environment to operate. The freeze lifts only when
+> the owner says so.
+
 Ratatoskr runs on **one machine**, and there will not be a second one. This document is the
 canonical description of that machine and the contracts that depend on it: the storage layout, the
 port allocations, and who supervises what. Every repository's `AGENTS.md` carries a short
