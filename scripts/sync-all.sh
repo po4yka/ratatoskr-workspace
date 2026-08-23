@@ -8,8 +8,8 @@ failed=()
 sync() {
   local repo=$1
   echo "==> $repo"
-  if [[ -n "$(git -C "$repo" status --porcelain)" ]]; then
-    echo "    skipped: uncommitted changes"
+  if [[ -n "$(git -C "$repo" status --porcelain -uno)" ]]; then
+    echo "    skipped: uncommitted tracked changes"
     failed+=("$repo (dirty)")
     return
   fi
