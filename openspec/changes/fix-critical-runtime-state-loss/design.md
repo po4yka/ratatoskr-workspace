@@ -46,6 +46,5 @@ Rollback each child by reverting its commit and recreating the development datab
 ## Observed verification
 
 - `ratatoskr-platform` commit `c533ad7f0b4621070cec9075d933d0e2725e01d2` is on remote `main`. Its complete documented local gate and all four GitHub workflows passed.
-- `ratatoskr-telegram` commit `69ea5d3b04c438ca4cefee69c7ce833ac4aa79e5` is on remote `main`. Dependency policy, formatting, source-size limit, debug and release builds, the complete workspace test suite, and the focused persistence and restart suites passed.
-- Telegram's complete Clippy gate remains blocked by pre-existing lints already present in base commit `ee3e462d8efbe516e3b18e5480a654efbb3c0985` and its failed CI run `32573155310`. This change adds no lint suppression; its affected persistence crate passes Clippy, and the runtime behavior is covered by the green database-backed tests above.
+- `ratatoskr-telegram` durability commit `69ea5d3b04c438ca4cefee69c7ce833ac4aa79e5` and gate-recovery commit `fee55974e63897b81afec86fefdde797fe9f4b96` are on remote `main`. The complete documented local gate and all four GitHub workflows passed, including the full Clippy gate. The inherited violations were corrected directly without lint suppression or policy changes.
 - No frozen-host deployment, provider registration, database migration, contract version, or workspace pin changed.
