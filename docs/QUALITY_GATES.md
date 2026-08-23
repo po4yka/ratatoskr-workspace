@@ -2,7 +2,7 @@
 
 > Status: Implemented  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-20  
+> Last reviewed: 2026-08-23
 > Related: `DEVELOPMENT.md`, `TESTING.md`, `THREAT_MODEL.md`, `docs/ARCHITECTURE.md` section 11
 
 ## Scope
@@ -54,9 +54,9 @@ All 17 repositories are public. The default branch of each repository is `main`.
 | `openspec/config.yaml` | 17 of 17 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
 | `skills-lock.json` | 14 of 17 | The `skills` CLI lockfile. Identical in the 13 whose stack is Rust; `ratatoskr-web` has its own, for design skills |
 | The Rust skill catalogue, `.agents/skills/` | 13 of 17 | 18 skills vendored from `po4yka/rust-skills`, identical in every repository whose stack is Rust. See [The Rust skill catalogue](#the-rust-skill-catalogue) |
-| Size limits in a linter configuration | 3 of 17 | `clippy.toml` in the two with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
-| A repository gate, `.github/workflows/ci.yml` | 3 of 17 | `ratatoskr-contracts`, `ratatoskr-platform` and `ratatoskr-web` |
-| The advisory check, `.github/workflows/advisories.yml` | 2 of 17 | Identical file, in the two repositories with Rust. `ratatoskr-web` audits its own tree in `ci.yml` instead, because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
+| Size limits in a linter configuration | 8 of 17 | `clippy.toml` in the seven with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
+| A repository gate, `.github/workflows/ci.yml` | 8 of 17 | The seven Rust repositories and `ratatoskr-web` |
+| The advisory check, `.github/workflows/advisories.yml` | 3 of 17 | Present in Contracts, Extractor and Platform. The four newer Rust repositories are a known drift gap. `ratatoskr-web` audits its own tree in `ci.yml` because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
 | The drift check, `.github/workflows/drift.yml` | 1 of 17 | In `ratatoskr-workspace`, and it reads all 17. See [The drift check](#the-drift-check) |
 | The release, `.github/workflows/release.yml` | 1 of 17 | In `ratatoskr-platform`. See [Deployment](#deployment) |
 
@@ -98,9 +98,9 @@ Measured on `ratatoskr-vault` before the fleet-wide change, in this order:
 | `+ bypass for the administrator role` | accepted, with the bypass printed |
 
 The required check names are the names GitHub publishes for the jobs, not the workflow names:
-`invariants` from `fleet.yml`, `audit` from `zizmor.yml`, `specs` from `openspec.yml`, and in the
-two repositories with code
-`gate` and, in `ratatoskr-platform`, `linux/arm64 artifact`. Each is pinned to integration 15368,
+`invariants` from `fleet.yml`, `audit` from `zizmor.yml`, and `specs` from `openspec.yml`.
+Product repositories also publish the job names in their own `ci.yml`; Platform publishes `gate`
+and `linux/arm64 artifact`. Each configured required check is pinned to integration 15368,
 the GitHub Actions application, so a check of the same name from another application cannot satisfy
 it. A wrong name here does not fail open — it blocks every pull request forever, which is why a
 control pull request was opened on `ratatoskr-vault` to confirm that GitHub reported
@@ -124,7 +124,9 @@ deletes the branch.
 
 ## The Rust gate
 
-Two repositories contain Rust code. Each repository runs its gate in `.github/workflows/ci.yml`.
+Seven repositories contain Rust code: Contracts, Extractor, GitHub, Telegram, Knowledge, Platform
+and Vault. Each runs its own gate in `.github/workflows/ci.yml`; its `DEVELOPMENT.md` is the source of
+truth for the exact command list.
 
 `ratatoskr-contracts` runs six commands:
 
@@ -154,15 +156,14 @@ The debug build in `ratatoskr-platform` is necessary. `services/edge/tests/boot.
 the package under test only. It does not build the binary of a sibling package. Without the debug
 build, three of the four boot tests fail on each clean checkout.
 
-Each workflow has a final step that compares its own `- run:` lines with the command list in the
+Each Rust workflow has a final step that compares its own `- run:` lines with the command list in the
 repository's `DEVELOPMENT.md`. The step fails if the two lists are different. `AGENTS.md` and
-`DEVELOPMENT.md` both state that the two lists are one list. Before this step, no check enforced the
-rule.
+`DEVELOPMENT.md` both state that the two lists are one list.
 
 ### `cargo deny`
 
-`deny.toml` is in each of the two repositories. The files are the same, except for the `[sources]`
-section.
+`deny.toml` is in each of the seven Rust repositories. Its policy is repository-owned; the files are
+not required to be byte-identical.
 
 `cargo deny` earns its place. It is the only tool in this project that found real defects. On its
 first run against `ratatoskr-platform` it reported five advisories:
@@ -200,8 +201,9 @@ The five advisories in the table above are the measurement. They were in the gra
 milestones. No commit in those six milestones would have turned the gate red, because the gate was
 correct about every tree it was shown.
 
-`.github/workflows/advisories.yml` asks the second question on a daily schedule, in both repositories
-that have code. The file is identical in the two.
+`.github/workflows/advisories.yml` asks the second question on a daily schedule. It is present and
+identical in Contracts, Extractor and Platform. GitHub, Telegram, Knowledge and Vault now contain
+Rust but do not yet carry it. This is a known fleet drift gap, not covered by their product gates.
 
 | Choice | Why |
 |---|---|
@@ -213,7 +215,8 @@ that have code. The file is identical in the two.
 | It files an issue as well as failing | A workflow log is deleted after 90 days, and an advisory can outlive that |
 | One open issue, commented on | Not one issue per night. The open issues are listed and filtered exactly rather than searched: GitHub's search index is eventually consistent, so a search is how a duplicate check files a duplicate |
 
-Both halves were tested. The passing half ran on `main` in both repositories and reported
+Both halves were tested when this control first landed. The passing half ran on `main` in Contracts
+and Platform and reported
 `advisories ok`, with the reporting step skipped. The failing half ran on a temporary branch whose
 check command was replaced by one that fails: the job ended red, the issue was created with the log
 in it, and a second run of the same branch added a comment instead of a second issue. The branch and
@@ -234,7 +237,8 @@ workspace also denies two lints from `clippy::restriction`:
 
 `pedantic` does not enable either lint. Both lints are `allow` by default.
 
-Production code in both repositories violates neither lint. Test code violates both. `clippy.toml`
+Production code in the original Contracts and Platform measurement violated neither lint. Test code
+violated both. `clippy.toml`
 in `ratatoskr-platform` sets `allow-indexing-slicing-in-tests = true`, beside the
 `allow-unwrap-in-tests` and `allow-expect-in-tests` settings that were already there. Clippy has no
 equivalent setting for `string_slice`, so three test files have a file-level `#![allow]` with a
@@ -249,14 +253,14 @@ only quieter.
 `.github/dependabot.yml` is in all 17 repositories, and each one watches the `github-actions`
 ecosystem only. The configuration groups the updates into one pull request each month.
 
-The file was in the two Rust repositories first. It is now in all 16 because each repository pins two
+The file was in the first Rust repositories first. It is now in all 17 because each repository pins two
 actions across two workflows, and a pin without a maintainer is the thing this file exists to prevent.
 An action pin rots, and it rots silently: a reader cannot find a pin whose `# vX.Y.Z` comment no longer
 agrees with its SHA. Dependabot corrects the SHA and the comment together.
 
-The `cargo` ecosystem is deliberately absent from the two Rust repositories. Each commits its
+The `cargo` ecosystem is deliberately absent from the seven Rust repositories. Each commits its
 `Cargo.lock` and runs each command with `--locked`. A dependency bump is therefore a deliberate act,
-and `cargo deny check` in the gate reports an advisory on the day it is published. In the other 14 no
+and `cargo deny check` in the gate reports an advisory on the day it is published. In the other nine no
 language ecosystem is named at all: the commit that brings the first code brings its own gate and its
 own lockfile policy, and that commit is where the question belongs.
 
@@ -266,14 +270,15 @@ then offer the attacker's commit with a version comment that looks correct. The 
 between a release and the pull request that proposes it. `zizmor` reports the absence of one as
 `dependabot-cooldown`, and that is how the two original files were found to be missing it.
 
-The cost is visible and worth stating: up to 16 grouped pull requests a month, one per repository,
+The cost is visible and worth stating: up to 17 grouped pull requests a month, one per repository,
 each of them one or two SHA bumps with a green gate behind it.
 
 ## Size limits
 
 How long a function may be, how many arguments it may take, how deep a block may nest, and how long a
-file may be. Three repositories hold code and each carries these in its own linter configuration. The
-other 14 enforce nothing yet, and one step in the fleet gate is what keeps that from being a hole.
+file may be. Eight repositories hold product code and each carries these in its own linter
+configuration. The other nine enforce nothing yet, and one step in the fleet gate is what keeps that
+from becoming a Rust or Node.js hole.
 
 Every number below is the worst case the tree already had when it was written, plus zero or a stated
 margin. That is the same choice as `shadscan --fail-under` in `ratatoskr-web`: a limit set at the
@@ -281,9 +286,9 @@ score a tree already has fails on a regression, and a limit set at an aspiration
 has not been done yet. Nothing was refactored to make a number fit, and no number was raised to make
 a build pass.
 
-### The two repositories with Rust
+### The seven repositories with Rust
 
-`clippy.toml` in each carries three thresholds. Only one of the three changes behaviour, and saying
+`clippy.toml` in each carries the same three thresholds. Only one of the three changes behaviour, and saying
 which is the reason the other two are worth writing down at all.
 
 | Limit | Value | Worst case measured | Lint | Already enforced before this? |
@@ -291,7 +296,7 @@ which is the reason the other two are worth writing down at all.
 | Lines in a function | 100 | 98 — `accept`, `crates/public-api/src/captures.rs` (platform). 83 — `lint_type`, `tools/contractsc/src/lint.rs` (contracts) | `clippy::too_many_lines` | Yes. `pedantic` enables it and `-D warnings` makes it fatal. 100 is clippy's own default, written down so that a toolchain bump raising the default cannot loosen these trees silently |
 | Arguments in a signature | 7 | 7 — three functions in platform: `crates/operations/src/lib.rs:258` and `:456`, and `crates/identity/src/relay.rs:48`. 6 in contracts | `clippy::too_many_arguments` | Yes, warn-by-default in `clippy::complexity`. 7 is clippy's default, pinned for the same reason |
 | Block nesting depth | 5 | 5 — nine blocks in platform, two in contracts | `clippy::excessive_nesting` | **No.** The lint is warn-by-default, but its threshold defaults to 0 and 0 disables it. The `clippy.toml` line is what turns the lint on |
-| Lines in a tracked `.rs` file | 850 | 817 — `tools/contractsc/src/compat.rs` (contracts). 716 — `crates/operations/src/lib.rs` (platform) | none; a step in the `gate` job | **No.** Clippy has no file-length lint |
+| Lines in a tracked `.rs` file | 850 | 821 — `crates/safe-fetch/src/lib.rs` (extractor). 817 — `tools/contractsc/src/compat.rs` (contracts) | none; a step in the `gate` job | **No.** Clippy has no file-length lint |
 
 Two properties of `too_many_lines` were measured rather than assumed, because both change what a
 number means. It does not count blank lines or comment-only lines: a function of five statements,
@@ -376,7 +381,7 @@ that the next `npm run ui:add:aicss` rewrites. A size finding there also cannot 
 one-line edit the way `no-empty` can: the answer is a refactor, and the generator undoes it. The
 alternative is setting the standard for hand-written code at the shape of a generated WebGL harness.
 
-### The 14 repositories with no code
+### The nine repositories with no product manifest
 
 They enforce nothing, because there is nothing to enforce. What keeps that from being a hole is one
 step in `fleet.yml`, which is byte-identical in all 17 repositories and sits beside the step that
@@ -389,7 +394,7 @@ The step asserts that the file exists. It cannot read the numbers inside it and 
 pull request that adds the file is where the numbers are read. That is the ceiling of this control,
 and it is stated in the step itself.
 
-Eleven of the 14 expect Rust and one expects TypeScript, so the assertion covers 12 of them. The gap
+Six of the nine expect Rust and one expects TypeScript, so the assertion covers seven of them. The gap
 is `ratatoskr-export-agent`, whose first code is Swift, and `ratatoskr-mobile`, whose first code is
 Kotlin and Swift. The fleet has chosen no linter for either language, and choosing `swiftlint` or
 `detekt` for a repository that has not started is the configuration-for-an-unstarted-milestone that
@@ -402,7 +407,7 @@ untracked `clippy.toml` to it still exits 1, which is the case the word "tracked
 
 ## The fleet gate
 
-Each repository runs `.github/workflows/fleet.yml`. The file is identical in all sixteen. It installs
+Each repository runs `.github/workflows/fleet.yml`. The file is identical in all 17. It installs
 nothing and uses one action, so it has no supply-chain surface beyond the checkout and it cannot fail
 for a reason that has nothing to do with the tree.
 
@@ -426,7 +431,7 @@ language in the fleet.
 
 There is one thing this file cannot do by construction. It runs inside one repository and can see
 only that repository, so it can assert that a file EXISTS and never that it is the same file as the
-one in the other fifteen. [The drift check](#the-drift-check) is the answer to that, and it is the
+one in the other 16. [The drift check](#the-drift-check) is the answer to that, and it is the
 only job in the project that reads more than one repository.
 
 ### Why the credential and key checks are not redundant
@@ -463,7 +468,7 @@ the step named above fails until it arrives.
 
 ## The workflow gate
 
-Each repository runs `.github/workflows/zizmor.yml`. The file is identical in all sixteen. It runs
+Each repository runs `.github/workflows/zizmor.yml`. The file is identical in all 17. It runs
 [`zizmor`](https://github.com/zizmorcore/zizmor) over that repository's own workflow and Dependabot
 files, through `zizmorcore/zizmor-action` pinned to a commit SHA, with the `zizmor` version pinned to
 `1.29.0`.
@@ -563,7 +568,7 @@ command exits 0. That is the whole of what CI can say about test-first, and it i
 looks: the pair shape means an unticked second task is an implementation that was never written, and
 an unticked first task is a test that was never run.
 
-### Why it runs in the fourteen repositories that have no specs yet
+### Why it runs in the nine repositories that have no specs yet
 
 Because it answers correctly there, which was measured rather than assumed. Against an OpenSpec root
 with no specs and no changes, `openspec validate --all --strict` prints `No items found to validate`
@@ -624,7 +629,7 @@ the finding would turn all seventeen repositories red, and it was found by runni
 new file before it was committed rather than by a first red run.
 
 The audit asks for a lockfile. There is no way to have one here: a lockfile needs a `package.json`,
-and a tracked `package.json` makes `fleet.yml` demand an `eslint.config.*` in fourteen repositories
+and a tracked `package.json` makes `fleet.yml` demand an `eslint.config.*` in nine repositories
 that have no code to lint. The property the audit protects is that what executes is a known version,
 and `@fission-ai/openspec@1.10.0` is exactly that — the same pin, in the same form, as
 `version: 1.29.0` in `zizmor.yml`.
@@ -645,9 +650,9 @@ carries the two commands.
 
 ## The Rust skill catalogue
 
-Thirteen of the seventeen repositories hold Rust or plan to. `ratatoskr-contracts` and
-`ratatoskr-platform` hold it today; eleven more name Rust and Tokio in their own `DEVELOPMENT.md` as
-the intended toolchain, and `ratatoskr-workspace` plans the `ws` CLI in Rust. Each of the thirteen
+Thirteen of the seventeen repositories hold Rust or plan to. Contracts, Extractor, GitHub, Telegram,
+Knowledge, Platform and Vault hold it today; six more, including the workspace `ws` CLI, name Rust
+and Tokio as the intended toolchain. Each of the thirteen
 carries eighteen skills under `.agents/skills/`, with `.claude/skills/` symlinked to them so Claude
 Code and Codex read one copy rather than two.
 
@@ -742,18 +747,18 @@ and `skills-lock.json` — and one distinct tree across the thirteen.
 ## The drift check
 
 Four files are the same file in every repository, and until now nothing noticed when they stopped
-being the same file. `fleet.yml`, `zizmor.yml` and `.githooks/pre-commit` are byte-identical in all
-16. `.github/dependabot.yml` has exactly two forms, one for a repository with Rust in it and one for
-a repository that has no code yet.
+being the same file. `fleet.yml`, `zizmor.yml`, `openspec.yml` and `.githooks/pre-commit` are
+byte-identical in all 17. `.github/dependabot.yml` has two intended forms, one for a repository with
+Rust in it and one for a repository without Rust.
 
 They are identical because they were copied there, not because anything keeps them so. The next fix
-lands in whichever repository its author happened to be working in, and the other fifteen keep the
+lands in whichever repository its author happened to be working in, and the other 16 keep the
 defect with every gate green.
 
 `ratatoskr-workspace/.github/workflows/drift.yml` runs weekly and on demand. It compares git blob
 names rather than text, so the comparison is exactly git's own notion of identity, and the same tree
 read carries the file mode — which is how a `pre-commit` that has lost its executable bit is caught
-in the same pass. One `git/trees?recursive=1` call per repository, sixteen calls.
+in the same pass. One `git/trees?recursive=1` call per repository, 17 calls.
 
 | Assertion | The failure it catches |
 |---|---|
@@ -769,6 +774,11 @@ in the same pass. One `git/trees?recursive=1` call per repository, sixteen calls
 | `dependabot.yml` is one blob within each of its two classes | The two forms drifting into three |
 | `advisories.yml` is present and one blob in every repository with Rust | A deletion that no `push` trigger can see, because the file has no `push` trigger |
 | `ci.yml` is PRESENT in every repository with Rust | A gate deleted from a repository that already had one |
+
+The 2026-08-23 inventory found the drift that these last assertions are designed to expose. GitHub,
+Telegram, Knowledge and Vault have Rust but still use the non-Rust `dependabot.yml` form and have no
+`advisories.yml`. The next drift run remains expected to fail until a separate CI change brings those
+four repositories into the Rust class. This documentation change does not weaken that assertion.
 
 `ci.yml` is checked for presence and deliberately not for sameness. The gates are legitimately
 different: `ratatoskr-platform` runs a PostgreSQL service, a NATS container and a native arm64 job,
@@ -1181,8 +1191,8 @@ Add these files in the same pull request as the first `Cargo.toml`, and not befo
   `ratatoskr-contracts`;
 - `.github/workflows/ci.yml`, copied from the repository whose gate is closest;
 - `.github/workflows/advisories.yml`, copied UNCHANGED from either repository that has it;
-- `.github/dependabot.yml` for the `github-actions` ecosystem, in the form the two Rust
-  repositories already use — it differs from the one every other repository has.
+- `.github/dependabot.yml` for the `github-actions` ecosystem, in the form the three established
+  Rust repositories already use — it differs from the non-Rust form.
 
 That `ci.yml` must run the tests. A step in `fleet.yml` fails a repository that has a manifest and a
 `ci.yml` with no test invocation in it, for the same reason the step beside it fails a `Cargo.toml`
@@ -1196,8 +1206,8 @@ a repository with no code has most of. What the first code commit adds to `opens
 one line in its `context:` naming where the tests now live.
 
 `advisories.yml` is not optional and is not a matter of taste: the drift check asserts that every
-repository holding a `Cargo.toml` has it and that the file is identical in all of them, so a first
-code commit without it turns the workspace drift check red rather than being quietly incomplete.
+repository holding a `Cargo.toml` has it and that the file is identical in all of them. Four current
+Rust repositories do not satisfy that assertion; this is the known drift gap recorded above.
 
 Copy each file. Do not use a symbolic link, and do not use a path reference. Invariant 5 says that
 each child repository builds independently of the workspace, and that makes an identical copy the

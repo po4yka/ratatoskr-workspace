@@ -239,24 +239,31 @@ The workspace itself is still architectural: `workspace.toml`, `workspace.lock`,
 `ws` CLI and the agent harness described above are targets rather than claims. Everything in this
 README about *this* repository is intent.
 
-The fleet is not. Three of the sixteen product repositories hold code:
+The fleet is not. Eight of the sixteen product repositories hold code:
 
 | Repository | State |
 |---|---|
-| `ratatoskr-contracts` | Rust. Four crates published — identifiers, event envelope, operation contracts, error contracts. Plan items 5 to 10 unbuilt; **Document IR is among them**. |
+| `ratatoskr-contracts` | Rust. Seven contract crates, deterministic schema generation, fixtures, and CI. Document IR, social-source, and AI-archive contracts are implemented; packages are not published. |
 | `ratatoskr-platform` | Rust. All ten milestones: an API, an outbox and inbox, a scheduler, and a single-host deployment profile. It was installed on the target once to prove the vertical slice; that host is now frozen and what runs on it is older than `main`. |
-| `ratatoskr-web` | TypeScript. An early React application with co-located tests. |
-| `extractor`, `knowledge`, `github`, `vault`, `telegram`, `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents, CI and quality gates. No product code. |
+| `ratatoskr-extractor` | Rust. Safe bounded retrieval, HTML and direct-PDF Document IR extraction, durable command processing, and operation reporting. Browser and provider adapters remain planned. |
+| `ratatoskr-knowledge` | Rust. The bounded first article-analysis pipeline and real OpenRouter adapter. Bus integration, search, and embeddings remain planned. |
+| `ratatoskr-github` | Rust. Service foundation, operator plane, and the first current schema. Account and synchronization behavior remains planned. |
+| `ratatoskr-vault` | Rust. Service foundation, operator plane, and the first current schema. Mirror, snapshot, storage, and restore workers remain planned. |
+| `ratatoskr-telegram` | Rust. Service foundation, Bot API client, and durable secure webhook intake. Identity and domain processing remain planned. |
+| `ratatoskr-web` | TypeScript. React toolchain, tests, linting, build, and CI; no router, API client, or product views yet. |
+| `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents and fleet/OpenSpec gates. No product manifest or runtime yet. |
 
-The consequence worth stating plainly: **nothing consumes what Platform publishes.** A capture
-becomes an operation and a command on the bus, the command expires unread after seven days, and the
-operation stays `accepted`. The control plane is complete and the system does no work.
+The first domain loop now exists in source: Platform publishes
+`cmd.content.capture.requested.v1`, Extractor consumes it durably and reports the terminal operation
+outcome, and Platform projects that report without discarding its structured detail. Knowledge can
+analyse Document IR through its library pipeline, but it is not connected to that bus flow yet.
 
-Which is why the deployment target is frozen and stays that way until a service exists to run on
-it. `docs/DEPLOYMENT_TARGET.md` describes the machine as a performance budget for the code being
-written now — four Cortex-A76 cores, 15 GiB, 16 KiB pages, one NVMe — and not as an environment
-anyone operates.
+The deployment target remains frozen until the workspace can pin compatible commits and validate
+them through an integration profile. `docs/DEPLOYMENT_TARGET.md` describes the machine as a
+performance budget for the code being written now — four Cortex-A76 cores, 15 GiB, 16 KiB pages,
+one NVMe — and not as an environment anyone operates.
 
-`ratatoskr-extractor` is the service that closes that loop — its documented input is the command
-Platform already emits. `openspec/changes/unblock-the-first-domain-service/` decides the three
-cross-repository questions that stood in front of it.
+The workspace still does not pin those commits or run them together: submodules, manifests,
+integration profiles and the `ws` harness remain target architecture. The verified child commits
+and cross-repository decisions are recorded in OpenSpec changes until that snapshot machinery
+exists.

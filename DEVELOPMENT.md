@@ -2,12 +2,16 @@
 
 > Status: Proposed  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-20  
+> Last reviewed: 2026-08-23
 > Related: `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`
 
 ## Current stage
 
-The repository is in architecture bootstrap. The `ws` harness, manifests, submodules, agent runners, and integration environments are not implemented yet. Do not claim executable checks were run until the corresponding scaffold exists.
+The repository is in architecture bootstrap. It already holds the fleet OpenSpec store, shared
+agent instructions and fleet-level CI, but the `ws` harness, manifests, submodules, deterministic
+agent runners, and integration environments are not implemented. `.workspaces/local/` is an
+operator-created checkout set, not a reproducible workspace snapshot, and `scripts/sync-all.sh`
+targets the planned `repos/` baseline that is not present yet.
 
 ## Intended toolchain
 
@@ -37,7 +41,13 @@ Formatting, linting, tests, generated artifacts, manifest/lock consistency, cont
 
 `docs/QUALITY_GATES.md` records which of those gates exist today, in which repository, and what each one measured before it was accepted. It also lists the checks that were rejected, with the reason, so that a later reader does not add them again.
 
-Code size limits are part of that set. A function, a signature, a block and a file each have a maximum, the numbers live in the linter configuration of the repository they govern, and `docs/QUALITY_GATES.md` records each number with the command that measured it. The 13 repositories that hold no code yet enforce nothing today, and `fleet.yml` is what makes that safe: it fails the gate when a `Cargo.toml` arrives without a `clippy.toml`, or a `package.json` without an `eslint.config.js`, so the first code commit cannot land without the file that carries its limits.
+Code size limits are part of that set. A function, a signature, a block and a file each have a
+maximum, the numbers live in the linter configuration of the repository they govern, and
+`docs/QUALITY_GATES.md` records each number with the command that measured it. Eight repositories
+currently have a product manifest and size-limit configuration; the other nine have no product
+code. `fleet.yml` fails when a `Cargo.toml` arrives without `clippy.toml`, or a `package.json`
+without `eslint.config.js`, so a first code commit cannot land without the file that carries its
+limits.
 
 Every repository carries `.githooks/pre-commit`. It is inert until a clone runs `git config core.hooksPath .githooks`, and `git commit --no-verify` skips it. Run the command in each clone you work in, and treat the hook as a convenience rather than a control: the gate is CI and the branch ruleset.
 

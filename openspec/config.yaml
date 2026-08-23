@@ -6,10 +6,11 @@ context: |
   change must reach the repositories, and what a consumer may rely on. Behaviour internal to one
   repository belongs in that repository's own openspec/, not here.
 
-  The fleet is seventeen repositories: sixteen product repositories plus this one. Three hold code
-  today — ratatoskr-contracts and ratatoskr-platform in Rust, ratatoskr-web in TypeScript. The other
-  fourteen hold documents only. A change may therefore describe behaviour for a repository that has
-  no code yet; that is the normal case here, not an error.
+  The fleet is seventeen repositories: sixteen product repositories plus this one. Seven product
+  repositories hold Rust code — ratatoskr-contracts, ratatoskr-platform, ratatoskr-extractor,
+  ratatoskr-knowledge, ratatoskr-github, ratatoskr-vault and ratatoskr-telegram — and ratatoskr-web
+  holds TypeScript. The other eight products and this workspace have no product manifest. A change
+  may therefore describe behaviour for a repository that has no code yet; that is normal here.
 
   Dependency order, from AGENTS.md: contracts, then backward-compatible consumers, then producers,
   then clients, then the integration environment, then the workspace pins. A different order is valid
