@@ -9,9 +9,10 @@
   OpenSpec change and generated OpenAPI are on remote `main`, and the verified commit URL is recorded
   here: https://github.com/po4yka/ratatoskr-platform/commit/3b6efb1942d0ebc7735faa8ceb04338a54b535db.
   PR: not used by explicit delivery direction.
-- [ ] 1.3 `ratatoskr-web` — close only after tasks 4.1-4.25 are complete, its archived local OpenSpec
+- [x] 1.3 `ratatoskr-web` — close only after tasks 4.1-4.25 are complete, its archived local OpenSpec
   change, browser evidence, and current documentation are on remote `main`, and the verified commit
-  URL is recorded here. PR: not used by explicit delivery direction.
+  URL is recorded here: https://github.com/po4yka/ratatoskr-web/commit/856d224969067a8a26c02bb5171d93858cd62d8a.
+  PR: not used by explicit delivery direction.
 - [ ] 1.4 `ratatoskr-workspace` — close only after tasks 5.1-5.11 and 6.1-6.5 are complete, this
   fleet change and the executable profile are on remote `main`, and the verified commit URL is
   recorded here. PR: not used by explicit delivery direction.
@@ -230,22 +231,22 @@
   task before claiming accessibility acceptance.
 - [x] 5.8 Tear down only the WEB-012 Compose project and verify unrelated containers, ports,
   databases, streams, volumes, source checkouts, and user worktrees are unchanged.
-- [ ] 5.9 Add `changesets/WEB-012-operational-status.yaml` with affected repositories, exact bases
+- [x] 5.9 Add `changesets/WEB-012-operational-status.yaml` with affected repositories, exact bases
   and final SHAs, dependency graph, no-schema-migration statement, compatibility, commands/results,
   profile namespace, rollout/rollback, direct-main delivery note, and remaining manual/unverified
   evidence. This is required integration evidence and cannot start from a behavior test; validate
   every referenced commit exists remotely.
-- [ ] 5.10 Update workspace README/DEVELOPMENT/integration documentation to say this one executable
+- [x] 5.10 Update workspace README/DEVELOPMENT/integration documentation to say this one executable
   profile exists while `ws`, manifest, lock, general profile generation, and workspace pins remain
   absent. Documentation cannot start from a behavior test; verify no target architecture is
   mislabeled implemented.
-- [ ] 5.11 Run all available workspace static checks, the shell profile tests, OpenSpec strict
+- [x] 5.11 Run all available workspace static checks, the shell profile tests, OpenSpec strict
   validation, secret scan, and baseline cleanliness checks; inspect the final diff and evidence for
   local paths, tokens, fixture leaks, or claims unsupported by observed output.
 
 ## 6. Archive, publish, and cleanup
 
-- [ ] 6.1 Sync all three fleet delta specs into the workspace main specs and verify every added
+- [x] 6.1 Sync all three fleet delta specs into the workspace main specs and verify every added
   requirement/scenario matches before archiving; this is OpenSpec lifecycle work and cannot start
   from a behavior test.
 - [ ] 6.2 Mark 1.1-1.4 only after their remote-main containment and evidence conditions hold, then

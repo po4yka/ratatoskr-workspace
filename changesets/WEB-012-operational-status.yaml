@@ -1,0 +1,102 @@
+id: WEB-012
+state: verified
+goal: Deliver owner-gated operational inspection, an anonymous truthful status page, accessibility hardening, and one executable workspace profile.
+repositories:
+  - id: ratatoskr-contracts
+    role: contract-producer
+    base: 5b8bbb4220375f6236066a23b19e9d6f8faaaf28
+    feature_commit: 9a4df8126b495ffc3ad0647441da1690594f25bc
+    published_main_head_at_verification: ad5a9ba7cad05b0ce992e0d21a5c4e22e185f799
+  - id: ratatoskr-platform
+    role: authorization-and-edge-producer
+    base: 28f3e8e3bd16cc798e27ed92d7e9686f70c798ee
+    feature_commit: 3b6efb1942d0ebc7735faa8ceb04338a54b535db
+    published_main_head_at_verification: 12ce8cc387d12b087fe0785256808897bd7ac7b2
+  - id: ratatoskr-web
+    role: browser-consumer
+    base: 4ca1279e547efffc0032c610d448e0693c4424d9
+    feature_commit: 856d224969067a8a26c02bb5171d93858cd62d8a
+    published_main_head_at_verification: 856d224969067a8a26c02bb5171d93858cd62d8a
+  - id: ratatoskr-workspace
+    role: coordination-and-composed-verification
+    base: ea2d89596485ce0130fceaab9dfc6769f54ff73e
+    feature_commit: bdc93c9c6e60fcd6e87cf5e1e0c3fede6c2c7134
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-platform
+  - ratatoskr-web
+  - ratatoskr-workspace
+contract:
+  version: 1
+  public_status_path: /v1/status
+  owner_paths: [/v1/admin/operations, /v1/admin/schedules, /v1/admin/audit-events]
+  capabilities: [platform.operations.inspect, platform.schedules.inspect, platform.audit.inspect]
+compatibility:
+  strategy: Publish the additive bounded contract, then Platform enforcement and projection, then the generated-type Web consumer.
+  contract_pin: 9a4df8126b495ffc3ad0647441da1690594f25bc
+  platform_openapi_pin: 3b6efb1942d0ebc7735faa8ceb04338a54b535db
+  authorization_boundary: Platform rechecks the live platform.owner grant; Web capability gating is presentation only.
+database:
+  strategy: Edit the current development schema in place and create the composed PostgreSQL database from that schema.
+  migration_artifacts: none
+privacy:
+  public_status: Closed component and state tokens, timestamps, and stale flags only; no diagnostics, addresses, payloads, or credentials.
+  owner_views: Bounded summaries omit request bodies, command configuration, tokens, private URLs, and raw diagnostics.
+  fixtures: Synthetic fixed owner/member credentials are hashed in the seed and never written to result output.
+rollout:
+  - Publish the Contracts types and fixtures.
+  - Publish Platform owner enforcement, bounded queries, status projection, and generated OpenAPI.
+  - Publish Web generated types, anonymous status, owner views, focus handling, and accessibility evidence.
+  - Run the task-namespaced workspace profile against the exact published child revisions.
+rollback:
+  - Revert in reverse dependency order before relying on the new browser routes.
+  - Keep Platform authorization fail-closed if the Web client is rolled back independently.
+  - Remove only the ratatoskr-web-012 Compose project; the profile does not own unrelated containers or volumes.
+delivery:
+  method: Dedicated task branches and worktrees, fast-forwarded directly to remote main as explicitly requested; no pull requests.
+  workspace_profile: ratatoskr-web-012
+verification:
+  remote_reachability:
+    - Every child feature commit is reachable from its repository remote main.
+    - Published child heads were fetched immediately before this record was written.
+  contracts:
+    - Full local repository gate passed at feature commit 9a4df8126b495ffc3ad0647441da1690594f25bc.
+    - Public status rejects unknown or diagnostic-bearing components; operational pages are bounded and content-free.
+    - Published head ad5a9ba7cad05b0ce992e0d21a5c4e22e185f799 contains the feature, repairs unrelated baseline drift, and passed all five hosted workflows.
+  platform:
+    - Full local repository gate passed at feature commit 3b6efb1942d0ebc7735faa8ceb04338a54b535db.
+    - Member access returns 403, owner grants are read live and fail closed, and status remains anonymous and sanitized during dependency loss.
+    - Published head 12ce8cc387d12b087fe0785256808897bd7ac7b2 contains the feature and passed all four hosted workflows.
+  web:
+    - Clean install, API drift check, typecheck, lint, format check, 63 Vitest files with 229 tests, 38 Playwright tests, production build, shadscan 80/100 at ratchet 79, and production dependency audit all passed.
+    - The rendered axe matrix covered 32 theme, viewport, role, and route combinations with no serious or critical finding.
+    - The committed checklist distinguishes automated evidence from the unperformed manual screen-reader pass.
+    - Hosted run 33095553325 proved the corrected account-menu keyboard test and the complete CI gate before the OpenSpec archive-only commits.
+  composed_profile:
+    - The final run built Contracts 9a4df8126b495ffc3ad0647441da1690594f25bc, Platform 3b6efb1942d0ebc7735faa8ceb04338a54b535db, and Web 856d224969067a8a26c02bb5171d93858cd62d8a.
+    - Healthy phase proved anonymous status, exact owner capabilities, member 403, three operation summaries including failed and partially succeeded, two schedules including disabled with failed outcome, and two redacted audit events.
+    - Playwright loaded the production Web bundle, exercised /status and /ops with keyboard focus, and reported no serious or critical axe finding.
+    - Stopping only the namespaced NATS service produced degraded status with stale command_delivery unavailable; restart returned status to operational.
+    - Project teardown removed the profile containers, network, and volumes; docker-before and docker-after inventories were byte-identical.
+  workspace:
+    - Profile contract, shellcheck, Node syntax, Compose configuration, YAML parsing, OpenSpec strict validation, staged fleet invariants, credential/private-key scans, and git diff checks passed.
+    - zizmor 1.29.0 offline pedantic audit at low severity reported no findings across all five workflow and Dependabot inputs.
+hosted_ci:
+  contracts:
+    head: ad5a9ba7cad05b0ce992e0d21a5c4e22e185f799
+    successful_runs: [33078522751, 33078522644, 33078522769, 33078522831, 33078522669]
+  platform:
+    head: 12ce8cc387d12b087fe0785256808897bd7ac7b2
+    successful_runs: [33086423798, 33086423943, 33086424026, 33086424121]
+  web:
+    head: 856d224969067a8a26c02bb5171d93858cd62d8a
+    successful_runs: [33095944023, 33095943997, 33095944043, 33095944029]
+remaining_follow_ups:
+  fleet_decisions_required:
+    - LLM cost dashboards need Knowledge cost-ledger exposure.
+    - Digest, RSS, signals, and chat-agent surfaces remain assigned to their owning subsystems.
+    - EN/RU needs a localization framework decision.
+    - The command palette and Cmd/Ctrl+K shortcut remain a separate product decision.
+  unverified:
+    - No manual screen-reader session was performed.
+    - No live deployment or real user archive was used; all composed data was bounded and synthetic.
