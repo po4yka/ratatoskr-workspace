@@ -237,6 +237,11 @@ bind to `0.0.0.0`.
 |---|---|---|
 | 8080 | `ratatoskr-edge` public API | `cloudflared` tunnel |
 | 8181 | `ratatoskr-ingest` webhook adapter | `cloudflared` tunnel |
+| 8091 | `ratatoskr-knowledge` domain API (`/v1/k`) | loopback; reached only through Edge |
+| 8092 | `ratatoskr-github` domain API (`/v1/gh`) | loopback; reached only through Edge |
+| 8093 | `ratatoskr-vault` domain API (`/v1/vault`) | loopback; reached only through Edge |
+| 8094 | `ratatoskr-social` domain API (`/v1/social`) | loopback; reached only through Edge |
+| 8095 | `ratatoskr-ai-archive` domain API (`/v1/ai`) | loopback; reached only through Edge |
 | 9464 / 9465 / 9466 | edge / ingest / scheduler operator listener | host only |
 | 4222 | NATS — a container, `ratatoskr-nats`, config in `platform/deploy/nats/` | host only |
 | 5432 | PostgreSQL | host only |
@@ -255,6 +260,10 @@ operators reach them over Tailscale.
 Because the tunnel terminates TLS and adds its own headers, "internal headers are not trusted from
 public ingress" means the header set arriving at a public listener is attacker-influenced up to
 whatever the tunnel overwrites. A service may trust no inbound header it did not itself mint.
+
+The five domain API listeners above bind only to `127.0.0.1`. Their capability document is
+`GET /v1/capabilities` on the same listener; Edge owns the public prefix, authenticates the client,
+strips inbound `x-ratatoskr-*` headers, and mints the bounded identity claims before proxying.
 
 The trust boundary is the whole host: every Ratatoskr service shares one kernel, so OS-level
 isolation between them defends against a compromised process, not against a compromised host. The
