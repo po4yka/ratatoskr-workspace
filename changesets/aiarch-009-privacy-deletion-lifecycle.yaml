@@ -5,7 +5,7 @@ repositories:
   - id: ratatoskr-contracts
     role: contract-producer
     feature_commit: 66d9454737d86d93f49ead96c0f028c2aeda02ff
-    published_main_head_at_verification: 5b8bbb4220375f6236066a23b19e9d6f8faaaf28
+    published_main_head_at_verification: ad5a9ba7cad05b0ce992e0d21a5c4e22e185f799
   - id: ratatoskr-knowledge
     role: deletion-consumer
     feature_commit: 8b884099407ee5e53739577b5134d8f17daa7635
@@ -13,10 +13,10 @@ repositories:
   - id: ratatoskr-chatgpt
     role: archive-producer
     feature_commit: 154ff889cfe358fa8cfbe06a597c499d9a9cfbf1
-    published_main_head_at_verification: 154ff889cfe358fa8cfbe06a597c499d9a9cfbf1
+    published_main_head_at_verification: 168c1709c8d315475f488af0b3ea4e042c4032e5
   - id: ratatoskr-workspace
     role: coordination-and-verification
-    feature_commit: this-changeset-commit
+    feature_commit: 1681923cbdd4f3243467048686de4c9539a5c0ce
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-knowledge
@@ -51,8 +51,9 @@ verification:
     - All three feature commits are reachable from their published remote main branches.
     - Knowledge commit time 2026-08-27T15:27:03+04:00 precedes ChatGPT commit time 2026-08-27T17:11:41+04:00.
   contracts:
-    - Full repository gate passed on feature commit 66d9454737d86d93f49ead96c0f028c2aeda02ff.
+    - Full local repository gate passed on feature commit 66d9454737d86d93f49ead96c0f028c2aeda02ff.
     - The user-requested tombstone fixture round-trips through AiArchiveTombstone.
+    - Published head ad5a9ba7cad05b0ce992e0d21a5c4e22e185f799 contains the feature, repairs pre-existing public-API baseline drift, and passed all 5 hosted workflows.
   knowledge:
     - Full repository gate passed on feature commit 8b884099407ee5e53739577b5134d8f17daa7635.
     - The scoped user-requested tombstone test proves sibling retention, replay deduplication, and cross-tenant refusal.
@@ -61,6 +62,8 @@ verification:
     - cargo deny check passed with repository-allowed duplicate warnings.
     - cargo fmt, clippy with warnings denied, build, and the PostgreSQL 17 full workspace test suite passed.
     - OpenSpec strict and archived validation passed after the child change was archived.
+    - Hosted CI exposed and the follow-up fixed global-row test interference plus non-canonical fractional timestamp padding.
+    - Published head 168c1709c8d315475f488af0b3ea4e042c4032e5 passed all 4 hosted workflows.
   workspace:
     - The final staged tree passed the local fleet invariants, CRLF, credential, private-key, action-pin, and manifest fail-closed checks.
     - OpenSpec strict validation passed and all 8 archived changes validated with no incomplete task.
@@ -68,5 +71,17 @@ verification:
   workspace_limit:
     - This bootstrap repository has no workspace manifest, submodules, lockfile, ws harness, or integration profile to execute.
     - Workspace verification is therefore the OpenSpec and fleet-tree gates plus exact published-child reachability, not a live deployment claim.
-hosted_ci: not-claimed-required-checks-were-bypassed-on-direct-main-push
+hosted_ci:
+  contracts:
+    head: ad5a9ba7cad05b0ce992e0d21a5c4e22e185f799
+    successful_runs: [33078522751, 33078522644, 33078522769, 33078522831, 33078522669]
+  knowledge:
+    head: 8b884099407ee5e53739577b5134d8f17daa7635
+    successful_runs: [33067465071, 33067465120, 33067465232, 33067465142]
+  chatgpt:
+    head: 168c1709c8d315475f488af0b3ea4e042c4032e5
+    successful_runs: [33079100423, 33079100413, 33079100431, 33079100440]
+  workspace_coordination:
+    head: 1681923cbdd4f3243467048686de4c9539a5c0ce
+    successful_runs: [33076208070, 33076208117, 33076208119]
 real_owner_fixture_status: Admission process and synthetic golden evidence only; no private owner export is committed or claimed as parser support.
