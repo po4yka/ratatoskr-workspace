@@ -2,14 +2,16 @@
 
 > Status: Proposed  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-23
+> Last reviewed: 2026-08-27
 > Related: `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`
 
 ## Current stage
 
 The repository is in architecture bootstrap. It already holds the fleet OpenSpec store, shared
-agent instructions and fleet-level CI, but the `ws` harness, manifests, submodules, deterministic
-agent runners, and integration environments are not implemented. `.workspaces/local/` is an
+agent instructions and fleet-level CI. One manual, task-namespaced Web/Platform integration profile
+is implemented under `integration/`; see `integration/README.md`. The `ws` harness, manifests,
+lockfile, submodules, generated profiles, and deterministic agent runners are not implemented.
+`.workspaces/local/` is an
 operator-created checkout set, not a reproducible workspace snapshot, and `scripts/sync-all.sh`
 targets the planned `repos/` baseline that is not present yet.
 

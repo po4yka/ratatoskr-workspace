@@ -2,7 +2,8 @@
 
 `ratatoskr-workspace` is the coordination repository for Ratatoskr: a self-hosted, multi-repository platform for capturing, extracting, analysing, searching, and backing up personal knowledge from the web, GitHub, social networks, Telegram, ChatGPT, and Claude.
 
-> **Status:** architecture bootstrap. This repository currently defines the intended operating model; the workspace CLI, submodules, integration environment, and agent harness will be introduced incrementally.
+> **Status:** architecture bootstrap with one executable integration profile. The workspace CLI,
+> manifests, lockfile, submodules, generated profiles, and agent harness remain unimplemented.
 
 > [!IMPORTANT]
 > **Ratatoskr is in development.** No database holds data that has to survive a schema change.
@@ -159,7 +160,16 @@ service's Compose entry here says nothing about whether it can run there, which 
 worth naming: a dependency that exists only in a Compose profile is a dependency that is installed
 nowhere.
 
-This repository will own cross-service Docker Compose profiles and end-to-end fixtures:
+One narrow profile is implemented now:
+
+- `integration/compose/web-operational.yaml` builds published Platform and Web revisions from
+  explicit checkout paths, seeds bounded synthetic owner/member data, and verifies healthy,
+  degraded, and recovered status through public HTTP;
+- `integration/run-web-operational.sh` validates exact revisions, assigns ephemeral loopback ports,
+  runs the API and Playwright smoke, and removes only its Compose project; and
+- [`integration/README.md`](integration/README.md) gives the exact inputs and command.
+
+This is not the planned general integration harness. The broader target remains:
 
 ```text
 integration/
@@ -250,7 +260,7 @@ The fleet is not. Eight of the sixteen product repositories hold code:
 | `ratatoskr-github` | Rust. Service foundation, operator plane, and the first current schema. Account and synchronization behavior remains planned. |
 | `ratatoskr-vault` | Rust. Service foundation, operator plane, and the first current schema. Mirror, snapshot, storage, and restore workers remain planned. |
 | `ratatoskr-telegram` | Rust. Service foundation, Bot API client, and durable secure webhook intake. Identity and domain processing remain planned. |
-| `ratatoskr-web` | TypeScript. React toolchain, tests, linting, build, and CI; no router, API client, or product views yet. |
+| `ratatoskr-web` | TypeScript. Generated Edge gateway, authenticated shell, public status, search/reader and archive views, owner operational views, Vitest/Playwright accessibility coverage, build, and CI. |
 | `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents and fleet/OpenSpec gates. No product manifest or runtime yet. |
 
 The first domain loop now exists in source: Platform publishes
@@ -263,7 +273,7 @@ them through an integration profile. `docs/DEPLOYMENT_TARGET.md` describes the m
 performance budget for the code being written now — four Cortex-A76 cores, 15 GiB, 16 KiB pages,
 one NVMe — and not as an environment anyone operates.
 
-The workspace still does not pin those commits or run them together: submodules, manifests,
-integration profiles and the `ws` harness remain target architecture. The verified child commits
-and cross-repository decisions are recorded in OpenSpec changes until that snapshot machinery
-exists.
+The workspace still does not pin child commits: submodules, manifests, lockfile, generated profiles,
+and the `ws` harness remain target architecture. The `web-operational` profile is a deliberately
+manual exception that requires exact checkout paths and revisions. Verified child commits and
+cross-repository decisions remain in changesets and OpenSpec until snapshot machinery exists.

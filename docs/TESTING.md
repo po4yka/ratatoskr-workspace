@@ -1,7 +1,7 @@
 # Workspace testing strategy
 
 > Status: Proposed  
-> Last reviewed: 2026-08-20
+> Last reviewed: 2026-08-27
 
 ## Required layers
 
@@ -23,6 +23,21 @@ Test interrupted fetch/worktree creation, dirty repositories, missing remotes, c
 Formatting/linting, unit tests, Git integration tests, generated-config drift, fixture validation, security/dependency checks, and at least one end-to-end task flow. Workspace CI supplements rather than replaces child CI.
 
 Fixtures must use synthetic repositories and credentials. Never use personal exports or production tokens.
+
+## Implemented integration smoke
+
+`integration/tests/web_operational_profile_test.sh` checks the static isolation and phase contract
+for the first profile. `integration/run-web-operational.sh` then builds exact published Contracts,
+Platform, and Web revisions and observes:
+
+- anonymous public status through Platform and the Web production bundle;
+- member refusal and owner access to operations, schedules, and audit history;
+- keyboard and axe checks on the real `/status` and `/ops` pages;
+- NATS loss as a truthful degraded/stale state, followed by recovery; and
+- project-only teardown with unrelated container state unchanged.
+
+This smoke does not implement or validate the planned `ws` commands, manifest, lockfile, or general
+profile generation. Run it with the inputs documented in `integration/README.md`.
 
 ## Test-first
 

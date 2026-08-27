@@ -1,0 +1,117 @@
+name: ratatoskr-${RATATOSKR_TASK_NAMESPACE:?set a unique task namespace}
+
+x-ratatoskr-inputs:
+  contracts_context: ${RATATOSKR_CONTRACTS_CONTEXT:?set the Contracts checkout}
+  contracts_revision: ${RATATOSKR_CONTRACTS_REVISION:?set the Contracts revision}
+  platform_context: ${RATATOSKR_PLATFORM_CONTEXT:?set the Platform checkout}
+  platform_revision: ${RATATOSKR_PLATFORM_REVISION:?set the Platform revision}
+  web_context: ${RATATOSKR_WEB_CONTEXT:?set the Web checkout}
+  web_revision: ${RATATOSKR_WEB_REVISION:?set the Web revision}
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: platform
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=und-x-icu --encoding=UTF8
+      POSTGRES_USER: platform
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U platform -d platform && psql -U platform -d platform -c 'select 1' >/dev/null"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  nats:
+    image: nats:2-alpine
+    command: [--jetstream, --store_dir=/data, --http_port=8222]
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O- http://127.0.0.1:8222/healthz | grep -q ok"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - nats-data:/data
+
+  platform:
+    build:
+      context: ${RATATOSKR_PLATFORM_CONTEXT:?set the Platform checkout}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_PLATFORM_REVISION:?set the Platform revision}
+    command: [ratatoskr-edge]
+    environment:
+      RATATOSKR__ADMIN__BIND: 0.0.0.0:9464
+      RATATOSKR__BUS__URL: nats://nats:4222
+      RATATOSKR__DATABASE__URL: postgres://platform@postgres:5432/platform
+      RATATOSKR__PUBLIC__BIND: 0.0.0.0:8080
+      RATATOSKR__TELEMETRY__LOG_FILTER: info
+    depends_on:
+      nats:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "grep -qi ':24F8 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+    ports:
+      - 127.0.0.1::8080
+      - 127.0.0.1::9464
+
+  seed:
+    image: postgres:17
+    depends_on:
+      platform:
+        condition: service_healthy
+    environment:
+      PGDATABASE: platform
+      PGHOST: postgres
+      PGUSER: platform
+    command:
+      - sh
+      - -euc
+      - |
+        attempt=0
+        until psql -v ON_ERROR_STOP=1 -Atqc 'select 1 from identity.users limit 1' >/dev/null 2>&1; do
+          attempt=$$((attempt + 1))
+          test "$$attempt" -lt 60
+          sleep 1
+        done
+        psql -v ON_ERROR_STOP=1 -f /seed/web-operational.sql >/dev/null
+    volumes:
+      - ../fixtures/web-operational.sql:/seed/web-operational.sql:ro
+
+  web:
+    build:
+      context: ${RATATOSKR_WEB_CONTEXT:?set the Web checkout}
+      dockerfile_inline: |
+        FROM node:24-bookworm-slim AS builder
+        WORKDIR /app
+        COPY package.json package-lock.json ./
+        RUN npm ci --legacy-peer-deps
+        COPY . .
+        RUN npm run build
+
+        FROM nginx:1.28-alpine
+        COPY --from=builder /app/dist /usr/share/nginx/html
+    depends_on:
+      platform:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O- http://127.0.0.1/status >/dev/null"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+    ports:
+      - 127.0.0.1::80
+    volumes:
+      - ../nginx/web-operational.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres-data:
+  nats-data:

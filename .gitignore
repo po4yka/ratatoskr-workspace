@@ -19,3 +19,6 @@ target/
 *.pem
 *.key
 .omo/
+
+# Local integration logs. Committed results belong in the changeset record.
+/evidence/

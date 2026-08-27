@@ -342,6 +342,11 @@ The workspace MCP server exposes repository topology, task context, dependency g
 
 The workspace owns cross-service test environments.
 
+Current implementation is intentionally smaller than this target. The repository has one manual
+`web-operational` profile with explicit checkout/revision inputs, ephemeral loopback ports, bounded
+synthetic seed data, browser/API smoke, dependency-loss recovery, and project-scoped teardown. It
+does not read a workspace manifest or lockfile and is not exposed through `ws`.
+
 ```text
 integration/
 ├── compose/

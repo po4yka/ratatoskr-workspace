@@ -1,7 +1,7 @@
 # Workspace implementation plan
 
 > Status: Proposed  
-> Last reviewed: 2026-08-17
+> Last reviewed: 2026-08-27
 
 ## Milestones
 
@@ -12,7 +12,8 @@
 5. Add repository command execution and structured results.
 6. Add Claude Code and Codex adapters with one-writer enforcement.
 7. Coordinate one real cross-repository changeset.
-8. Add task-namespaced integration profiles.
+8. Add task-namespaced integration profiles. Started with the manual `web-operational` profile;
+   general profile generation remains open.
 9. Add PR reconciliation, lock generation, and release snapshots.
 10. Expose read-only MCP resources before any mutating MCP tools.
 
