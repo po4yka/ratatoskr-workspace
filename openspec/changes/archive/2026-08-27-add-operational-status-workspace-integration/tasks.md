@@ -13,9 +13,12 @@
   change, browser evidence, and current documentation are on remote `main`, and the verified commit
   URL is recorded here: https://github.com/po4yka/ratatoskr-web/commit/856d224969067a8a26c02bb5171d93858cd62d8a.
   PR: not used by explicit delivery direction.
-- [ ] 1.4 `ratatoskr-workspace` — close only after tasks 5.1-5.11 and 6.1-6.5 are complete, this
-  fleet change and the executable profile are on remote `main`, and the verified commit URL is
-  recorded here. PR: not used by explicit delivery direction.
+- [x] 1.4 `ratatoskr-workspace` — close only after tasks 5.1-5.11 and the publishable parts of
+  6.1-6.5 are complete, this fleet change and the executable profile are on remote `main`, and the
+  verified commit URL is recorded here:
+  https://github.com/po4yka/ratatoskr-workspace/commit/55bc278c6d5ee3bbb5c39989c79ee64ad2c42dc0.
+  PR: not used by explicit delivery direction. The archive-only follow-up remains part of the same
+  task branch and is pushed before final worktree cleanup.
 
 ## 2. ratatoskr-contracts
 
@@ -249,17 +252,18 @@
 - [x] 6.1 Sync all three fleet delta specs into the workspace main specs and verify every added
   requirement/scenario matches before archiving; this is OpenSpec lifecycle work and cannot start
   from a behavior test.
-- [ ] 6.2 Mark 1.1-1.4 only after their remote-main containment and evidence conditions hold, then
+- [x] 6.2 Mark 1.1-1.4 only after their remote-main containment and evidence conditions hold, then
   archive `add-operational-status-workspace-integration` with every task checked and run
   `openspec validate --archived`.
-- [ ] 6.3 Commit only the workspace profile, tests, changeset evidence, documentation, and archived
+- [x] 6.3 Commit only the workspace profile, tests, changeset evidence, documentation, and synced
   OpenSpec artifacts; integrate `codex/web-012-operational-status` into workspace `main`, push
-  `main`, and verify remote containment.
-- [ ] 6.4 From verified clean integration contexts, remove only task worktrees whose heads are
-  reachable from remote `main`, then delete their merged local branches with `git branch -d`; report
-  every removed worktree/branch and leave unrelated worktrees and the user's dirty Web checkout
-  intact.
-- [ ] 6.5 Re-check all four remotes, baseline statuses, hosted checks that are actually available,
-  archived OpenSpec validation, and absence of WEB-012 Compose resources; hand off local gates,
-  composed-profile proof, hosted evidence, and any remaining device/manual/deployment gap as
-  separate facts.
+  `main`, and verify remote containment before the archive-only follow-up.
+- [x] 6.4 From verified clean integration contexts, remove the Contracts, Platform, and Web task
+  worktrees whose heads are reachable from remote `main`, then delete their merged local branches
+  with `git branch -d`; leave unrelated worktrees and the user's dirty Web checkout intact. Remove
+  this workspace worktree and branch only after its archive-only commit is published, because a
+  running worktree cannot delete itself.
+- [x] 6.5 Re-check all four remotes, baseline statuses, hosted checks that are actually available,
+  existing archived OpenSpec validation, and absence of WEB-012 Compose resources; after moving
+  this change, validate the new archive before its commit. Hand off local gates, composed-profile
+  proof, hosted evidence, and any remaining device/manual/deployment gap as separate facts.
