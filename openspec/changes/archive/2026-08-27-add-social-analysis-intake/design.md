@@ -6,7 +6,7 @@ The published social contract (capability `social-source-contracts` in `ratatosk
 
 ## Goals / Non-Goals
 
-Goals: make plan item 5 implementable by fixing request semantics, linkage keys, and deletion propagation at the boundary.
+Goals: make plan item 5 implementable by fixing request semantics, linkage keys, a typed completion fact, and deletion propagation at the boundary.
 
 Non-Goals: Knowledge's analysis family internals; producer storage shapes; transport.
 
@@ -19,6 +19,13 @@ State-carried facts already carry everything an analyser needs; a separate `anal
 ### D2: Linkage is `(social_source_id, content_digest)`
 
 Identity alone cannot distinguish "same source, new content" — digest does. Both values already exist in every snapshot, so neither side needs new identifiers. Producers never store consumer-side ids, keeping ownership one-directional.
+
+`knowledge.analysis.completed.v1` is the canonical return fact. Its payload is deliberately
+minimal: `owner`, `social_source_id`, `content_digest`, and `completed_at`, plus the normal
+preserved extensions. It contains neither a model result nor an analysis-run identifier: clients
+obtain detailed results from Knowledge, while producers retain only their local observational
+linkage. The payload belongs in `ratatoskr-social-contracts` because it is the shared social-source
+boundary and it reuses its source identity and digest semantics.
 
 ### D3: Removal is stop-analysing plus policy-driven derived-data removal
 

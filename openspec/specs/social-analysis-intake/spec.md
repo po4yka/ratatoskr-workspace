@@ -1,4 +1,9 @@
-## ADDED Requirements
+# social-analysis-intake Specification
+
+## Purpose
+Defines the replay-safe social-source boundary through which preserved facts request Knowledge analysis and completion or removal facts return safely to producers.
+
+## Requirements
 
 ### Requirement: A social-source fact is itself the analysis request
 
@@ -11,7 +16,12 @@ Consumers that analyse social sources SHALL create their analysis runs from rece
 
 ### Requirement: Results link back through identity plus content digest
 
-Every analysis-completion fact about a social source SHALL name the `social_source_id` it analysed and the `content_digest` of the snapshot analysed. Producing services SHALL link results to their own records using only these two values; a result whose digest differs from the record's current normalized state SHALL be treated as superseded evidence, never merged silently.
+Every analysis-completion fact about a social source SHALL be the typed
+`knowledge.analysis.completed.v1` payload from `ratatoskr-social-contracts`. It SHALL name the
+owner, `social_source_id`, `content_digest`, and completion instant, and SHALL carry neither model
+output nor a consumer-private run identifier. Producing services SHALL link results to their own
+records using only `(social_source_id, content_digest)`; a result whose digest differs from the
+record's current normalized state SHALL be treated as superseded evidence, never merged silently.
 
 #### Scenario: a changed digest supersedes without erasing
 
