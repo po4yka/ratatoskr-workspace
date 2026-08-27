@@ -1,0 +1,72 @@
+id: AIARCH-009
+state: verified
+goal: Complete the ChatGPT Archive privacy-deletion and parser lifecycle with downstream Knowledge erasure.
+repositories:
+  - id: ratatoskr-contracts
+    role: contract-producer
+    feature_commit: 66d9454737d86d93f49ead96c0f028c2aeda02ff
+    published_main_head_at_verification: 5b8bbb4220375f6236066a23b19e9d6f8faaaf28
+  - id: ratatoskr-knowledge
+    role: deletion-consumer
+    feature_commit: 8b884099407ee5e53739577b5134d8f17daa7635
+    published_main_head_at_verification: 99e622438e09b7da87b5a4a121195fbe87ba7efa
+  - id: ratatoskr-chatgpt
+    role: archive-producer
+    feature_commit: 154ff889cfe358fa8cfbe06a597c499d9a9cfbf1
+    published_main_head_at_verification: 154ff889cfe358fa8cfbe06a597c499d9a9cfbf1
+  - id: ratatoskr-workspace
+    role: coordination-and-verification
+    feature_commit: this-changeset-commit
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-knowledge
+  - ratatoskr-chatgpt
+  - ratatoskr-workspace
+contract:
+  event: ai_archive.subject.tombstoned.v1
+  reason: user_requested
+  version: 1
+compatibility:
+  strategy: Add one bounded reason token to the existing event and deploy the compatible consumer first.
+  contract_pin: 66d9454737d86d93f49ead96c0f028c2aeda02ff
+  consumer_before_producer: true
+database:
+  strategy: Edit each development repository current schema in place.
+  migration_artifacts: none
+privacy:
+  deletion_scopes: [archive, conversation, tenant]
+  removed_categories: [raw_archives, extracted_artifacts, normalized_records]
+  retained_evidence: Content-free immutable audit metadata and deduplicated tombstone facts only.
+rollout:
+  - Publish the additive contract and fixtures.
+  - Publish the Knowledge consumer and scoped replay-safe deletion.
+  - Publish ChatGPT privacy deletion, reparse, parser reporting, and fixture admission.
+  - Record the verified fleet boundary in the workspace OpenSpec store.
+rollback:
+  - Before producer publication, revert in reverse dependency order.
+  - After a privacy tombstone is published, disable new producer operations only.
+  - Keep contract and consumer support; never recreate erased archive or Knowledge data.
+verification:
+  child_commits:
+    - All three feature commits are reachable from their published remote main branches.
+    - Knowledge commit time 2026-08-27T15:27:03+04:00 precedes ChatGPT commit time 2026-08-27T17:11:41+04:00.
+  contracts:
+    - Full repository gate passed on feature commit 66d9454737d86d93f49ead96c0f028c2aeda02ff.
+    - The user-requested tombstone fixture round-trips through AiArchiveTombstone.
+  knowledge:
+    - Full repository gate passed on feature commit 8b884099407ee5e53739577b5134d8f17daa7635.
+    - The scoped user-requested tombstone test proves sibling retention, replay deduplication, and cross-tenant refusal.
+  chatgpt:
+    - cargo fetch --locked passed.
+    - cargo deny check passed with repository-allowed duplicate warnings.
+    - cargo fmt, clippy with warnings denied, build, and the PostgreSQL 17 full workspace test suite passed.
+    - OpenSpec strict and archived validation passed after the child change was archived.
+  workspace:
+    - The final staged tree passed the local fleet invariants, CRLF, credential, private-key, action-pin, and manifest fail-closed checks.
+    - OpenSpec strict validation passed and all 8 archived changes validated with no incomplete task.
+    - zizmor 1.29.0 offline audit reported no findings across all 5 workflow and Dependabot inputs; online audits remain a hosted-check boundary.
+  workspace_limit:
+    - This bootstrap repository has no workspace manifest, submodules, lockfile, ws harness, or integration profile to execute.
+    - Workspace verification is therefore the OpenSpec and fleet-tree gates plus exact published-child reachability, not a live deployment claim.
+hosted_ci: not-claimed-required-checks-were-bypassed-on-direct-main-push
+real_owner_fixture_status: Admission process and synthetic golden evidence only; no private owner export is committed or claimed as parser support.

@@ -1,26 +1,4 @@
-# AI archive event lifecycle across repositories
-
-## Purpose
-
-Defines replay-safe AI-archive facts that let Knowledge index normalized conversation evidence.
-
-Knowledge removes derived results only after authoritative tombstone evidence.
-
-## Requirements
-
-### Requirement: Published archive facts carry independently verifiable provenance
-
-The AI-archive contract SHALL publish `ai_archive.archive.imported.v1` and conversation/project added/updated facts that link every subject to its owning import and expose immutable export reference, parser name/version, owner, provider, normalized content digest, and graph revision without requiring a producer-database read.
-
-#### Scenario: Contract fixture links normalized subjects to immutable archive evidence
-
-- **WHEN** a consumer deserializes a valid imported-archive fixture and linked conversation-added and project-added fixtures
-- **THEN** it verifies owner, provider, archive identity, source-export reference, parser identity, and normalized content records agree and round-trip
-
-#### Scenario: Added and updated facts converge under replay
-
-- **WHEN** a consumer receives a duplicate fact or an older revision after a newer conversation or project fact
-- **THEN** it retains at most one current source head and does not regress content digest or parser revision
+## MODIFIED Requirements
 
 ### Requirement: Authoritative AI-archive tombstones are publishable facts
 
