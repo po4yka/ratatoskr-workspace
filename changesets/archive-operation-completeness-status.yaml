@@ -1,0 +1,47 @@
+id: archive-operation-completeness-status
+state: implementing
+goal: Truthful end-to-end archive import completeness status in the macOS export agent.
+repositories:
+  - id: ratatoskr-contracts
+    role: contract-producer
+    branch: main@33fd9991f1bb5c39fe779dff1369218a9e28e7e4
+  - id: ratatoskr-platform
+    role: operation-acceptance-and-projection
+    branch: main@b422c323e19af606fd3371827d7fb512a6179383
+  - id: ratatoskr-chatgpt
+    role: archive-import-producer
+    branch: pending-public-operation-correlation
+  - id: ratatoskr-claude
+    role: archive-import-producer
+    branch: pending-public-operation-correlation
+  - id: ratatoskr-export-agent
+    role: consumer-and-local-presentation
+    branch: main@bd3896f5dd22fc9798b405a168582721277f18a1
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-platform
+  - ratatoskr-chatgpt
+  - ratatoskr-claude
+  - ratatoskr-export-agent
+contract: ai-archive-operation-summary
+compatibility:
+  strategy: additive typed operation-result field; consumers treat absence as unverified
+  old_agent: continues to ignore the additive result data
+  old_producer: agent retains an unverified terminal result and never claims completeness
+privacy:
+  allowed: [archive_id, provider, completeness, aggregate_counts, gap_count, warning_count, report_reference]
+  forbidden: [archive_content, titles, paths, provider_account_ids, credentials, raw_diagnostics, warning_text]
+rollout:
+  - publish contract fixtures
+  - deploy Platform acceptance/projection support
+  - expose an authenticated Platform archive-acceptance operation that carries its ID into a producer
+  - deploy both archive producers with terminal summary emission
+  - deploy export agent consumer after its configured upload path returns an operation ID
+rollback:
+  - stop producer summary emission if required
+  - agent keeps last known or unverified state; local archives and credentials remain untouched
+verification:
+  - repository-local contract, Platform, and agent gates are green on the recorded main commits
+  - Platform and agent hosted checks are green on the recorded main commits
+  - producer publication remains pending because no current public Platform archive receiver supplies an operation ID or durable producer event path
+  - compatible pinned workspace snapshot remains pending until that end-to-end acceptance path exists
