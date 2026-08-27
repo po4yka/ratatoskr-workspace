@@ -242,6 +242,8 @@ bind to `0.0.0.0`.
 | 8093 | `ratatoskr-vault` domain API (`/v1/vault`) | loopback; reached only through Edge |
 | 8094 | `ratatoskr-social` domain API (`/v1/social`) | loopback; reached only through Edge |
 | 8095 | `ratatoskr-ai-archive` domain API (`/v1/ai`) | loopback; reached only through Edge |
+| 8096 | ChatGPT archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
+| 8097 | Claude archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
 | 9464 / 9465 / 9466 | edge / ingest / scheduler operator listener | host only |
 | 4222 | NATS — a container, `ratatoskr-nats`, config in `platform/deploy/nats/` | host only |
 | 5432 | PostgreSQL | host only |

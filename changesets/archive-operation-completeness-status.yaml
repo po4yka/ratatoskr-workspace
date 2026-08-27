@@ -10,10 +10,10 @@ repositories:
     branch: main@b422c323e19af606fd3371827d7fb512a6179383
   - id: ratatoskr-chatgpt
     role: archive-import-producer
-    branch: pending-public-operation-correlation
+    branch: producer-operation-report@d82fe59
   - id: ratatoskr-claude
     role: archive-import-producer
-    branch: pending-public-operation-correlation
+    branch: archive-operation-summary@4296447
   - id: ratatoskr-export-agent
     role: consumer-and-local-presentation
     branch: main@bd3896f5dd22fc9798b405a168582721277f18a1
@@ -43,5 +43,6 @@ rollback:
 verification:
   - repository-local contract, Platform, and agent gates are green on the recorded main commits
   - Platform and agent hosted checks are green on the recorded main commits
-  - producer publication remains pending because no current public Platform archive receiver supplies an operation ID or durable producer event path
-  - compatible pinned workspace snapshot remains pending until that end-to-end acceptance path exists
+  - producer and export-agent task branches are locally gated and await ordered main integration
+  - deployment must configure ChatGPT and Claude loopback receipt listeners before the Platform
+    archive-acceptance route can deliver live imports
