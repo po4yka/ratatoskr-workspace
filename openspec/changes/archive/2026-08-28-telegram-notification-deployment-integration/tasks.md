@@ -2,7 +2,7 @@
 
 - [x] 1.1 `ratatoskr-platform`: apply and archive `provision-telegram-notification-consumer`, run its full gate, integrate its task branch into `main`, push `main`, and record the exact commit URL and green evidence in `TG-010` (the user-authorized direct integration replaces a pull-request link).
 - [x] 1.2 `ratatoskr-telegram`: after the Platform revision is fixed, apply and archive `notifications-deployment-recovery-integration`, run its full gate, integrate its task branch into `main`, push `main`, and record the exact commit URL and green evidence in `TG-010` (the user-authorized direct integration replaces a pull-request link).
-- [ ] 1.3 `ratatoskr-workspace`: after both child revisions are fixed, implement the port contract and composed profile below, run the workspace gate, archive this change, integrate the coordination branch into `main`, push `main`, and record the exact commit URL and green evidence in `TG-010`.
+- [x] 1.3 `ratatoskr-workspace`: after both child revisions are fixed, implement the port contract and composed profile below, run the workspace gate, archive this change, integrate the coordination branch into `main`, push `main`, and record the exact commit URL and green evidence in `TG-010`.
 
 ## 2. Port and deployment contract
 
@@ -27,4 +27,4 @@
 
 - [x] 5.1 Add the generated TG-010 evidence summary with exact Contracts, Platform, Telegram, and workspace source revisions, Compose hash, image IDs, executed commands, safe decision/call counts, and explicit `hosted_ci`/`live_deployment` boundaries; configuration evidence cannot start from a failing behavior test, so verify it with the evidence schema/static checker and a secret-pattern scan.
 - [x] 5.2 Update `integration/README.md`, `docs/TESTING.md`, and `TG-010` with the executable commands and observed evidence; documentation cannot start from a failing behavior test, so verify every command/path through the static profile tests and dry-run runner mode.
-- [ ] 5.3 Run `openspec validate telegram-notification-deployment-integration --strict`, every workspace gate command from `docs/QUALITY_GATES.md`, and a final diff/credential scan; mark tasks complete only for observed runs and leave hosted CI/live deployment unclaimed unless separately verified.
+- [x] 5.3 Run `openspec validate telegram-notification-deployment-integration --strict`, every workspace gate command from `docs/QUALITY_GATES.md`, and a final diff/credential scan; mark tasks complete only for observed runs and leave hosted CI/live deployment unclaimed unless separately verified.
