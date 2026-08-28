@@ -3,7 +3,7 @@
 - [x] 1.1 `ratatoskr-knowledge`: merge the additive search identity/effective-state/filter and read-state-only mutation change after its repository gate passes; direct authorized `main` merge: `16df57993825a42680bc922b45c2742a04964ea2`, verified on `origin/main`.
 - [x] 1.2 `ratatoskr-platform`: after 1.1, merge the authenticated library façade, OpenAPI, safe Knowledge client, and capability names after its repository gate passes; direct authorized `main` merge: `070b718238c4e6e45a5b7fc08ebe719ed5374e33`, verified on `origin/main` after Knowledge.
 - [x] 1.3 `ratatoskr-telegram`: after 1.2, merge the command adapter, opaque read authority, renderer, and typed Platform client after its repository gate passes; direct authorized `main` merge: `73c5ed2100bd2aa5b11bfbf6f57551ea45e828af`, verified on `origin/main` after Platform.
-- [ ] 1.4 `ratatoskr-workspace`: after composed verification and pin updates, merge this coordination/integration change; record the merged PR link here (PR: pending) and verify all three child commits and the final workspace commit are reachable from their remote default branches.
+- [x] 1.4 `ratatoskr-workspace`: after composed verification and evidence updates, merge this coordination/integration change; direct authorized evidence merge `b275431f7a4332aa4d4c415a7584dd4971787b46` and all three child merge commits were verified on their remote default branches.
 
 ## 2. Workspace coordination and static profile
 

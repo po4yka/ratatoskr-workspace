@@ -1,5 +1,5 @@
 id: TG-011
-state: evidence_recorded
+state: complete
 goal: Deliver authenticated library search and read-state commands through Knowledge, Platform, and Telegram with composed capability-recovery evidence.
 repositories:
   - id: ratatoskr-knowledge
@@ -74,8 +74,27 @@ evidence:
   telegram_commit_url: https://github.com/po4yka/ratatoskr-telegram/commit/73c5ed2100bd2aa5b11bfbf6f57551ea45e828af
   workspace_profile_commit: 52b7b5934da5934c9a57fd38e55f5bb0bb93c81a
   workspace_profile_commit_url: https://github.com/po4yka/ratatoskr-workspace/commit/52b7b5934da5934c9a57fd38e55f5bb0bb93c81a
+  workspace_evidence_commit: b275431f7a4332aa4d4c415a7584dd4971787b46
+  workspace_evidence_commit_url: https://github.com/po4yka/ratatoskr-workspace/commit/b275431f7a4332aa4d4c415a7584dd4971787b46
   composed_profile: green_against_published_clean_revisions
   composed_profile_boundary: synthetic_bot_api_no_live_telegram_or_deployment
   composed_profile_summary: integration/evidence/TG-011.md
   compose_sha256: 1ac9e0f68beae2f30cb4efa383b4f403d63879b62820f7d41da87e622b8abffc
+  hosted_ci: green
+  hosted_runs:
+    knowledge_ci: https://github.com/po4yka/ratatoskr-knowledge/actions/runs/33177135374
+    knowledge_fleet: https://github.com/po4yka/ratatoskr-knowledge/actions/runs/33177135362
+    knowledge_openspec: https://github.com/po4yka/ratatoskr-knowledge/actions/runs/33177135375
+    knowledge_zizmor: https://github.com/po4yka/ratatoskr-knowledge/actions/runs/33177135308
+    platform_ci: https://github.com/po4yka/ratatoskr-platform/actions/runs/33177151386
+    platform_fleet: https://github.com/po4yka/ratatoskr-platform/actions/runs/33177151460
+    platform_openspec: https://github.com/po4yka/ratatoskr-platform/actions/runs/33177151427
+    platform_zizmor: https://github.com/po4yka/ratatoskr-platform/actions/runs/33177151380
+    telegram_ci: https://github.com/po4yka/ratatoskr-telegram/actions/runs/33177172127
+    telegram_fleet: https://github.com/po4yka/ratatoskr-telegram/actions/runs/33177172051
+    telegram_openspec: https://github.com/po4yka/ratatoskr-telegram/actions/runs/33177172024
+    telegram_zizmor: https://github.com/po4yka/ratatoskr-telegram/actions/runs/33177172048
+    workspace_fleet: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33178481716
+    workspace_openspec: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33178481653
+    workspace_zizmor: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33178481727
 live_telegram: not_authorized
