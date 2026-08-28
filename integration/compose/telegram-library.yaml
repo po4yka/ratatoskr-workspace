@@ -1,0 +1,228 @@
+name: ratatoskr-${RATATOSKR_TASK_NAMESPACE:?set a unique tg011 task namespace}
+
+x-ratatoskr-inputs:
+  knowledge_context: ${RATATOSKR_KNOWLEDGE_CONTEXT:?set the Knowledge checkout}
+  knowledge_revision: ${RATATOSKR_KNOWLEDGE_REVISION:?set the Knowledge revision}
+  platform_context: ${RATATOSKR_PLATFORM_CONTEXT:?set the Platform checkout}
+  platform_revision: ${RATATOSKR_PLATFORM_REVISION:?set the Platform revision}
+  telegram_context: ${RATATOSKR_TELEGRAM_CONTEXT:?set the Telegram checkout}
+  telegram_revision: ${RATATOSKR_TELEGRAM_REVISION:?set the Telegram revision}
+  runtime_dir: ${RATATOSKR_TG011_RUNTIME_DIR:?set the generated TG-011 runtime directory}
+
+services:
+  network:
+    image: nats@sha256:d4ac35882ac65aff236cd65b9d3fa4d24332c681e1a85f94eedccd3cdd65b1da
+    entrypoint: [/bin/sh, -c]
+    command: [sleep infinity]
+    ports:
+      - 127.0.0.1::8080
+      - 127.0.0.1::8091
+      - 127.0.0.1::8182
+      - 127.0.0.1::18080
+      - 127.0.0.1::9464
+      - 127.0.0.1::9467
+      - 127.0.0.1::9468
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    network_mode: service:network
+    depends_on:
+      network:
+        condition: service_started
+    environment:
+      POSTGRES_DB: platform
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=und-x-icu --encoding=UTF8
+      POSTGRES_USER: platform
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U platform -d platform && pg_isready -U platform -d telegram && pg_isready -U platform -d knowledge"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../fixtures/telegram-library-init.sql:/docker-entrypoint-initdb.d/10-library.sql:ro
+
+  nats:
+    image: nats@sha256:d4ac35882ac65aff236cd65b9d3fa4d24332c681e1a85f94eedccd3cdd65b1da
+    network_mode: service:network
+    depends_on:
+      network:
+        condition: service_started
+    command: [-c, /run/tg011/nats.conf]
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O- http://127.0.0.1:8222/healthz | grep -q ok"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+    volumes:
+      - ${RATATOSKR_TG011_RUNTIME_DIR:?set the runtime directory}:/run/tg011:ro
+      - nats-data:/data
+
+  fake-bot:
+    image: python@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d
+    network_mode: service:network
+    depends_on:
+      network:
+        condition: service_started
+    command: [python3, /fixture/telegram-library-fake-bot-api.py]
+    healthcheck:
+      test: [CMD, python3, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18080/health', timeout=1)"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - ../fixtures/telegram-library-fake-bot-api.py:/fixture/telegram-library-fake-bot-api.py:ro
+      - ${RATATOSKR_TG011_RUNTIME_DIR:?set the runtime directory}/state:/state
+
+  knowledge:
+    build:
+      context: ${RATATOSKR_KNOWLEDGE_CONTEXT:?set the Knowledge checkout}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_KNOWLEDGE_REVISION:?set the Knowledge revision}
+      dockerfile_inline: |
+        FROM rust:1.97.0-slim-bookworm AS builder
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git pkg-config && rm -rf /var/lib/apt/lists/*
+        WORKDIR /build
+        ARG RATATOSKR_GIT_SHA=unknown
+        ENV RATATOSKR_GIT_SHA=$${RATATOSKR_GIT_SHA}
+        COPY . .
+        RUN cargo build --release --locked -p ratatoskr-knowledge-service
+        FROM debian:12-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && useradd --system --no-create-home --shell /usr/sbin/nologin ratatoskr
+        COPY --from=builder /build/target/release/ratatoskr-knowledge-service /usr/local/bin/
+        USER ratatoskr
+    image: ratatoskr-tg011-knowledge:${RATATOSKR_KNOWLEDGE_REVISION:?set the Knowledge revision}
+    network_mode: service:network
+    command: [ratatoskr-knowledge-service]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:8091
+      RATATOSKR__STORAGE__BLOB_ROOT: /tmp/tg011-knowledge-blobs
+      RATATOSKR__STORAGE__DATABASE_URL: postgres://platform@127.0.0.1:5432/knowledge
+    healthcheck:
+      test: [CMD-SHELL, "grep -qi ':1F9B ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      interval: 1s
+      timeout: 3s
+      retries: 90
+
+  platform:
+    build:
+      context: ${RATATOSKR_PLATFORM_CONTEXT:?set the Platform checkout}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_PLATFORM_REVISION:?set the Platform revision}
+    image: ratatoskr-tg011-platform:${RATATOSKR_PLATFORM_REVISION:?set the Platform revision}
+    network_mode: service:network
+    command: [ratatoskr-edge]
+    depends_on:
+      knowledge:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      RATATOSKR__ADMIN__BIND: 0.0.0.0:9464
+      RATATOSKR__BUS__NKEY_SEED_PATH: /run/tg011/edge.nkey
+      RATATOSKR__BUS__URL: nats://127.0.0.1:4222
+      RATATOSKR__DATABASE__URL: postgres://platform@127.0.0.1:5432/platform
+      RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__CLASS: stream
+      RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__LISTENER: 127.0.0.1:8091
+      RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__PREFIX: /v1/k
+      RATATOSKR__IDENTITY__ASSERTION_KEY: ${RATATOSKR_TG011_ASSERTION_PUBLIC_KEY:?set generated assertion public key}
+      RATATOSKR__PUBLIC__BIND: 0.0.0.0:8080
+      RATATOSKR__PUBLIC__REQUEST_TIMEOUT_SECONDS: 300
+      RATATOSKR__TELEMETRY__LOG_FILTER: info
+    healthcheck:
+      test: [CMD-SHELL, "grep -qi ':24F8 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      interval: 1s
+      timeout: 3s
+      retries: 90
+    volumes:
+      - ${RATATOSKR_TG011_RUNTIME_DIR:?set the runtime directory}:/run/tg011:ro
+
+  telegram-webhook:
+    build:
+      context: ${RATATOSKR_TELEGRAM_CONTEXT:?set the Telegram checkout}
+      dockerfile_inline: |
+        FROM rust:1.97.0-slim-bookworm AS builder
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git pkg-config && rm -rf /var/lib/apt/lists/*
+        WORKDIR /build
+        ARG RATATOSKR_GIT_SHA=unknown
+        ENV RATATOSKR_GIT_SHA=$${RATATOSKR_GIT_SHA}
+        COPY . .
+        RUN cargo build --release --locked -p ratatoskr-telegram-webhook -p ratatoskr-telegram-dispatcher
+        FROM debian:12-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && useradd --system --no-create-home --shell /usr/sbin/nologin ratatoskr
+        COPY --from=builder /build/target/release/ratatoskr-telegram-webhook /build/target/release/ratatoskr-telegram-dispatcher /usr/local/bin/
+        USER ratatoskr
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_TELEGRAM_REVISION:?set the Telegram revision}
+    image: ratatoskr-tg011-telegram:${RATATOSKR_TELEGRAM_REVISION:?set the Telegram revision}
+    network_mode: service:network
+    command: [ratatoskr-telegram-webhook]
+    depends_on:
+      fake-bot:
+        condition: service_healthy
+      platform:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment: &telegram-environment
+      RATATOSKR__ACCESS__OWNER_TELEGRAM_USER_ID: 900700601
+      RATATOSKR__ADMIN__BIND: 0.0.0.0:9467
+      RATATOSKR__BOT_API__BASE_URL: http://127.0.0.1:18080
+      RATATOSKR__BOT_API__TOKEN_FILE: /run/tg011/bot-token
+      RATATOSKR__DATABASE__URL: postgres://platform@127.0.0.1:5432/telegram
+      RATATOSKR__INGESTION__BLOB_ROOT: /tmp/tg011-telegram-blobs
+      RATATOSKR__PLATFORM__ASSERTION_SIGNING_KEY_FILE: /run/tg011/assertion-seed
+      RATATOSKR__PLATFORM__AUDIENCE: edge
+      RATATOSKR__PLATFORM__BASE_URL: http://127.0.0.1:8080
+      RATATOSKR__TELEMETRY__LOG_FILTER: info
+      RATATOSKR__WEBHOOK__BIND: 0.0.0.0:8182
+      RATATOSKR__WEBHOOK__SECRET_TOKEN_FILE: /run/tg011/webhook-secret
+    healthcheck:
+      test: [CMD-SHELL, "grep -qi ':24FB ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      interval: 1s
+      timeout: 3s
+      retries: 90
+    volumes:
+      - ${RATATOSKR_TG011_RUNTIME_DIR:?set the runtime directory}:/run/tg011:ro
+
+  telegram-dispatcher:
+    image: ratatoskr-tg011-telegram:${RATATOSKR_TELEGRAM_REVISION:?set the Telegram revision}
+    network_mode: service:network
+    command: [ratatoskr-telegram-dispatcher]
+    depends_on:
+      telegram-webhook:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    environment:
+      RATATOSKR__ADMIN__BIND: 0.0.0.0:9468
+      RATATOSKR__BOT_API__BASE_URL: http://127.0.0.1:18080
+      RATATOSKR__BOT_API__TOKEN_FILE: /run/tg011/bot-token
+      RATATOSKR__DATABASE__URL: postgres://platform@127.0.0.1:5432/telegram
+      RATATOSKR__NOTIFICATION_BUS__ACK_WAIT_SECONDS: 30
+      RATATOSKR__NOTIFICATION_BUS__CREDENTIALS_FILE: /run/tg011/telegram.nkey
+      RATATOSKR__NOTIFICATION_BUS__DURABLE: ratatoskr_telegram_notifications
+      RATATOSKR__NOTIFICATION_BUS__ENDPOINT: nats://127.0.0.1:4222
+      RATATOSKR__NOTIFICATION_BUS__STREAM: ratatoskr_events
+      RATATOSKR__NOTIFICATION_BUS__SUBJECT: evt.platform.notification.raised.v1
+      RATATOSKR__PLATFORM__ASSERTION_SIGNING_KEY_FILE: /run/tg011/assertion-seed
+      RATATOSKR__PLATFORM__AUDIENCE: edge
+      RATATOSKR__PLATFORM__BASE_URL: http://127.0.0.1:8080
+      RATATOSKR__TELEMETRY__LOG_FILTER: info
+    healthcheck:
+      test: [CMD-SHELL, "grep -qi ':24FC ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      interval: 1s
+      timeout: 3s
+      retries: 90
+    volumes:
+      - ${RATATOSKR_TG011_RUNTIME_DIR:?set the runtime directory}:/run/tg011:ro
+
+volumes:
+  nats-data:
+  postgres-data:

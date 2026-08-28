@@ -47,6 +47,14 @@ notification preference/deduplication decisions, notification-durable readiness 
 recovery, and project-only cleanup. It uses no production bot token or real chat and therefore does
 not establish live delivery. Run it with the inputs documented in `integration/README.md`.
 
+The TG-011 library-command profile is statically checked by
+`integration/tests/telegram_library_profile_test.sh`. The check pins the Knowledge/Platform/
+Telegram topology, allocated loopback and dynamic host ports, deterministic two-tenant fixtures,
+the complete search/unread/read/scope/recovery assertion sequence, reviewed evidence fields, and a
+namespaced teardown dry run. `build-gate -- integration/run-telegram-library.sh` is the heavier
+composed proof and must use exact clean revisions for final evidence. Its Bot API is synthetic and
+content-bounded; it does not prove a live Telegram account or deployment.
+
 ## Test-first
 
 A change is planned before it is built, and the plan is a task list in which behaviour arrives in

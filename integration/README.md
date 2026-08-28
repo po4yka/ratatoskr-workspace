@@ -72,3 +72,39 @@ the article flow reaches its final Telegram projection, enabled/suppressed/dupli
 decisions are enforced, and dispatcher readiness fails closed for absent or mismatched Platform
 durables. `evidence/<namespace>/` is ignored raw evidence; `TG-010` records the reviewed bounded
 summary. This is synthetic integration evidence, not hosted-CI, live-provider, or deployment proof.
+
+## Telegram library profile (TG-011)
+
+Validate the task namespace, service topology, dynamic ports, fixture boundary, runner assertions,
+reviewed evidence shape, and exact teardown plan:
+
+```sh
+integration/tests/telegram_library_profile_test.sh
+```
+
+Run the composed profile with clean child checkouts already contained by their `origin/main`:
+
+```sh
+export RATATOSKR_TASK_NAMESPACE=tg011-local
+export RATATOSKR_KNOWLEDGE_CONTEXT=/absolute/path/to/ratatoskr-knowledge
+export RATATOSKR_KNOWLEDGE_REVISION=<full-knowledge-sha>
+export RATATOSKR_PLATFORM_CONTEXT=/absolute/path/to/ratatoskr-platform
+export RATATOSKR_PLATFORM_REVISION=<full-platform-sha>
+export RATATOSKR_TELEGRAM_CONTEXT=/absolute/path/to/ratatoskr-telegram
+export RATATOSKR_TELEGRAM_REVISION=<full-telegram-sha>
+
+build-gate -- integration/run-telegram-library.sh
+```
+
+The runner builds real Knowledge, Platform, webhook, and dispatcher processes, creates disposable
+Platform/Knowledge/Telegram databases from their current schemas, and uses a recording synthetic
+Bot API. It proves owner-scoped `/search`, filtered `/unread`, token-bound `/read`, replay and
+foreign-scope refusal, favorite preservation, and health-backed capability disappearance/recovery.
+Raw output remains under ignored `evidence/<namespace>/`; the reviewed boundary is
+[`evidence/TG-011.md`](evidence/TG-011.md).
+
+The workspace harness and generated `workspace.lock` are still unimplemented by repository
+decision (`DEVELOPMENT.md`). TG-011 therefore pins its inputs through required full revision
+variables and refuses dirty, mismatched, or unpublished revisions instead of fabricating lockfile
+metadata. `RATATOSKR_ALLOW_DIRTY_SOURCES=1` and `RATATOSKR_ALLOW_UNPUBLISHED=1` exist only for a
+clearly labelled pre-publication smoke; their output cannot satisfy the exact-revision evidence row.
