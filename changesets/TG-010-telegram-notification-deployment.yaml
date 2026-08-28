@@ -90,5 +90,11 @@ evidence:
     fleet: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33161204461
     openspec: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33161204394
     zizmor: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33161204559
-  final_archive_hosted_ci: pending
+  workspace_archive_commit: f89ee61cc2dd724c0ef266acaba766156f67fddc
+  workspace_archive_commit_url: https://github.com/po4yka/ratatoskr-workspace/commit/f89ee61cc2dd724c0ef266acaba766156f67fddc
+  final_archive_hosted_ci: green
+  final_archive_runs:
+    fleet: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33161417175
+    openspec: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33161417258
+    zizmor: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33161417185
 live_deployment: not_authorized_target_frozen
