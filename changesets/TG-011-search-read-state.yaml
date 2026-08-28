@@ -1,0 +1,76 @@
+id: TG-011
+state: active
+goal: Deliver authenticated library search and read-state commands through Knowledge, Platform, and Telegram with composed capability-recovery evidence.
+repositories:
+  - id: ratatoskr-knowledge
+    role: authoritative-search-and-read-state-owner
+    branch: task/search-read-state-query-contract
+    base: 99e622438e09b7da87b5a4a121195fbe87ba7efa
+  - id: ratatoskr-platform
+    role: authenticated-public-library-facade
+    branch: task/library-search-read-state-api
+    base: a117ca854e73e7b6a0acbc0844905ca53462a502
+  - id: ratatoskr-telegram
+    role: private-chat-command-and-opaque-authority-adapter
+    branch: task/search-read-state-commands
+    base: 09c2231a60fed6fedb72165f3a6f51005ded7070
+  - id: ratatoskr-workspace
+    role: contract-coordination-and-composed-verification
+    branch: coord/search-read-state-specs
+    base: 4e914df16b0b897ce4bfbd414364e89627e07be9
+dependency_order:
+  - ratatoskr-knowledge
+  - ratatoskr-platform
+  - ratatoskr-telegram
+  - ratatoskr-workspace
+contract:
+  public_search: GET /v1/library/search
+  public_read_state: PUT /v1/library/items/{analysis_id}/read-state
+  capabilities: [library.search, library.read_state]
+  telegram_commands: [/search, /unread, /read]
+  synchronous_bus_subject: none
+compatibility:
+  strategy: Deploy additive Knowledge fields and mutation first, then Platform routes, then Telegram commands; capability absence keeps newer clients fail-closed while any required dependency is unavailable.
+  old_knowledge: Platform withholds library capabilities and returns retryable dependency errors.
+  old_platform: Telegram reports the feature unavailable and creates no read authority.
+  old_telegram: Ignores the additive public routes and leaves Knowledge state unchanged.
+database:
+  strategy: Edit the current Knowledge and Telegram schemas in place; disposable databases are created from schema.sql.
+  migration_artifacts: none
+api:
+  version: 1
+  negotiation: none
+  generated_surface: ratatoskr-platform/openapi/openapi.json
+privacy:
+  allowed: [accepted_analysis_id, document_id, bounded_title, bounded_snippet, finite_score, effective_read_state, opaque_command_token, safe_outcome_class]
+  forbidden: [client_tenant_selector, raw_private_message_history, query_text_in_logs, title_in_logs, snippet_in_logs, analysis_id_in_telegram_token, provider_credentials, bot_token, webhook_secret]
+rollout:
+  - Publish Knowledge search identity, effective-state filtering, read-state-only mutation, and its bounded capability document.
+  - Publish Platform authentication, tenant derivation, public routes, OpenAPI, typed Knowledge client, and health-backed capability names.
+  - Regenerate affected clients, then publish Telegram parsing, bounded rendering, typed Platform calls, and opaque read authority.
+  - Run the TG-011 task-namespaced profile against exact clean child revisions and record reviewed evidence before advancing workspace pins.
+rollback:
+  - Roll Telegram back first so no old Platform surface receives new command traffic.
+  - Roll Platform back second so no caller consumes Knowledge additions through the public API.
+  - Roll Knowledge back last; retain valid analysis_user_states rows because both binaries understand them.
+  - Remove only the exact TG-011 Compose project and volumes; do not touch another task namespace or live Telegram.
+security:
+  authentication: Platform session principal is the sole public tenant authority.
+  telegram_authority: Tokens are random, 64-character, single-use, 15-minute, and bound to bot, actor, internal user, and private chat.
+  failure_mode: Missing or stale dependency capability refuses the command without synthesizing data or success.
+verification:
+  planned:
+    - Knowledge database tests prove effective unread, pre-pagination filtering, scoped absence, idempotency, and favorite preservation.
+    - Platform route tests prove authentication, strict bounds, tenant derivation, minimized responses, safe errors, and capability availability.
+    - Telegram tests prove parsing, escaping, output bounds, token scope, one-time consumption, idempotent retry, and safe telemetry.
+    - The composed profile proves owner-only search, two unread items, read mutation, replay and foreign denial, final unread omission, favorite preservation, and capability disappearance and recovery.
+    - Every repository-local gate and strict OpenSpec validation passes before publication.
+evidence:
+  knowledge_commit: pending
+  platform_commit: pending
+  telegram_commit: pending
+  workspace_commit: pending
+  composed_profile: pending_exact_clean_revisions
+  composed_profile_boundary: synthetic_bot_api_no_live_telegram_or_deployment
+  composed_profile_summary: integration/evidence/TG-011.md
+live_telegram: not_authorized
