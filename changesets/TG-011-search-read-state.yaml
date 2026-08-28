@@ -1,5 +1,5 @@
 id: TG-011
-state: active
+state: evidence_recorded
 goal: Deliver authenticated library search and read-state commands through Knowledge, Platform, and Telegram with composed capability-recovery evidence.
 repositories:
   - id: ratatoskr-knowledge
@@ -66,11 +66,16 @@ verification:
     - The composed profile proves owner-only search, two unread items, read mutation, replay and foreign denial, final unread omission, favorite preservation, and capability disappearance and recovery.
     - Every repository-local gate and strict OpenSpec validation passes before publication.
 evidence:
-  knowledge_commit: pending
-  platform_commit: pending
-  telegram_commit: pending
-  workspace_commit: pending
-  composed_profile: pending_exact_clean_revisions
+  knowledge_commit: 16df57993825a42680bc922b45c2742a04964ea2
+  knowledge_commit_url: https://github.com/po4yka/ratatoskr-knowledge/commit/16df57993825a42680bc922b45c2742a04964ea2
+  platform_commit: 070b718238c4e6e45a5b7fc08ebe719ed5374e33
+  platform_commit_url: https://github.com/po4yka/ratatoskr-platform/commit/070b718238c4e6e45a5b7fc08ebe719ed5374e33
+  telegram_commit: 73c5ed2100bd2aa5b11bfbf6f57551ea45e828af
+  telegram_commit_url: https://github.com/po4yka/ratatoskr-telegram/commit/73c5ed2100bd2aa5b11bfbf6f57551ea45e828af
+  workspace_profile_commit: 52b7b5934da5934c9a57fd38e55f5bb0bb93c81a
+  workspace_profile_commit_url: https://github.com/po4yka/ratatoskr-workspace/commit/52b7b5934da5934c9a57fd38e55f5bb0bb93c81a
+  composed_profile: green_against_published_clean_revisions
   composed_profile_boundary: synthetic_bot_api_no_live_telegram_or_deployment
   composed_profile_summary: integration/evidence/TG-011.md
+  compose_sha256: 1ac9e0f68beae2f30cb4efa383b4f403d63879b62820f7d41da87e622b8abffc
 live_telegram: not_authorized
