@@ -25,6 +25,6 @@
 
 ## 5. Evidence and workspace gate
 
-- [ ] 5.1 Add the generated TG-010 evidence summary with exact Contracts, Platform, Telegram, and workspace source revisions, Compose hash, image IDs, executed commands, safe decision/call counts, and explicit `hosted_ci`/`live_deployment` boundaries; configuration evidence cannot start from a failing behavior test, so verify it with the evidence schema/static checker and a secret-pattern scan.
+- [x] 5.1 Add the generated TG-010 evidence summary with exact Contracts, Platform, Telegram, and workspace source revisions, Compose hash, image IDs, executed commands, safe decision/call counts, and explicit `hosted_ci`/`live_deployment` boundaries; configuration evidence cannot start from a failing behavior test, so verify it with the evidence schema/static checker and a secret-pattern scan.
 - [x] 5.2 Update `integration/README.md`, `docs/TESTING.md`, and `TG-010` with the executable commands and observed evidence; documentation cannot start from a failing behavior test, so verify every command/path through the static profile tests and dry-run runner mode.
 - [ ] 5.3 Run `openspec validate telegram-notification-deployment-integration --strict`, every workspace gate command from `docs/QUALITY_GATES.md`, and a final diff/credential scan; mark tasks complete only for observed runs and leave hosted CI/live deployment unclaimed unless separately verified.

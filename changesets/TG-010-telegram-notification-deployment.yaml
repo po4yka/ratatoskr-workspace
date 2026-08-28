@@ -73,8 +73,13 @@ evidence:
   telegram_local_gate: green
   telegram_remote_main: 09c2231a60fed6fedb72165f3a6f51005ded7070
   telegram_hosted_ci: not_verified
-  workspace_commit: pending
+  workspace_profile_commit: ca832869fa1de429fd2e72047feb0e481256599f
+  workspace_profile_commit_url: https://github.com/po4yka/ratatoskr-workspace/commit/ca832869fa1de429fd2e72047feb0e481256599f
   composed_profile: green_against_published_children
   composed_profile_boundary: synthetic_fake_bot_api_no_live_provider_or_deployment
+  composed_profile_summary: integration/evidence/TG-010.md
+  compose_sha256: e9df99a269d5b8b7007eeaefb3f37f2a19e0269cbad51c5f1f0adf095e22f916
+  notification_decisions: {delivered: 1, suppressed: 1, duplicate_jobs: 1}
+  durable_recovery: {missing: unready, mismatched: unready, restored: ready}
   hosted_ci: not_verified
 live_deployment: not_authorized_target_frozen

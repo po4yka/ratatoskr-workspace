@@ -6,6 +6,7 @@ profile="$workspace_root/integration/compose/telegram-notification.yaml"
 runner="$workspace_root/integration/run-telegram-notification.sh"
 fake_bot="$workspace_root/integration/fixtures/telegram-fake-bot-api.py"
 database_seed="$workspace_root/integration/fixtures/telegram-notification-init.sql"
+evidence_summary="$workspace_root/integration/evidence/TG-010.md"
 
 fail() {
   printf 'FAIL: %s\n' "$1" >&2
@@ -23,6 +24,7 @@ assert_contains() {
 for file in "$profile" "$runner" "$fake_bot" "$database_seed"; do
   assert_file "$file"
 done
+assert_file "$evidence_summary"
 
 for input in \
   RATATOSKR_TASK_NAMESPACE \
@@ -63,9 +65,19 @@ assert_contains "$runner" 'dispatcher_refuses_missing_or_mismatched_platform_dur
   "runner lacks durable failure assertion"
 assert_contains "$runner" 'workspace_revision' "runner does not record the workspace source revision"
 
+for evidence_field in \
+  'Contracts revision' 'Platform revision' 'Telegram revision' 'Workspace revision' \
+  'Compose SHA-256' 'Platform image ID' 'Telegram image ID' \
+  'Delivered notification decisions' 'Suppressed notification decisions' \
+  'Hosted CI' 'Live deployment'
+do
+  assert_contains "$evidence_summary" "$evidence_field" "evidence omits $evidence_field"
+done
+assert_contains "$evidence_summary" 'synthetic' "evidence omits its synthetic boundary"
+
 if rg --quiet --hidden -g '!telegram_notification_profile_test.sh' \
   '(BEGIN [A-Z ]*PRIVATE KEY|\bSU[A-Z2-7]{20,}|[0-9]{8,10}:[A-Za-z0-9_-]{30,})' \
-  "$profile" "$runner" "$fake_bot" "$database_seed"; then
+  "$profile" "$runner" "$fake_bot" "$database_seed" "$evidence_summary"; then
   fail "profile fixtures contain credential material"
 fi
 
