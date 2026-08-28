@@ -39,6 +39,14 @@ Platform, and Web revisions and observes:
 This smoke does not implement or validate the planned `ws` commands, manifest, lockfile, or general
 profile generation. Run it with the inputs documented in `integration/README.md`.
 
+The TG-010 Telegram profile is independently checked by
+`integration/tests/telegram_deployment_profile_test.sh` and
+`integration/tests/telegram_notification_profile_test.sh`. Its composed runner builds exact
+published Contracts, Platform, and Telegram revisions and observes the item-5 article path,
+notification preference/deduplication decisions, notification-durable readiness failures and
+recovery, and project-only cleanup. It uses no production bot token or real chat and therefore does
+not establish live delivery. Run it with the inputs documented in `integration/README.md`.
+
 ## Test-first
 
 A change is planned before it is built, and the plan is a task list in which behaviour arrives in

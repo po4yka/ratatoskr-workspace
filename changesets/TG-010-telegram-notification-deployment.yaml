@@ -1,0 +1,80 @@
+id: TG-010
+state: verifying
+goal: Deliver preference-filtered Telegram notifications, a bounded single-host deployment profile, executable recovery runbooks, and composed plan-item-5 evidence.
+repositories:
+  - id: ratatoskr-contracts
+    role: existing-notification-contract
+    write_required: false
+    contract: platform.notification.raised.v1
+    revision: 9a4df8126b495ffc3ad0647441da1690594f25bc
+  - id: ratatoskr-platform
+    role: notification-consumer-topology-and-nats-identity
+    branch: task/telegram-notification-consumer
+    base: 12ce8cc387d12b087fe0785256808897bd7ac7b2
+  - id: ratatoskr-telegram
+    role: notification-consumer-and-deploy-owner
+    branch: task/notifications-deployment-integration
+    base: 087623f55803a7df9d90003459e7d5bb5baad887
+  - id: ratatoskr-workspace
+    role: port-contract-and-composed-verification
+    branch: coord/telegram-notification-deployment
+    base: ee9a915ce956e717459d59763a9482ed32232416
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-platform
+  - ratatoskr-telegram
+  - ratatoskr-workspace
+contract:
+  event_type: platform.notification.raised.v1
+  bus_subject: evt.platform.notification.raised.v1
+  consumer: ratatoskr_telegram_notifications
+  delivery: at-least-once-with-telegram-inbox-deduplication
+ports:
+  webhook_public: 8182
+  webhook_operator: 9467
+  dispatcher_operator: 9468
+compatibility:
+  strategy: Pre-provision the additive durable and least-privilege identity before Telegram; absence of events preserves current behavior.
+  old_telegram: Leaves the pre-provisioned durable idle while producers retain their source facts.
+  new_telegram: Preserves unknown well-formed classes and applies user preferences before enqueueing delivery.
+database:
+  strategy: Edit the Telegram current schema in place and create composed databases from schema.sql.
+  migration_artifacts: none
+privacy:
+  allowed: [notification_id, class, recipient_user_ref, bounded_title, bounded_message, opaque_operation_ref, opaque_analysis_ref, preference_decision]
+  forbidden: [bot_token, webhook_secret, nats_credentials, raw_telegram_updates, provider_credentials, private_domain_payloads]
+rollout:
+  - Verify the existing notification contract revision and subject convention.
+  - Publish Platform fixed consumer provisioning and the least-privilege Telegram NATS identity.
+  - Publish Telegram preference enforcement, durable consumption, deploy artifacts, and runbooks.
+  - Update the workspace port contract and run the task-namespaced composed profile against the exact Telegram commit.
+  - Record the verified child revision and composed evidence before advancing the workspace snapshot.
+rollback:
+  - Stop Telegram before revoking its NATS identity and roll back the Telegram binaries.
+  - Retain the Platform-owned durable cursor unless an explicit operator action accepts backlog and cursor loss.
+  - Retain preference and notification inbox rows so later replay remains deduplicated.
+  - Remove only the TG-010 namespaced Compose resources; do not operate the frozen deployment target.
+verification:
+  planned:
+    - Telegram preference and quiet-hours tests fail first and then pass.
+    - Telegram deploy artifacts pass structural validation and runbook commands pass dry-run tests.
+    - Platform provisions the exact durable and a real local broker enforces the Telegram NKey allow/deny matrix.
+    - The composed smoke proves plan item 5 and one synthetic notification without production credentials or real chats.
+    - Repository-local and workspace gates pass before commits are published.
+evidence:
+  contracts_revision: 9a4df8126b495ffc3ad0647441da1690594f25bc
+  platform_commit: a117ca854e73e7b6a0acbc0844905ca53462a502
+  platform_commit_url: https://github.com/po4yka/ratatoskr-platform/commit/a117ca854e73e7b6a0acbc0844905ca53462a502
+  platform_local_gate: green
+  platform_remote_main: a117ca854e73e7b6a0acbc0844905ca53462a502
+  platform_hosted_ci: not_verified
+  telegram_commit: 09c2231a60fed6fedb72165f3a6f51005ded7070
+  telegram_commit_url: https://github.com/po4yka/ratatoskr-telegram/commit/09c2231a60fed6fedb72165f3a6f51005ded7070
+  telegram_local_gate: green
+  telegram_remote_main: 09c2231a60fed6fedb72165f3a6f51005ded7070
+  telegram_hosted_ci: not_verified
+  workspace_commit: pending
+  composed_profile: green_against_published_children
+  composed_profile_boundary: synthetic_fake_bot_api_no_live_provider_or_deployment
+  hosted_ci: not_verified
+live_deployment: not_authorized_target_frozen

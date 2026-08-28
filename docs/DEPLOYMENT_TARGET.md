@@ -155,7 +155,7 @@ like a firewall. The rule Ratatoskr needs is narrow, and the host already carrie
 shape (`27124/tcp ALLOW 172.16.0.0/12`, `6333/tcp ALLOW 172.0.0.0/8`):
 
 ```bash
-sudo ufw allow proto tcp from 172.19.0.0/16 to any port 9464:9466 \
+sudo ufw allow proto tcp from 172.19.0.0/16 to any port 9464:9468 \
   comment 'ratatoskr operator listeners, from the monitoring bridge'
 ```
 
@@ -237,6 +237,7 @@ bind to `0.0.0.0`.
 |---|---|---|
 | 8080 | `ratatoskr-edge` public API | `cloudflared` tunnel |
 | 8181 | `ratatoskr-ingest` webhook adapter | `cloudflared` tunnel |
+| 8182 | `ratatoskr-telegram-webhook` public listener | `cloudflared` tunnel |
 | 8091 | `ratatoskr-knowledge` domain API (`/v1/k`) | loopback; reached only through Edge |
 | 8092 | `ratatoskr-github` domain API (`/v1/gh`) | loopback; reached only through Edge |
 | 8093 | `ratatoskr-vault` domain API (`/v1/vault`) | loopback; reached only through Edge |
@@ -245,6 +246,8 @@ bind to `0.0.0.0`.
 | 8096 | ChatGPT archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
 | 8097 | Claude archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
 | 9464 / 9465 / 9466 | edge / ingest / scheduler operator listener | host only |
+| 9467 | `ratatoskr-telegram-webhook` operator listener | host and monitoring bridge only |
+| 9468 | `ratatoskr-telegram-dispatcher` operator listener | host and monitoring bridge only |
 | 4222 | NATS — a container, `ratatoskr-nats`, config in `platform/deploy/nats/` | host only |
 | 5432 | PostgreSQL | host only |
 

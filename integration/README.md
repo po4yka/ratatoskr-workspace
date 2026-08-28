@@ -40,3 +40,35 @@ only to `evidence/<namespace>/`, which Git ignores; the fleet changeset records 
 The smoke checks healthy status, member refusal, owner operational reads, real-page keyboard and axe
 results, NATS degradation, recovery, and namespaced teardown. Fixture credentials are fixed,
 non-secret values used only by the disposable database and are never printed.
+
+## Telegram notification profile (TG-010)
+
+Validate the port/deployment and Compose contracts against an exact Telegram checkout:
+
+```sh
+RATATOSKR_TELEGRAM_CONTEXT=/absolute/path/to/ratatoskr-telegram \
+RATATOSKR_TELEGRAM_REVISION=<full-telegram-sha> \
+  integration/tests/telegram_deployment_profile_test.sh
+integration/tests/telegram_notification_profile_test.sh
+```
+
+Run the composed profile with clean child checkouts already contained by their `origin/main`:
+
+```sh
+export RATATOSKR_TASK_NAMESPACE=tg010-local
+export RATATOSKR_CONTRACTS_CONTEXT=/absolute/path/to/ratatoskr-contracts
+export RATATOSKR_CONTRACTS_REVISION=<full-contracts-sha>
+export RATATOSKR_PLATFORM_CONTEXT=/absolute/path/to/ratatoskr-platform
+export RATATOSKR_PLATFORM_REVISION=<full-platform-sha>
+export RATATOSKR_TELEGRAM_CONTEXT=/absolute/path/to/ratatoskr-telegram
+export RATATOSKR_TELEGRAM_REVISION=<full-telegram-sha>
+
+build-gate -- integration/run-telegram-notification.sh
+```
+
+The runner uses fresh PostgreSQL 17 and JetStream state, runtime-generated credentials, a fake Bot
+API, dynamic loopback host ports, and the exact `ratatoskr-<namespace>` Compose project. It proves
+the article flow reaches its final Telegram projection, enabled/suppressed/duplicate notification
+decisions are enforced, and dispatcher readiness fails closed for absent or mismatched Platform
+durables. `evidence/<namespace>/` is ignored raw evidence; `TG-010` records the reviewed bounded
+summary. This is synthetic integration evidence, not hosted-CI, live-provider, or deployment proof.
