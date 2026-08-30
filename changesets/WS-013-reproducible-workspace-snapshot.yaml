@@ -1,5 +1,5 @@
 id: WS-013
-state: local_verified_publication_pending
+state: pull_request_green_awaiting_merge_authorization
 goal: Make one workspace commit identify and verify the complete sixteen-repository Ratatoskr fleet snapshot.
 non_goals:
   - Change, rebuild, deploy, or republish a child repository.
@@ -22,7 +22,7 @@ repositories:
   - { id: ratatoskr-mobile, role: mobile-client, pin: c496046fb0718b727e54e14071d61f2ed148e3d4 }
   - { id: ratatoskr-browser-extension, role: browser-capture-client, pin: 79bcba985135c4a71a0c7734adb9d855cedbdb53 }
   - { id: ratatoskr-export-agent, role: local-export-client, pin: fcb1397372bda0608316cb80b200bd2bd86e36f4 }
-  - { id: ratatoskr-workspace, role: semantic-catalogue-gitlink-lock-and-verification-owner, base: 8f305f056bca06abe46c031797359f0118d5e0a4, feature_commit: pending }
+  - { id: ratatoskr-workspace, role: semantic-catalogue-gitlink-lock-and-verification-owner, base: 8f305f056bca06abe46c031797359f0118d5e0a4, feature_commit: 04be72834f8e5622785def7f45418b09e40771ab }
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-platform
@@ -69,8 +69,9 @@ required_checks:
   - ./ws doctor
 delivery:
   branch: codex/ws-013-reproducible-snapshot
-  pull_request: pending
-  workspace_commit: pending
+  pull_request: https://github.com/po4yka/ratatoskr-workspace/pull/11
+  workspace_commit: 04be72834f8e5622785def7f45418b09e40771ab
+  merged_commit: not_merged_not_authorized
 verification:
   local:
     rust_gate: cargo fmt, Clippy with warnings denied, and all workspace tests passed through one top-level build-gate; 29 named integration tests passed.
@@ -84,6 +85,12 @@ verification:
       - Telegram deployment profile contract passed against pinned f814cdde49cd76000b7a20bb497a840b52fa99e0.
       - Telegram notification and library profile contract tests were attempted but could not start their Docker sentinel because no Docker daemon was available; no pass is claimed.
     pin_record: all 16 changeset pin values matched workspace.lock mechanically.
-  hosted_ci: pending_push
+  hosted_ci:
+    exact_sha: 04be72834f8e5622785def7f45418b09e40771ab
+    fleet: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33300456814
+    openspec: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33300456925
+    workspace_snapshot: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33300456865
+    zizmor: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33300456922
+    result: all_four_hosted_pull_request_checks_passed
   deployment: not_in_scope
   provider_end_to_end: not_in_scope
