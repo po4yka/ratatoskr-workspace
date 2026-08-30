@@ -33,7 +33,7 @@ done
 
 platform_context=$(cd "$RATATOSKR_PLATFORM_CONTEXT" && pwd)
 github_context=$(cd "$RATATOSKR_GITHUB_CONTEXT" && pwd)
-runtime_dir=$RATATOSKR_GHB017_RUNTIME_DIR
+runtime_dir=$(cd "$RATATOSKR_GHB017_RUNTIME_DIR" && pwd -P)
 evidence_output=${RATATOSKR_GHB017_EVIDENCE_OUTPUT:-$runtime_dir/evidence.env}
 allow_unpublished=${RATATOSKR_ALLOW_UNPUBLISHED:-0}
 
