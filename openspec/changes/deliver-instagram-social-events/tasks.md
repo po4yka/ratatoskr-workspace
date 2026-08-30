@@ -23,7 +23,7 @@
 
 ## 4. Workspace composition and evidence
 
-- [ ] 4.1 Add `changesets/IG-014-instagram-event-delivery.yaml` with exact base/final SHAs, Platform-before-Instagram order, historical incident statement, stopped-service repair, rollback, proof boundaries, and PR/check fields; no failing test because this is coordination configuration. Verify repository IDs and recorded SHAs against Git directly.
+- [x] 4.1 Add `changesets/IG-014-instagram-event-delivery.yaml` with exact base/final SHAs, Platform-before-Instagram order, historical incident statement, stopped-service repair, rollback, proof boundaries, and PR/check fields; no failing test because this is coordination configuration. Verify repository IDs and recorded SHAs against Git directly.
 - [x] 4.2 In `integration/tests/instagram_event_delivery_profile_test.sh`, add a failing composed test that accepts explicit Platform and Instagram worktree paths, starts the actual Platform NATS policy fixture plus PostgreSQL, invokes Instagram's real transport test, and requires exact subject/body/acknowledgement ordering and denial evidence; run it red against both base SHAs.
 - [x] 4.3 Add the bounded IG-014 runner/fixture wiring and evidence template, then verify task 4.2 passes on a Docker-capable host and states that Knowledge consumption, provider behavior, deployment, and human alert receipt are unverified.
 - [x] 4.4 Update Instagram, Platform, and workspace documentation so logging delivery is removed, the three ACL subjects and repair sequence are current, and outbox commit/broker ack/consumer ack/Knowledge/live deployment are distinct; no failing test because this is documentation. Verify every documented command exists and static docs tests pass.
@@ -31,7 +31,7 @@
 ## 5. Full verification and publication
 
 - [x] 5.1 Run each child repository's complete local gate from its assigned worktree through the machine-wide `build-gate`, including format, clippy, build, test, deny/advisories, strict OpenSpec, deployment/static tests, and `git diff --check`; run the composed IG-014 profile, then record exact commands and outcomes without promoting fixture proof to deployment proof.
-- [ ] 5.2 Review all three final diffs for scope, secrets, payload logging, weakened ACLs, retry/data-loss regressions, stale generated files, unrelated edits, and clean original baselines; stage only intended paths, inspect staged diffs, commit each repository in dependency order, push the explicitly authorized task branches, and verify exact remote branch SHAs.
+- [x] 5.2 Review all three final diffs for scope, secrets, payload logging, weakened ACLs, retry/data-loss regressions, stale generated files, unrelated edits, and clean original baselines; stage only intended paths, inspect staged diffs, commit each repository in dependency order, push the explicitly authorized task branches, and verify exact remote branch SHAs.
 
 ## 6. Implementation by repository
 

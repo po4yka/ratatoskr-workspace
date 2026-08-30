@@ -23,7 +23,7 @@ repositories:
     role: composed-policy-and-producer-evidence
     branch: codex/ig-014-instagram-event-delivery
     base: 8f305f056bca06abe46c031797359f0118d5e0a4
-    final: pending
+    final: c1b001d0ff92e217c807a7a9e1e172468bee9622
     pull_request: pending
     hosted_checks: pending
 dependency_order:
@@ -61,7 +61,7 @@ verification:
   platform_local: passed at d6ce405a301dceae5adb57dd1787af46f9a37eaf
   instagram_local: passed at 50c152162aa1a5544c316f3fd474d9e7f8ad1cbb
   workspace_composed: passed pre-publication producer-to-stream fixture on 2026-08-30
-  exact_remote_branch_shas: Platform and Instagram verified; workspace pending publication
+  exact_remote_branch_shas: Platform, Instagram, and workspace implementation commits verified
 proof_boundaries:
   outbox_commit: local durable publication intent only
   broker_ack: producer-to-JetStream persistence only
