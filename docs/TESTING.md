@@ -1,7 +1,7 @@
 # Workspace testing strategy
 
-> Status: Proposed  
-> Last reviewed: 2026-08-27
+> Status: Snapshot test layers implemented; later orchestration layers proposed
+> Last reviewed: 2026-08-30
 
 ## Required layers
 
@@ -24,6 +24,29 @@ Formatting/linting, unit tests, Git integration tests, generated-config drift, f
 
 Fixtures must use synthetic repositories and credentials. Never use personal exports or production tokens.
 
+## Implemented snapshot gate
+
+The Rust tests create isolated Git superprojects and child repositories. They cover manifest and
+dependency diagnostics, topology mismatches, uninitialized and dirty baselines, non-mutation,
+canonical lock output, semantic stale-lock diffs, pinned blob/tree evidence, path escape, symlink
+refusal, CLI exit codes, and the real committed sixteen-repository snapshot.
+
+Run the complete code gate from the repository root:
+
+```bash
+build-gate -- sh -lc 'cd harness && cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-features --locked -- -D warnings && cargo test --workspace --all-features --locked'
+cd harness && cargo deny check
+cd ..
+./ws manifest check
+./ws lock check
+./ws status
+./ws doctor
+```
+
+The final four commands do not fetch or repair. A fresh clone must first run
+`git submodule update --init --recursive`. Snapshot success proves authority consistency and clean
+materialization, not child CI, deployment, provider access, or runtime end-to-end behavior.
+
 ## Implemented integration smoke
 
 `integration/tests/web_operational_profile_test.sh` checks the static isolation and phase contract
@@ -36,8 +59,8 @@ Platform, and Web revisions and observes:
 - NATS loss as a truthful degraded/stale state, followed by recovery; and
 - project-only teardown with unrelated container state unchanged.
 
-This smoke does not implement or validate the planned `ws` commands, manifest, lockfile, or general
-profile generation. Run it with the inputs documented in `integration/README.md`.
+This smoke does not replace the implemented snapshot checks or validate general profile generation.
+Run it with the inputs documented in `integration/README.md`.
 
 The TG-010 Telegram profile is independently checked by
 `integration/tests/telegram_deployment_profile_test.sh` and

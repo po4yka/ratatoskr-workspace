@@ -1,0 +1,89 @@
+id: WS-013
+state: local_verified_publication_pending
+goal: Make one workspace commit identify and verify the complete sixteen-repository Ratatoskr fleet snapshot.
+non_goals:
+  - Change, rebuild, deploy, or republish a child repository.
+  - Infer dependencies or compatibility evidence from ambient working trees.
+  - Implement task-worktree, pull-request, environment, release, or MCP orchestration.
+repositories:
+  - { id: ratatoskr-contracts, role: canonical-contract-producer, pin: d43b62a402f47984c95037c158ec29c5ee62ee5c }
+  - { id: ratatoskr-platform, role: public-api-and-event-backbone, pin: 070b718238c4e6e45a5b7fc08ebe719ed5374e33 }
+  - { id: ratatoskr-extractor, role: document-producer, pin: e380202073190bd6e21e0ea36f236fc150732ebc }
+  - { id: ratatoskr-knowledge, role: document-and-event-consumer, pin: 25fb4a92d8b9ebcc3f15c4f2c9bfd8ee6b027ba1 }
+  - { id: ratatoskr-github, role: repository-event-producer, pin: fd60dd37e22b30056d2153ef22b271f75659e654 }
+  - { id: ratatoskr-vault, role: backup-and-blob-service, pin: 27843706b7bfad46c9d263740bf8da9f75772d65 }
+  - { id: ratatoskr-x, role: social-event-producer, pin: a16b50b4425fe92c789f326fdac2a26712b18e7b }
+  - { id: ratatoskr-instagram, role: social-event-producer, pin: 4161a83db86335637e234737024687ff79e2095e }
+  - { id: ratatoskr-threads, role: social-event-producer, pin: 1b69c3f6e6d89116981b9bd629cdec25d65a9756 }
+  - { id: ratatoskr-chatgpt, role: ai-archive-event-producer, pin: 875e99abd6d0d550ac6d05040f31f6ba3e42c422 }
+  - { id: ratatoskr-claude, role: ai-archive-event-producer, pin: 39985a18a9200ce07bb927a8ebbeb7d1530c2c59 }
+  - { id: ratatoskr-telegram, role: notification-and-command-adapter, pin: f814cdde49cd76000b7a20bb497a840b52fa99e0 }
+  - { id: ratatoskr-web, role: browser-client, pin: 48b21c5fdcf9b85705ab2942b4b2db57a61728b2 }
+  - { id: ratatoskr-mobile, role: mobile-client, pin: c496046fb0718b727e54e14071d61f2ed148e3d4 }
+  - { id: ratatoskr-browser-extension, role: browser-capture-client, pin: 79bcba985135c4a71a0c7734adb9d855cedbdb53 }
+  - { id: ratatoskr-export-agent, role: local-export-client, pin: fcb1397372bda0608316cb80b200bd2bd86e36f4 }
+  - { id: ratatoskr-workspace, role: semantic-catalogue-gitlink-lock-and-verification-owner, base: 8f305f056bca06abe46c031797359f0118d5e0a4, feature_commit: pending }
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-platform
+  - ratatoskr-extractor
+  - ratatoskr-github
+  - ratatoskr-instagram
+  - ratatoskr-knowledge
+  - ratatoskr-vault
+  - ratatoskr-x
+  - ratatoskr-threads
+  - ratatoskr-chatgpt
+  - ratatoskr-claude
+  - ratatoskr-telegram
+  - ratatoskr-web
+  - ratatoskr-mobile
+  - ratatoskr-browser-extension
+  - ratatoskr-export-agent
+  - ratatoskr-workspace
+compatibility:
+  strategy: Pin already-published successful main commits; keep semantic metadata in workspace.toml, exact revisions in gitlinks, and derived evidence in workspace.lock.
+  contract_or_schema_change: none
+  event_migration: none
+  database_change: none
+  child_release_change: none
+rollout:
+  - Merge the coherent workspace commit after local and hosted snapshot checks pass.
+  - Fresh clones initialize all sixteen public submodules recursively.
+  - Operators use ws manifest check and ws lock check for authority consistency, ws status for read-only observation, and ws doctor as the strict gate.
+rollback:
+  - Before merge, remove only the isolated WS-013 worktree and branch after explicit confirmation.
+  - After merge, revert the coherent workspace commit; child histories and published commits remain unchanged.
+  - Never reset, clean, fetch, or check out a dirty child as part of rollback.
+required_checks:
+  - cargo fmt --all -- --check
+  - cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+  - cargo test --workspace --all-features --locked
+  - cargo deny check
+  - openspec validate --all --strict
+  - openspec validate --archived
+  - actionlint .github/workflows/ci.yml
+  - ./ws manifest check
+  - ./ws lock check
+  - ./ws status
+  - ./ws doctor
+delivery:
+  branch: codex/ws-013-reproducible-snapshot
+  pull_request: pending
+  workspace_commit: pending
+verification:
+  local:
+    rust_gate: cargo fmt, Clippy with warnings denied, and all workspace tests passed through one top-level build-gate; 29 named integration tests passed.
+    dependency_policy: cargo deny reported advisories, bans, licenses, and sources all ok.
+    openspec: named change, all 21 active items, and all 11 archived changes validated successfully under the requested strict modes.
+    snapshot: manifest check, lock check, status, and doctor passed; before/after child HEAD and porcelain snapshots were byte-identical.
+    workflow: actionlint accepted ci.yml; a local zizmor executable was unavailable.
+    shell: root launcher, integration runners, and profile test scripts passed sh syntax checks.
+    integration_contracts:
+      - web operational profile contract passed.
+      - Telegram deployment profile contract passed against pinned f814cdde49cd76000b7a20bb497a840b52fa99e0.
+      - Telegram notification and library profile contract tests were attempted but could not start their Docker sentinel because no Docker daemon was available; no pass is claimed.
+    pin_record: all 16 changeset pin values matched workspace.lock mechanically.
+  hosted_ci: pending_push
+  deployment: not_in_scope
+  provider_end_to_end: not_in_scope

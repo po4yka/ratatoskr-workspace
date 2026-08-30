@@ -1,0 +1,71 @@
+name: workspace advisories
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workspace-advisories
+  cancel-in-progress: false
+
+jobs:
+  advisories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show the committed workspace toolchain
+        working-directory: harness
+        run: rustup show
+
+      - name: Fetch the locked graph
+        working-directory: harness
+        run: cargo fetch --locked
+
+      - uses: taiki-e/install-action@5b4d68e2e660441203ab128a23676f1e4faf1532 # v2.86.3
+        with:
+          tool: cargo-deny
+
+      - name: Check current RustSec advisories
+        id: advisories
+        working-directory: harness
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cargo deny check advisories 2>&1 | tee advisories.log
+
+      - name: Preserve a current finding as an issue
+        if: steps.advisories.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: workspace cargo deny advisories fail on main
+        run: |
+          set -euo pipefail
+          {
+            echo "\`cargo deny check advisories\` failed on \`main\`."
+            echo
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo '```'
+            tail -n 100 harness/advisories.log
+            echo '```'
+          } > issue-body.md
+          existing=$(gh issue list --state open --limit 100 --json number,title \
+                     | jq -r --arg t "$TITLE" '.[] | select(.title == $t) | .number' | head -1)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file issue-body.md
+          else
+            gh issue create --title "$TITLE" --body-file issue-body.md
+          fi
+          exit 1
