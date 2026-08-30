@@ -164,7 +164,7 @@ scheduled_sync_is_consumed_once() {
     operation_id:"018f0000-0000-7000-8000-000000000922",
     tenant_id:"user:018f0000-0000-7000-8000-000000000901",
     correlation_id:"sched/github-sync/ghb017", idempotency_key:$id,
-    payload:{account:"user:018f0000-0000-7000-8000-000000000901",mode:"full"}
+    payload:{account:"ghb017-user",mode:"full"}
   }')
   publish cmd.github.sync.requested.v1 "$sync_envelope"
   wait_until 'one consumed sync command' \
@@ -301,7 +301,7 @@ domain_port=$("${compose[@]}" port network 8092 | awk -F: '{print $NF}')
 [[ "$operator_port" =~ ^[0-9]+$ && "$domain_port" =~ ^[0-9]+$ ]] || die 'ephemeral ports were not allocated'
 wait_until 'GitHub readiness' "curl -fsS http://127.0.0.1:$operator_port/ready >/dev/null"
 
-db "insert into github_catalog.github_accounts (account_id,owner_ref,status) values ('018f0000-0000-7000-8000-000000000901','user:018f0000-0000-7000-8000-000000000901','reauthorization_required')"
+db "insert into github_catalog.github_accounts (account_id,owner_ref,status) values ('018f0000-0000-7000-8000-000000000901','ghb017-user','reauthorization_required')"
 printf 'synthetic-ghb017-pat\n' | "${compose[@]}" run --rm --no-deps -T github reconnect-pat 018f0000-0000-7000-8000-000000000901 >/dev/null
 
 scheduled_sync_is_consumed_once
