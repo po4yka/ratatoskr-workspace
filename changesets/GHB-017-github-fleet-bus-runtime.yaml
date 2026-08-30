@@ -111,9 +111,9 @@ verification:
   platform_hosted_ci:
   github_commit: dfbeb99b3563716fb131a1c9b98590b05e5164ac
   github_hosted_ci:
-  workspace_commit:
+  workspace_commit: d7998a6c44f364a26e50d3bc84e20c81e4bf7e3a
   workspace_hosted_ci:
-  fixture_profile:
+  fixture_profile: passed against workspace d7998a6c44f364a26e50d3bc84e20c81e4bf7e3a, Platform 626760ae6a25a211ec2467586575e791e6a65a97, and GitHub dfbeb99b3563716fb131a1c9b98590b05e5164ac; synthetic pre-publication boundary only
   deployment: unverified
   live_github_provider: unverified
   live_knowledge_or_vault: unverified
