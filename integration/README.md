@@ -108,3 +108,22 @@ decision (`DEVELOPMENT.md`). TG-011 therefore pins its inputs through required f
 variables and refuses dirty, mismatched, or unpublished revisions instead of fabricating lockfile
 metadata. `RATATOSKR_ALLOW_DIRTY_SOURCES=1` and `RATATOSKR_ALLOW_UNPUBLISHED=1` exist only for a
 clearly labelled pre-publication smoke; their output cannot satisfy the exact-revision evidence row.
+
+## Instagram event delivery (IG-014)
+
+The IG-014 profile accepts explicit Platform and Instagram worktree paths, materializes Platform's
+checked-in `deploy/nats/ratatoskr.conf` with disposable NKeys, starts isolated JetStream and
+PostgreSQL, then runs Instagram's real acknowledged transport tests through that exact policy:
+
+```sh
+DOCKER_HOST=unix:///path/to/docker.sock \
+  integration/tests/instagram_event_delivery_profile_test.sh \
+  /absolute/path/to/ratatoskr-platform \
+  /absolute/path/to/ratatoskr-instagram
+```
+
+It proves exact captured/updated/removed subject and body mapping, JetStream acknowledgement before
+the outbox publication mark, and denial of a foreign publish and direct event subscription. Runtime
+seeds live only in a mode-0600 ignored directory and the runner removes its exact containers and
+directory on exit. The result is producer-to-stream fixture evidence only: consumer acknowledgement,
+Knowledge indexing, provider behavior, live deployment, and human alert receipt remain unverified.

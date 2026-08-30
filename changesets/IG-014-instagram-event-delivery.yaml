@@ -1,0 +1,72 @@
+id: IG-014
+state: in_progress
+goal: Deliver Instagram SocialSource facts to JetStream with acknowledged outbox semantics and repair every logging-era false acknowledgement.
+incident:
+  statement: The retired Instagram LoggingTransport returned success without an external carrier, so published_at could be set while no consumer-visible event existed.
+  historical_scope: All pre-cutover captured, updated, and removed SocialSource outbox rows with non-null published_at are treated as not delivered.
+repositories:
+  - id: ratatoskr-platform
+    role: least-privilege-nats-policy
+    branch: codex/ig-014-instagram-acl
+    base: 070b718238c4e6e45a5b7fc08ebe719ed5374e33
+    final: d6ce405a301dceae5adb57dd1787af46f9a37eaf
+    pull_request: pending
+    hosted_checks: pending
+  - id: ratatoskr-instagram
+    role: acknowledged-publisher-and-historical-repair
+    branch: codex/ig-014-instagram-delivery
+    base: 4161a83db86335637e234737024687ff79e2095e
+    final: 50c152162aa1a5544c316f3fd474d9e7f8ad1cbb
+    pull_request: pending
+    hosted_checks: pending
+  - id: ratatoskr-workspace
+    role: composed-policy-and-producer-evidence
+    branch: codex/ig-014-instagram-event-delivery
+    base: 8f305f056bca06abe46c031797359f0118d5e0a4
+    final: pending
+    pull_request: pending
+    hosted_checks: pending
+dependency_order:
+  - ratatoskr-platform
+  - ratatoskr-instagram
+  - ratatoskr-workspace
+contract:
+  event_types:
+    - social.source.captured.v1
+    - social.source.updated.v1
+    - social.source.removed.v1
+  subjects:
+    - evt.social.source.captured.v1
+    - evt.social.source.updated.v1
+    - evt.social.source.removed.v1
+  delivery: at-least-once-with-jetstream-persistence-acknowledgement
+  compatibility: Platform policy expands first; an old Instagram process ignores the grants, while a new process safely retains rows until the grants are live.
+database:
+  schema_change: none
+  migration_artifacts: none
+  repair: repair-logging-outbox --confirm logging-transport-never-delivered
+rollout:
+  - Merge and deploy the narrow Platform NATS policy before changing Instagram.
+  - Stop every old Instagram process.
+  - Run the confirmed logging-era repair; repeat on uncertain failure and require a successful repeated result of zero.
+  - Deploy and start the acknowledged Instagram publisher.
+  - Observe unpublished depth, failure classes, and the broker-enabled gauge without claiming downstream consumption.
+  - Publish the workspace composed evidence after both child commits are known.
+rollback:
+  - Stop Instagram before restoring the prior binary.
+  - Never run the retired logging publisher against repaired rows.
+  - Retain all outbox rows and the three narrow Platform grants during diagnosis; neither deletes acknowledged facts.
+  - Remove only IG-014 namespaced disposable integration resources.
+verification:
+  platform_local: passed at d6ce405a301dceae5adb57dd1787af46f9a37eaf
+  instagram_local: passed at 50c152162aa1a5544c316f3fd474d9e7f8ad1cbb
+  workspace_composed: passed pre-publication producer-to-stream fixture on 2026-08-30
+  exact_remote_branch_shas: Platform and Instagram verified; workspace pending publication
+proof_boundaries:
+  outbox_commit: local durable publication intent only
+  broker_ack: producer-to-JetStream persistence only
+  consumer_ack: unverified
+  knowledge_indexing: unverified
+  provider_behavior: unverified
+  deployment: unverified
+  human_alert_receipt: unverified
