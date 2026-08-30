@@ -6,6 +6,7 @@ profile="$workspace_root/integration/compose/github-fleet-bus.yaml"
 runner="$workspace_root/integration/run-github-fleet-bus.sh"
 provider="$workspace_root/integration/fixtures/github-fake-api.py"
 proxy="$workspace_root/integration/fixtures/github-loopback-proxy.py"
+topology="$workspace_root/integration/fixtures/github-provision-topology.sh"
 evidence="$workspace_root/integration/evidence/GHB-017.md"
 
 fail() {
@@ -21,7 +22,7 @@ assert_contains() {
   rg --quiet --fixed-strings -- "$2" "$1" || fail "$3"
 }
 
-for file in "$profile" "$runner" "$provider" "$proxy" "$evidence"; do
+for file in "$profile" "$runner" "$provider" "$proxy" "$topology" "$evidence"; do
   assert_file "$file"
 done
 
@@ -51,6 +52,8 @@ assert_contains "$profile" 'cmd.github.sync.requested.v1' "profile lacks sync su
 assert_contains "$profile" 'evt.knowledge.repository_analysis.requested.v1' \
   "profile lacks Knowledge request subject"
 assert_contains "$profile" 'cmd.vault.target.desired.v1' "profile lacks Vault command subject"
+assert_contains "$topology" 'stream info' "topology fixture is not restart-idempotent"
+assert_contains "$topology" 'consumer info' "consumer fixture is not restart-idempotent"
 
 if rg --quiet 'container_name:|127\.0\.0\.1:[0-9]+:' "$profile"; then
   fail "profile fixes a global container name or host port"
