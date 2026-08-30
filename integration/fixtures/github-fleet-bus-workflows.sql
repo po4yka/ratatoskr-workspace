@@ -60,4 +60,10 @@ values
 
 insert into github_catalog.backup_policy_publication_cursor
   (scope, dirty_generation, published_generation, not_before)
-values ('catalog', 1, 0, now() - interval '1 second');
+values ('catalog', 1, 0, now() - interval '1 second')
+on conflict (scope) do update
+set dirty_generation = greatest(
+      github_catalog.backup_policy_publication_cursor.dirty_generation,
+      github_catalog.backup_policy_publication_cursor.published_generation
+    ) + 1,
+    not_before = now() - interval '1 second';
