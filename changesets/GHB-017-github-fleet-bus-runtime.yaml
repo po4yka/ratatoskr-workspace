@@ -1,0 +1,119 @@
+id: GHB-017
+state: active
+goal: Activate GitHub Catalog's fleet-bus runtime so every accepted cross-service workflow is published, consumed, recoverable, supervised, and truthfully reflected in readiness.
+repositories:
+  - id: ratatoskr-platform
+    role: fixed-jetstream-topology-and-least-privilege-policy
+    branch: codex/ghb-017-github-topology
+    worktree: repos/platform
+    base: 070b718238c4e6e45a5b7fc08ebe719ed5374e33
+    pull_request:
+    merge_commit:
+    final_pin:
+  - id: ratatoskr-github
+    role: classified-inbox-outbox-and-supervised-bus-runtime
+    branch: codex/ghb-017-fleet-bus-runtime
+    worktree: repos/github
+    base: fd60dd37e22b30056d2153ef22b271f75659e654
+    pull_request:
+    merge_commit:
+    final_pin:
+  - id: ratatoskr-workspace
+    role: coordination-deployment-allocation-and-fixture-integration
+    branch: codex/ghb-017-github-fleet-bus-runtime
+    worktree: workspace
+    base: 8f305f056bca06abe46c031797359f0118d5e0a4
+    pull_request:
+    merge_commit:
+    final_pin:
+dependency_order:
+  - ratatoskr-platform
+  - ratatoskr-github
+  - ratatoskr-workspace
+contract:
+  version: 1
+  compatibility: breaking-development-cutover
+  compatibility_break: Persisted GitHub inbox subjects become exact classified transport subjects and outbox payloads become complete canonical wire envelopes; every current caller and disposable database moves together with no compatibility path.
+  inbound_subjects:
+    - cmd.github.sync.requested.v1
+    - evt.knowledge.repository_analysis.completed.v1
+    - evt.knowledge.repository_analysis.failed.v1
+    - evt.vault.backup_policy.acknowledged.v1
+  outbound_subjects:
+    - evt.knowledge.repository_analysis.requested.v1
+    - cmd.vault.target.desired.v1
+  durables:
+    - name: ratatoskr_github_sync
+      stream: ratatoskr_commands
+      filter: cmd.github.sync.requested.v1
+    - name: ratatoskr_github_analysis_completed
+      stream: ratatoskr_events
+      filter: evt.knowledge.repository_analysis.completed.v1
+    - name: ratatoskr_github_analysis_failed
+      stream: ratatoskr_events
+      filter: evt.knowledge.repository_analysis.failed.v1
+    - name: ratatoskr_github_vault_policy_ack
+      stream: ratatoskr_events
+      filter: evt.vault.backup_policy.acknowledged.v1
+  delivery: at-least-once-with-jetstream-ack-after-committed-inbox-outcome
+  publication: final-envelope-bytes-stored-transactionally-and-published-with-stable-nats-message-id
+database:
+  version: 1
+  strategy: Edit the current GitHub schema.sql in place and recreate disposable PostgreSQL 17 databases.
+  migration_artifacts: none
+  outbox_ordering: Preserve sequence per repository and one estate-wide policy key while unrelated keys progress independently.
+  inbox_recovery: Only consumed and rejected are terminal; received, expired processing, and retryable failure remain resumable.
+security:
+  topology_owner: ratatoskr-platform
+  application_identity: ratatoskr-github
+  allowed_publish_subjects:
+    - evt.knowledge.repository_analysis.requested.v1
+    - cmd.vault.target.desired.v1
+  allowed_fetch_durables:
+    - ratatoskr_github_sync
+    - ratatoskr_github_analysis_completed
+    - ratatoskr_github_analysis_failed
+    - ratatoskr_github_vault_policy_ack
+  denied_authority:
+    - consumer creation
+    - stream purge or deletion
+    - consumer deletion
+    - wildcard command or event subscription
+    - foreign publication
+  secret_boundary: No provider credential, database credential, NKey seed, authorization header, private provider body, or private diagnostic enters messages, logs, metrics, readiness, fixtures, or committed configuration.
+required_gates:
+  platform:
+    - Exact four-durable topology and idempotent drift-refusal test.
+    - Real disposable NATS permission matrix for all allowed and denied paths.
+    - Complete DEVELOPMENT.md gate through the machine-wide build gate.
+  github:
+    - PostgreSQL 17 schema, classified-envelope, claim, ordering, lease, replay, duplicate, rejection, and dead-letter tests.
+    - Real disposable NATS publisher, four-consumer, readiness, restart, and shutdown tests.
+    - Configuration redaction, deployment profile, and arm64 release smoke.
+    - Complete DEVELOPMENT.md gate through the machine-wide build gate.
+  workspace:
+    - GHB-017 profile contract and end-to-end fixture scenarios against exact child commits.
+    - Topology, lock, dirty-baseline, credential, redaction, strict OpenSpec, and archived-spec checks.
+rollout:
+  - Merge and deploy Platform's additive GitHub durables and least-privilege NKey policy first.
+  - Recreate the development GitHub database from the changed current schema.
+  - Deploy GitHub's bus-enabled runtime with protected NKey seed and credential-encryption inputs.
+  - Verify durable topology, readiness, lag, retries, rejections, dead letters, and orderly drain before schedules are enabled.
+  - Run the GHB-017 fixture profile against the merged child commits, then advance only the Platform and GitHub workspace pins.
+rollback:
+  - Disable Platform GitHub schedules and stop the GitHub bus-enabled unit before restoring an older binary.
+  - Restore the prior GitHub binary, unit configuration, and workspace pins; remove bus-only environment keys rejected by the older strict configuration.
+  - Retain GitHub inbox and outbox rows and all four durable cursors; never purge, delete, or reset accepted work during rollback.
+  - Leave the additive Platform identity and durables provisioned but unused unless an operator later authorizes their removal.
+  - Remove only GHB-017 namespaced disposable integration resources.
+verification:
+  platform_commit: 626760ae6a25a211ec2467586575e791e6a65a97
+  platform_hosted_ci:
+  github_commit: dfbeb99b3563716fb131a1c9b98590b05e5164ac
+  github_hosted_ci:
+  workspace_commit:
+  workspace_hosted_ci:
+  fixture_profile:
+  deployment: unverified
+  live_github_provider: unverified
+  live_knowledge_or_vault: unverified

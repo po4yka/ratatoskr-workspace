@@ -190,6 +190,11 @@ outbox and operation gauges are in the time series database.
 VictoriaMetrics is started without `-promscrape.configCheckInterval`, so a change to that file takes
 effect on `docker kill -s HUP victoriametrics` and not before.
 
+GitHub's operator listener is allocated `9469`, but it is not part of the verified host arrangement
+above yet. Its deployment must separately extend the narrow firewall rule through `9469`, add the
+GitHub scrape target, reload VictoriaMetrics, and observe that target as `up`; none of those live-host
+actions has been performed by GHB-017.
+
 `borgmatic` runs at 03:00 from **root's crontab**, not from a systemd timer, so
 `systemctl list-timers` does not show it. Anything that must be copied off the NVMe the same night
 has to finish before then; Ratatoskr's dump is scheduled at 02:30 for that reason.
@@ -248,6 +253,7 @@ bind to `0.0.0.0`.
 | 9464 / 9465 / 9466 | edge / ingest / scheduler operator listener | host only |
 | 9467 | `ratatoskr-telegram-webhook` operator listener | host and monitoring bridge only |
 | 9468 | `ratatoskr-telegram-dispatcher` operator listener | host and monitoring bridge only |
+| 9469 | `ratatoskr-github` operator listener | host and monitoring bridge only; firewall and scrape configuration are not yet applied |
 | 4222 | NATS — a container, `ratatoskr-nats`, config in `platform/deploy/nats/` | host only |
 | 5432 | PostgreSQL | host only |
 
