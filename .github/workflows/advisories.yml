@@ -16,6 +16,8 @@ jobs:
   advisories:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The check normally reads only. It writes an issue solely when a newly published advisory makes
+    # the locked dependency graph fail, preserving a durable operator-visible finding on main.
     permissions:
       contents: read
       issues: write
