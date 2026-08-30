@@ -5,6 +5,7 @@ workspace_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 profile="$workspace_root/integration/compose/github-fleet-bus.yaml"
 runner="$workspace_root/integration/run-github-fleet-bus.sh"
 provider="$workspace_root/integration/fixtures/github-fake-api.py"
+proxy="$workspace_root/integration/fixtures/github-loopback-proxy.py"
 evidence="$workspace_root/integration/evidence/GHB-017.md"
 
 fail() {
@@ -20,7 +21,7 @@ assert_contains() {
   rg --quiet --fixed-strings -- "$2" "$1" || fail "$3"
 }
 
-for file in "$profile" "$runner" "$provider" "$evidence"; do
+for file in "$profile" "$runner" "$provider" "$proxy" "$evidence"; do
   assert_file "$file"
 done
 
@@ -38,6 +39,10 @@ done
 assert_contains "$profile" 'postgres:17' "profile does not pin PostgreSQL 17"
 assert_contains "$profile" '127.0.0.1::8092' "profile lacks ephemeral domain port"
 assert_contains "$profile" '127.0.0.1::9469' "profile lacks ephemeral operator port"
+assert_contains "$profile" 'RATATOSKR__API__LISTEN_ADDRESS: 127.0.0.1:18092' \
+  "GitHub does not retain a strict loopback domain bind"
+assert_contains "$profile" 'RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:19469' \
+  "GitHub does not retain a strict loopback operator bind"
 assert_contains "$profile" 'ratatoskr_github_sync' "profile lacks sync durable"
 assert_contains "$profile" 'ratatoskr_github_analysis_completed' "profile lacks completion durable"
 assert_contains "$profile" 'ratatoskr_github_analysis_failed' "profile lacks failure durable"

@@ -24,12 +24,13 @@ x-ratatoskr-fleet-bus-contract:
 
 services:
   network:
-    image: nats@sha256:d4ac35882ac65aff236cd65b9d3fa4d24332c681e1a85f94eedccd3cdd65b1da
-    entrypoint: [/bin/sh, -c]
-    command: [sleep infinity]
+    image: python@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d
+    command: [python3, /fixture/github-loopback-proxy.py]
     ports:
       - 127.0.0.1::8092
       - 127.0.0.1::9469
+    volumes:
+      - ../fixtures/github-loopback-proxy.py:/fixture/github-loopback-proxy.py:ro
 
   postgres:
     image: postgres:17
@@ -124,8 +125,8 @@ services:
       topology:
         condition: service_completed_successfully
     environment:
-      RATATOSKR__ADMIN__LISTEN_ADDRESS: 0.0.0.0:9469
-      RATATOSKR__API__LISTEN_ADDRESS: 0.0.0.0:8092
+      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:19469
+      RATATOSKR__API__LISTEN_ADDRESS: 127.0.0.1:18092
       RATATOSKR__BUS__URL: nats://127.0.0.1:4222
       RATATOSKR__BUS__NKEY_SEED_PATH: /run/ghb017/github.nkey
       RATATOSKR__BUS__CONNECT_TIMEOUT_MS: 5000
@@ -141,7 +142,7 @@ services:
       RATATOSKR__PROVIDER__BASE_URL: http://127.0.0.1:18081
       RATATOSKR__STORAGE__DATABASE_URL: postgres://github@127.0.0.1:5432/github
     healthcheck:
-      test: [CMD-SHELL, "grep -qi ':24FD ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      test: [CMD-SHELL, "grep -qi ':4C0D ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
       interval: 1s
       timeout: 3s
       retries: 120
