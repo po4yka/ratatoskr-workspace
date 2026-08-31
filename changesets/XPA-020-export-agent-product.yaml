@@ -20,7 +20,7 @@ repositories:
     base: 39985a18a9200ce07bb927a8ebbeb7d1530c2c59
   - id: ratatoskr-export-agent
     role: macos-product-runtime-and-release-artifact
-    branch: main@a660877fef910bef67d5ca05578d02175f4bc0e7
+    branch: main@40e356630edf87ee78ddd0ad07bf449bbea9228c
     base: fcb1397372bda0608316cb80b200bd2bd86e36f4
   - id: ratatoskr-workspace
     role: cross-repository-contract-integration-and-compatible-snapshot
@@ -86,7 +86,7 @@ evidence:
   platform_remote_main: 4d3ca2d5be7f3aa94664e429936b63886d6bb38d
   chatgpt_remote_main: 5cd597ea800b87c1f6d8f1c0b0e85adf47f4fe87
   claude_remote_main: 989d2ba929b0355d3b3abc0e15d4f36c99652f43
-  export_agent_remote_main: a660877fef910bef67d5ca05578d02175f4bc0e7
+  export_agent_remote_main: 40e356630edf87ee78ddd0ad07bf449bbea9228c
   hosted_ci: pending
   workspace_profile: pending
   notarized_release: blocked_pending_owner_apple_credentials
