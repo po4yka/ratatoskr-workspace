@@ -246,7 +246,6 @@ evidence_is_privacy_bounded() { return 2; }
 
 generate_nkeys
 generate_tls
-setup_keychain
 bash "$workspace_root/integration/fixtures/export-agent-product-fixtures.sh" "$task_runtime/inbox" \
   >"$evidence_dir/fixture-digests.txt"
 compose config --quiet
@@ -256,6 +255,7 @@ if [[ "$mode" == --validate ]]; then
   exit 0
 fi
 
+setup_keychain
 docker ps --format '{{.ID}} {{.Names}} {{.Ports}}' >"$evidence_dir/docker-before.txt"
 compose up --detach --build
 tls_port=$(compose port network 8443 | tail -1 | awk -F: '{print $NF}')

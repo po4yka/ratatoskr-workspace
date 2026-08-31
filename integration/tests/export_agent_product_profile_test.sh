@@ -99,6 +99,11 @@ assert_contains "$nkey_generator" 'nkeys.CreateUser' "runtime NKey generator doe
 assert_contains "$runner" 'go mod tidy' \
   "runner does not materialize checksums for its pinned NKey generator dependency"
 
+validate_exit_line=$(grep -nF "if [[ \"\$mode\" == --validate ]]" "$runner" | cut -d: -f1)
+keychain_setup_line=$(grep -n '^setup_keychain$' "$runner" | cut -d: -f1)
+[[ "$validate_exit_line" -lt "$keychain_setup_line" ]] || \
+  fail "validation mode mutates the user Keychain before exiting"
+
 for assertion in \
   raw_receipt_is_nonterminal \
   interrupted_transfer_reuses_operation \
