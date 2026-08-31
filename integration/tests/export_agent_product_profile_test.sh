@@ -96,7 +96,7 @@ assert_contains "$system_host" 'import AgentCore' "system host does not use the 
 assert_contains "$system_host" 'OperationalAgentRuntime' \
   "system host does not compose the production operational runtime"
 assert_contains "$nkey_generator" 'nkeys.CreateUser' "runtime NKey generator does not create user seeds"
-assert_contains "$runner" 'go mod download' \
+assert_contains "$runner" 'go mod tidy' \
   "runner does not materialize checksums for its pinned NKey generator dependency"
 
 for assertion in \

@@ -129,7 +129,7 @@ go 1.25
 
 require github.com/nats-io/nkeys v0.4.10
 EOF
-  (cd "$generator" && GOWORK=off go mod download && GOWORK=off go run . "$task_runtime/nats")
+  (cd "$generator" && GOWORK=off go mod tidy && GOWORK=off go run . "$task_runtime/nats")
   local edge chatgpt claude
   edge=$(tr -d '\r\n' <"$task_runtime/nats/edge.public")
   chatgpt=$(tr -d '\r\n' <"$task_runtime/nats/chatgpt.public")
