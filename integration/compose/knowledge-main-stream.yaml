@@ -1,0 +1,265 @@
+name: ratatoskr-${RATATOSKR_TASK_NAMESPACE:?set a unique KNO-018 task namespace}
+
+x-ratatoskr-inputs:
+  knowledge_context: ${RATATOSKR_KNOWLEDGE_CONTEXT:?set the Knowledge checkout}
+  knowledge_revision: ${RATATOSKR_KNOWLEDGE_REVISION:?set the Knowledge revision}
+  extractor_context: ${RATATOSKR_EXTRACTOR_CONTEXT:?set the Extractor checkout}
+  extractor_revision: ${RATATOSKR_EXTRACTOR_REVISION:?set the Extractor revision}
+  github_context: ${RATATOSKR_GITHUB_CONTEXT:?set the GitHub checkout}
+  github_revision: ${RATATOSKR_GITHUB_REVISION:?set the GitHub revision}
+  runtime_dir: ${RATATOSKR_KNO018_RUNTIME_DIR:?set the generated KNO-018 runtime directory}
+  network_subnet: ${RATATOSKR_KNO018_NETWORK_SUBNET:?set the task-isolated fixture subnet}
+  network_anchor: ${RATATOSKR_KNO018_NETWORK_ANCHOR:?set the task-isolated anchor address}
+  source_address: ${RATATOSKR_KNO018_SOURCE_ADDRESS:?set the task-isolated source address}
+
+services:
+  network:
+    image: nats@sha256:d4ac35882ac65aff236cd65b9d3fa4d24332c681e1a85f94eedccd3cdd65b1da
+    entrypoint: [/bin/sh, -c]
+    command: [sleep infinity]
+    ports:
+      - 127.0.0.1::9081
+      - 127.0.0.1::9084
+      - 127.0.0.1::9091
+      - 127.0.0.1::18081
+    networks:
+      kno018:
+        ipv4_address: ${RATATOSKR_KNO018_NETWORK_ANCHOR:?set the task-isolated anchor address}
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    network_mode: service:network
+    depends_on:
+      network:
+        condition: service_started
+    environment:
+      POSTGRES_DB: fleet
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=und-x-icu --encoding=UTF8
+      POSTGRES_USER: fleet
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U fleet -d knowledge && pg_isready -U fleet -d extractor && pg_isready -U fleet -d github"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../fixtures/knowledge-main-stream-init.sql:/docker-entrypoint-initdb.d/10-kno018.sql:ro
+
+  nats:
+    image: nats@sha256:d4ac35882ac65aff236cd65b9d3fa4d24332c681e1a85f94eedccd3cdd65b1da
+    network_mode: service:network
+    depends_on:
+      network:
+        condition: service_started
+    command: [--jetstream, --store_dir=/data, --http_port=8222]
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O- http://127.0.0.1:8222/healthz | grep -q ok"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+    volumes:
+      - nats-data:/data
+
+  topology:
+    image: natsio/nats-box@sha256:9d5f35d286c3dcfca18bb2339b51345f9f89b580b237ab16ddfe609bdca9c72d
+    network_mode: service:network
+    depends_on:
+      nats:
+        condition: service_healthy
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        nats --server nats://127.0.0.1:4222 stream add ratatoskr_events --subjects 'evt.>' --storage file --retention limits --max-msgs 10000 --max-bytes 16777216 --defaults
+        nats --server nats://127.0.0.1:4222 consumer add ratatoskr_events ratatoskr_knowledge_main \
+          --pull --ack explicit --deliver all --replay instant --wait 30s \
+          --filter evt.content.document.extracted.v1 \
+          --filter evt.social.source.captured.v1 \
+          --filter evt.social.source.updated.v1 \
+          --filter evt.social.source.removed.v1 \
+          --filter evt.ai_archive.archive.imported.v1 \
+          --filter evt.ai_archive.conversation.added.v1 \
+          --filter evt.ai_archive.conversation.updated.v1 \
+          --filter evt.ai_archive.project.added.v1 \
+          --filter evt.ai_archive.project.updated.v1 \
+          --filter evt.ai_archive.artifact.added.v1 \
+          --filter evt.ai_archive.artifact.updated.v1 \
+          --filter evt.ai_archive.subject.tombstoned.v1 \
+          --filter evt.knowledge.repository_analysis.requested.v1 \
+          --defaults
+
+  scripted-provider:
+    image: python@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d
+    network_mode: service:network
+    depends_on:
+      network:
+        condition: service_started
+    command: [python3, /fixture/knowledge-main-stream-fixture.py, --mode, provider, --bind, 127.0.0.1, --port, "18081"]
+    healthcheck:
+      test: [CMD, python3, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18081/health', timeout=1)"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - ../fixtures/knowledge-main-stream-fixture.py:/fixture/knowledge-main-stream-fixture.py:ro
+
+  source-fixture:
+    image: python@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d
+    command: [python3, /fixture/knowledge-main-stream-fixture.py, --mode, source, --bind, 0.0.0.0, --port, "80"]
+    healthcheck:
+      test: [CMD, python3, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:80/health', timeout=1)"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - ../fixtures/knowledge-main-stream-fixture.py:/fixture/knowledge-main-stream-fixture.py:ro
+    networks:
+      kno018:
+        ipv4_address: ${RATATOSKR_KNO018_SOURCE_ADDRESS:?set the task-isolated source address}
+
+  github:
+    build:
+      context: ${RATATOSKR_GITHUB_CONTEXT:?set the GitHub checkout}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_GITHUB_REVISION:?set the GitHub revision}
+      dockerfile_inline: |
+        FROM rust:1.97.0-slim-bookworm AS builder
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git pkg-config && rm -rf /var/lib/apt/lists/*
+        WORKDIR /build
+        ARG RATATOSKR_GIT_SHA=unknown
+        ENV CARGO_BUILD_JOBS=2
+        ENV RATATOSKR_GIT_SHA=$${RATATOSKR_GIT_SHA}
+        COPY . .
+        RUN cargo build --release --locked --jobs 2 -p ratatoskr-github-catalog-service
+        FROM debian:12-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && useradd --system --no-create-home --shell /usr/sbin/nologin ratatoskr
+        COPY --from=builder /build/target/release/ratatoskr-github-catalog /usr/local/bin/
+        USER ratatoskr
+    image: ratatoskr-kno018-github:${RATATOSKR_GITHUB_REVISION:?set the GitHub revision}
+    network_mode: service:network
+    command: [ratatoskr-github-catalog]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:9084
+      RATATOSKR__API__LISTEN_ADDRESS: 127.0.0.1:9082
+      RATATOSKR__INTERNAL_API__LISTEN_ADDRESS: 127.0.0.1:9083
+      RATATOSKR__SERVICE_AUTH__KNOWLEDGE_TOKEN_FILE: /run/kno018/github-token
+      RATATOSKR__STORAGE__DATABASE_URL: postgres://fleet@127.0.0.1:5432/github
+    healthcheck:
+      test: [CMD-SHELL, "grep -qi ':237C ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      interval: 1s
+      timeout: 3s
+      retries: 90
+    volumes:
+      - ${RATATOSKR_KNO018_RUNTIME_DIR:?set the runtime directory}:/run/kno018:ro
+
+  extractor:
+    build:
+      context: ${RATATOSKR_EXTRACTOR_CONTEXT:?set the Extractor checkout}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_EXTRACTOR_REVISION:?set the Extractor revision}
+      dockerfile_inline: |
+        FROM rust:1.97.0-slim-bookworm AS builder
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git pkg-config && rm -rf /var/lib/apt/lists/*
+        WORKDIR /build
+        ARG RATATOSKR_GIT_SHA=unknown
+        ENV CARGO_BUILD_JOBS=2
+        ENV RATATOSKR_GIT_SHA=$${RATATOSKR_GIT_SHA}
+        COPY . .
+        RUN cargo build --release --locked --jobs 2 -p ratatoskr-extractor-service
+        FROM debian:12-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && useradd --system --no-create-home --shell /usr/sbin/nologin ratatoskr
+        COPY --from=builder /build/target/release/ratatoskr-extractor /usr/local/bin/
+        USER ratatoskr
+    image: ratatoskr-kno018-extractor:${RATATOSKR_EXTRACTOR_REVISION:?set the Extractor revision}
+    network_mode: service:network
+    command: [ratatoskr-extractor]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      source-fixture:
+        condition: service_healthy
+    environment:
+      RATATOSKR__ADMIN__BIND: 127.0.0.1:9091
+      RATATOSKR__BLOBS__ROOT: /tmp/kno018-extractor-blobs
+      RATATOSKR__BUS__URL: nats://127.0.0.1:4222
+      RATATOSKR__BUS__DURABLE_NAME: ratatoskr_extractor_capture_kno018
+      RATATOSKR__DATABASE__URL: postgres://fleet@127.0.0.1:5432/extractor
+      RATATOSKR__FETCH__ALLOWED_PORTS: '[80, 443]'
+    healthcheck:
+      test: [CMD-SHELL, "grep -qi ':2383 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      interval: 1s
+      timeout: 3s
+      retries: 90
+
+  knowledge:
+    build:
+      context: ${RATATOSKR_KNOWLEDGE_CONTEXT:?set the Knowledge checkout}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_KNOWLEDGE_REVISION:?set the Knowledge revision}
+      dockerfile_inline: |
+        FROM rust:1.97.0-slim-bookworm AS builder
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git pkg-config && rm -rf /var/lib/apt/lists/*
+        WORKDIR /build
+        ARG RATATOSKR_GIT_SHA=unknown
+        ENV CARGO_BUILD_JOBS=2
+        ENV RATATOSKR_GIT_SHA=$${RATATOSKR_GIT_SHA}
+        COPY . .
+        RUN cargo build --release --locked --jobs 2 -p ratatoskr-knowledge-service
+        FROM debian:12-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && useradd --system --no-create-home --shell /usr/sbin/nologin ratatoskr
+        COPY --from=builder /build/target/release/ratatoskr-knowledge-service /usr/local/bin/
+        USER ratatoskr
+    image: ratatoskr-kno018-knowledge:${RATATOSKR_KNOWLEDGE_REVISION:?set the Knowledge revision}
+    network_mode: service:network
+    command: [ratatoskr-knowledge-service]
+    depends_on:
+      github:
+        condition: service_healthy
+      topology:
+        condition: service_completed_successfully
+      scripted-provider:
+        condition: service_healthy
+    environment:
+      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:9081
+      RATATOSKR__LIMITS__PROVIDER_REQUESTS_PER_MINUTE: 600
+      RATATOSKR__PRIMARY__BUS_ENDPOINT: nats://127.0.0.1:4222
+      RATATOSKR__PRIMARY__GITHUB_BASE_URL: http://127.0.0.1:9083/
+      RATATOSKR__PRIMARY__GITHUB_TOKEN_FILE: /run/kno018/github-token
+      RATATOSKR__PRIMARY__WORKER_COUNT: 2
+      RATATOSKR__PROVIDER__OPENROUTER__API_KEY: kno018-scripted-provider-token
+      RATATOSKR__PROVIDER__OPENROUTER__BASE_URL: http://127.0.0.1:18081/v1
+      RATATOSKR__PROVIDER__OPENROUTER__MODEL: scripted/knowledge
+      RATATOSKR__RUNTIME__ROLE: primary
+      RATATOSKR__STORAGE__BLOB_ROOT: /tmp/kno018-knowledge-blobs
+      RATATOSKR__STORAGE__DATABASE_URL: postgres://fleet@127.0.0.1:5432/knowledge
+    healthcheck:
+      test: [CMD-SHELL, "grep -qi ':2379 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      interval: 1s
+      timeout: 3s
+      retries: 120
+    volumes:
+      - ${RATATOSKR_KNO018_RUNTIME_DIR:?set the runtime directory}:/run/kno018:ro
+
+  nats-tools:
+    image: natsio/nats-box@sha256:9d5f35d286c3dcfca18bb2339b51345f9f89b580b237ab16ddfe609bdca9c72d
+    network_mode: service:network
+    depends_on:
+      knowledge:
+        condition: service_healthy
+    entrypoint: [/bin/sh, -c]
+    command: [sleep infinity]
+
+networks:
+  kno018:
+    ipam:
+      config:
+        - subnet: ${RATATOSKR_KNO018_NETWORK_SUBNET:?set the task-isolated fixture subnet}
+
+volumes:
+  nats-data:
+  postgres-data:

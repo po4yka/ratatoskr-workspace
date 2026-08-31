@@ -1,0 +1,262 @@
+id: KNO-018
+state: implementing
+goal: Make Knowledge durably consume the fleet's primary document and domain-event stream and recover every admitted analysis family across restart.
+non_goals:
+  - Implement or repair live X, Instagram, Threads, GitHub, ChatGPT, or Claude event publishers.
+  - Treat canonical fixture injection as proof of a live producer, live provider, deployment, or hosted CI.
+  - Read another service database, local path, or arbitrary URL as a repository-content boundary.
+  - Add a second contract version or a database migration.
+task_root: ratatoskr-task-worktrees/KNO-018-knowledge-main-stream-runtime
+workspace:
+  path: workspace
+  branch: codex/kno-018-knowledge-main-stream-runtime
+  base_sha: 8f305f056bca06abe46c031797359f0118d5e0a4
+  role: coordination-integration-and-pins
+  writer: root
+  required_gate:
+    - openspec validate activate-knowledge-main-stream-runtime --strict
+    - workspace fleet-tree, OpenSpec, credential, private-key, action-pin, and manifest checks from the repository workflows
+repositories:
+  - id: ratatoskr-contracts
+    path: repos/contracts
+    branch: codex/kno-018-document-event
+    base_sha: d43b62a402f47984c95037c158ec29c5ee62ee5c
+    task_sha: 90fca0353e1725ef04c28d71f8de0bedbf0e6b8a
+    role: typed-document-event-contract-producer
+    writer: root
+    depends_on: []
+    required_gate:
+      - cargo fetch --locked
+      - cargo deny check
+      - cargo fmt --all -- --check
+      - cargo clippy --workspace --all-targets --locked -- -D warnings
+      - git ls-files -z '*.rs' | xargs -0 -r wc -l | awk '$2 != "total" && $1 > 850 { print; bad = 1 } END { exit bad }'
+      - cargo contracts check
+      - cargo test --workspace --locked
+    pull_request: pending
+    merge_sha: pending
+  - id: ratatoskr-platform
+    path: repos/platform
+    branch: codex/kno-018-knowledge-topology
+    base_sha: 070b718238c4e6e45a5b7fc08ebe719ed5374e33
+    task_sha: c4d8a9b043f2ed721bd21a103d85d9aaf540955d
+    role: fixed-consumer-and-identity-owner
+    writer: root
+    depends_on: [ratatoskr-contracts]
+    required_gate:
+      - cargo fetch --locked
+      - cargo deny --locked check
+      - cargo fmt --all -- --check
+      - cargo clippy --workspace --all-targets --locked -- -D warnings
+      - cargo build --workspace --locked
+      - cargo test --workspace --locked
+      - cargo test --workspace --locked --doc
+      - cargo build --workspace --locked --release
+    pull_request: pending
+    merge_sha: pending
+  - id: ratatoskr-github
+    path: repos/github
+    branch: codex/kno-018-readme-boundary
+    base_sha: fd60dd37e22b30056d2153ef22b271f75659e654
+    task_sha: 394fb669ca1f589d4efc7f319d5a30e22cb7af53
+    role: immutable-readme-owner-service
+    writer: root
+    depends_on: [ratatoskr-contracts]
+    required_gate:
+      - cargo fetch --locked
+      - cargo deny --locked check
+      - cargo fmt --all -- --check
+      - cargo clippy --workspace --all-targets --locked -- -D warnings
+      - cargo build --workspace --locked
+      - cargo test --workspace --locked
+      - cargo test --workspace --locked --doc
+      - cargo build --workspace --locked --release
+    pull_request: pending
+    merge_sha: pending
+  - id: ratatoskr-knowledge
+    path: repos/knowledge
+    branch: codex/kno-018-main-stream-runtime
+    base_sha: 25fb4a92d8b9ebcc3f15c4f2c9bfd8ee6b027ba1
+    task_sha: 04ec9756d6c105bd2a2284342e54c225c20be122
+    role: primary-event-consumer-and-analysis-owner
+    writer: root
+    depends_on: [ratatoskr-contracts, ratatoskr-platform, ratatoskr-github]
+    required_gate:
+      - cargo fetch --locked
+      - cargo deny --locked check
+      - cargo fmt --all -- --check
+      - cargo clippy --workspace --all-targets --locked -- -D warnings
+      - cargo build --workspace --locked
+      - cargo test --workspace --locked
+      - cargo test --workspace --locked --doc
+      - cargo build --workspace --locked --release
+    pull_request: pending
+    merge_sha: pending
+  - id: ratatoskr-extractor
+    path: repos/extractor
+    branch: codex/kno-018-typed-document-event
+    base_sha: e380202073190bd6e21e0ea36f236fc150732ebc
+    task_sha: 87bcc3bce191b424f8986777ce6c64933d738aba
+    role: extracted-document-event-producer
+    writer: root
+    depends_on: [ratatoskr-contracts]
+    required_gate:
+      - cargo fetch --locked
+      - cargo deny --locked check
+      - cargo fmt --all -- --check
+      - cargo clippy --workspace --all-targets --locked -- -D warnings
+      - cargo build --workspace --locked
+      - cargo test --workspace --locked
+      - cargo test -p ratatoskr-extractor-corpus --locked
+      - cargo run --locked -p ratatoskr-extractor-corpus --bin shadow-report -- --check
+      - cargo test --workspace --locked --doc
+      - cargo build --workspace --locked --release
+      - tools/run-corpus-performance.sh --check
+    pull_request: pending
+    merge_sha: pending
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-platform
+  - ratatoskr-github
+  - ratatoskr-knowledge
+  - ratatoskr-extractor
+  - ratatoskr-workspace
+compatibility:
+  strategy: Register the existing v1 document payload without wire drift, deploy backward-compatible topology and content readers before Knowledge, then update the producer and pins.
+  contract_version: 1
+  database_strategy: Edit each current schema definition in place; create fresh development databases; add no migrations.
+  durable_strategy: Preserve Platform-owned consumer names and cursors; Knowledge verifies but never creates or repairs them.
+live_publisher_dependencies:
+  x: outside KNO-018; canonical fixture proof only
+  instagram: outside KNO-018; canonical fixture proof only
+  threads: outside KNO-018; canonical fixture proof only
+  github: publication outside KNO-018; only the authenticated immutable README read boundary is in scope
+  chatgpt: outside KNO-018; canonical fixture proof only
+  claude: outside KNO-018; canonical fixture proof only
+proof_categories:
+  repository_local: focused and full repository checks run against a recorded task commit
+  composed_fixture: exact task SHAs with real NATS/PostgreSQL and scripted provider; not live producer/provider proof
+  push: remote branch resolves to the intended commit; not hosted CI or merge proof
+  hosted_ci: required workflow runs observed on the exact commit
+  live_producer: source service itself publishes through its deployed runtime
+  live_provider: external provider accepted a real request; scripted provider is excluded
+  deployment: target-host unit, credentials, topology, health, and functional behavior observed
+  rollback: upstream claims stopped, bounded drain completed, durable cursor and database work preserved
+rollout:
+  - Publish the typed document-event contract and generated artifacts.
+  - Provision exact Knowledge consumers and least-privilege identity, and publish the immutable GitHub read boundary.
+  - Publish Knowledge with claims initially disabled; verify topology, dependencies, readiness, and backlog visibility before enabling claims.
+  - Publish Extractor's typed construction after the Contracts commit is available.
+  - Run the exact-SHA composed recovery/deletion/shutdown matrix.
+  - Advance Workspace pins only to merged child commits after integration passes.
+rollback:
+  - Stop affected upstream publication or Knowledge work claims first.
+  - Allow Knowledge to settle admission and drain its terminal outbox within the configured bound, then stop it.
+  - Preserve ratatoskr_knowledge_main, ratatoskr_knowledge_channel_recap, both durable cursors, and Knowledge receipt/work/outbox rows.
+  - Roll back deployables and pins in reverse dependency order without deleting broker state.
+  - Recreate only the development Knowledge database when returning to the older first-version schema; never add or run a down migration.
+verification:
+  baseline_submodules: clean at task creation
+  one_writer_per_repository: root
+  local:
+    ratatoskr-contracts:
+      status: passed
+      red: focused registry test failed because content.document.extracted.v1 was absent
+      green:
+        - focused registry and fixture tests passed
+        - deterministic generation passed and a second generation changed no artifact
+        - generated TypeScript compiled in strict mode with TypeScript 5.9.2
+        - cargo-public-api baseline was reviewed, blessed for the additive EventPayload implementation, and api-check passed on nightly-2026-06-12
+        - cargo fetch, cargo deny, rustfmt, clippy, size ratchet, contract check, determinism, and the full locked workspace test suite passed
+    ratatoskr-platform:
+      status: passed
+      broker: nats-server v2.14.5 through the task Colima profile
+      red:
+        - exact Knowledge topology test failed because ratatoskr_knowledge_main was absent
+        - real-broker and deployment-profile permission tests failed because RATATOSKR_KNOWLEDGE was absent
+      green:
+        - exact thirteen-filter primary and separate recap durable were created, reused without cursor reset, and drift was refused without mutation
+        - disposable generated NKeys proved allowed INFO, NEXT, ACK, and six terminal publications plus denial of consumer creation, foreign access, broad subscription, source publication, and stream administration
+        - production profile documents only the knowledge.nkey path; no seed or generated test credential is committed
+        - cargo fetch, cargo deny, rustfmt, clippy, size ratchet, debug workspace build, full locked workspace tests including doctests, and release workspace build passed
+    ratatoskr-github:
+      status: passed
+      red: real Catalog process returned 404 because the internal immutable README route was absent
+      green:
+        - service-authenticated resolution returned only the exact retained README bytes for the published tenant, repository, and complete BlobRef
+        - missing and wrong credentials, foreign owner/repository scope, arbitrary URL fields, altered digest/media type/length, oversized content, missing storage, and digest-corrupt bytes were refused without content disclosure
+        - the resolver is isolated from the loopback Edge API on a separately bound private/container listener; the process test proved Edge 404 and internal 200, and startup binds no internal listener without service auth
+        - the bearer value is loaded only from an absolute permission-checked secret file, retained only as a SHA-256 digest, compared in constant time, and redacted from Debug output
+        - cargo fetch, cargo deny, rustfmt, clippy, size ratchet, debug workspace build, full locked workspace tests including doctests, and release workspace build passed
+    ratatoskr-knowledge:
+      status: passed
+      red:
+        - primary process readiness stayed 200 without the exact durable or live intake/outbox supervisors
+        - invalid, conflicting, poison, crash, lease, removal, tombstone, resolver, publish-uncertainty, and shutdown cases exposed absent durable admission and recovery boundaries
+        - the first real composed broker-stop run on f927a7b left readiness stale because idle pull and outbox loops did not observe the disconnected async-nats client
+      green:
+        - primary startup verifies the Platform-owned thirteen-filter durable, opens but never creates it, supervises intake/work/index/resolver/outbox handles, and returns 503 whenever a required supervisor or live broker connection is unavailable
+        - document, social, AI-archive, and repository envelopes enter collision-checked atomic admission; ACK, NAK, and Term outcomes preserve content-free rejection evidence and poison does not block a later valid delivery
+        - claimed work resumes every persisted state, fences leases, refuses blind retry after uncertain provider outcomes, and inserts terminal state plus stable Nats-Msg-Id outbox intent atomically
+        - owner-scoped removal and tombstone ordering deletes Knowledge-owned derivatives and blocks stale replay without touching another tenant or source
+        - the GitHub resolver enforces service authentication, exact BlobRef digest/media/length, response limits, and bounded network timeouts without direct database, path, or arbitrary URL access
+        - ordered cancellation stops claims, settles admission, joins workers, drains outbox, and closes storage; primary metrics omit user content and high-cardinality identifiers
+        - cargo fetch, cargo deny, rustfmt, clippy, size ratchet, debug workspace build, full locked workspace tests including doctests, and release workspace build with two jobs passed at 04ec9756d6c105bd2a2284342e54c225c20be122
+    ratatoskr-extractor:
+      status: passed
+      red: focused completion test detected the manual unregistered EventType and payload construction path
+      green:
+        - content.document.extracted.v1 is constructed through Document::event_type and EventEnvelope::set_payload with unchanged subject, aggregate identity, outbox transaction, and canonical wire bytes
+        - cargo fetch, cargo deny, rustfmt, clippy, size ratchet, debug workspace build, full locked workspace and corpus tests, shadow report, corpus performance check, doctests, release build, fuzz cargo check, and nightly fuzz smoke passed
+  composed_fixture:
+    status: passed
+    command: build-gate -- env RATATOSKR_TASK_NAMESPACE=kno018-acceptance13 [exact task checkout paths and revisions] integration/run-knowledge-main-stream.sh
+    revisions:
+      workspace_prepublication: 8f305f056bca06abe46c031797359f0118d5e0a4
+      knowledge: 04ec9756d6c105bd2a2284342e54c225c20be122
+      extractor: 87bcc3bce191b424f8986777ce6c64933d738aba
+      github: 394fb669ca1f589d4efc7f319d5a30e22cb7af53
+    observed:
+      - real PostgreSQL 17 with pgvector and JetStream started in a task-derived isolated namespace; exact ratatoskr_knowledge_main had thirteen filters and explicit ACK policy
+      - real Extractor produced the typed document event from a bounded fixture address and real GitHub served README bytes over its authenticated internal boundary
+      - document, social, AI-archive, and repository work completed, became searchable, recorded provider usage, and published the exact three applicable terminal subjects after broker acknowledgement
+      - poison was terminated without blocking valid replay; duplicate envelopes did not duplicate receipts, provider calls, or terminal facts
+      - stopping NATS changed Knowledge readiness from 200 to 503, pending outbox state stayed unsent, and restart restored readiness and broker-ack publication
+      - social removal and archive tombstone deleted scoped source/search derivatives; stale replay did not recreate them or invoke the provider
+      - SIGTERM exited Knowledge with code 0, restart restored readiness, and Compose removed its namespaced containers, volumes, and network
+    evidence: evidence/acceptance13 is local ignored evidence and is not a hosted artifact
+    boundary: social and AI-archive inputs are canonical fixtures and provider is scripted; this is not live X, ChatGPT, Claude, provider, billing, hosted CI, or deployment proof
+  push:
+    status: passed
+    proof:
+      ratatoskr-contracts: origin/codex/kno-018-document-event = 90fca0353e1725ef04c28d71f8de0bedbf0e6b8a
+      ratatoskr-platform: origin/codex/kno-018-knowledge-topology = c4d8a9b043f2ed721bd21a103d85d9aaf540955d
+      ratatoskr-github: origin/codex/kno-018-readme-boundary = 394fb669ca1f589d4efc7f319d5a30e22cb7af53
+      ratatoskr-knowledge: origin/codex/kno-018-main-stream-runtime = 04ec9756d6c105bd2a2284342e54c225c20be122
+      ratatoskr-extractor: origin/codex/kno-018-typed-document-event = 87bcc3bce191b424f8986777ce6c64933d738aba
+    boundary: git ls-remote equality only; no force push, pull request, hosted workflow, review, or merge is claimed
+  hosted_ci: not observed; no pull requests were opened by this apply operation
+  live_producer: outside scope for X, Instagram, Threads, GitHub, ChatGPT, and Claude
+  live_provider: not claimed by scripted-provider acceptance
+  deployment: not performed
+  rollback:
+    status: passed in composed fixture scope
+    observed: Knowledge stopped with bounded SIGTERM drain, retained PostgreSQL and JetStream state across process restart, recovered readiness, and resumed the existing durable without recreation or cursor reset
+    boundary: no target-host deployable, production credential, live backlog, or published workspace pin was rolled back
+  workspace_topology:
+    status: unavailable
+    reason: this bootstrap repository has no tracked workspace.toml, workspace.lock, .gitmodules, ws CLI, or submodule topology to validate or regenerate
+  workspace_local:
+    status: passed
+    checks:
+      - bats integration/tests/knowledge_main_stream.bats
+      - bash syntax and Python fixture compilation
+      - docker compose config through the runner contract and composed startup
+      - openspec validate activate-knowledge-main-stream-runtime --strict
+      - openspec validate --all --strict
+      - openspec validate --archived
+      - fleet required-file, executable-hook, CRLF, credential, private-key, action-pin, manifest-gate, and size-limit invariants against the staged tree
+      - git diff --cached --check
+  baseline_cleanliness:
+    affected_baselines: contracts, platform, github, knowledge, and extractor baseline checkouts are clean
+    preserved_unrelated_work: three unrelated user-owned task directories under the shared repos tree are dirty and were not read, changed, staged, or cleaned by KNO-018
