@@ -87,8 +87,18 @@ evidence:
   chatgpt_remote_main: 5cd597ea800b87c1f6d8f1c0b0e85adf47f4fe87
   claude_remote_main: 989d2ba929b0355d3b3abc0e15d4f36c99652f43
   export_agent_remote_main: fdef58e281ea3c8e4519a6add8aee8185875bce1
-  hosted_ci: pending
-  workspace_profile: pending
+  hosted_ci: exact_child_and_workspace_profile_revisions_green
+  hosted_runs:
+    platform_ci: https://github.com/po4yka/ratatoskr-platform/actions/runs/33431243877
+    chatgpt_ci: https://github.com/po4yka/ratatoskr-chatgpt/actions/runs/33429368578
+    claude_ci: https://github.com/po4yka/ratatoskr-claude/actions/runs/33429392543
+    export_agent_ci: https://github.com/po4yka/ratatoskr-export-agent/actions/runs/33431442109
+    workspace_fleet: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33431758494
+    workspace_openspec: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33431758460
+    workspace_zizmor: https://github.com/po4yka/ratatoskr-workspace/actions/runs/33431758523
+  workspace_profile: exact_published_validation_green_composed_assertions_pending
+  workspace_profile_revision: 228b3020a8b418db606806711e7f10416b31361c
+  compose_sha256: ecf8f333544457a29673b93cbd7642739157d089150b58f95080748cae7ce89c
   notarized_release: blocked_pending_owner_apple_credentials
   clean_machine: blocked_pending_notarized_release_and_separate_mac
   live_deployment: not_authorized
