@@ -1,0 +1,8 @@
+\set ON_ERROR_STOP on
+
+CREATE ROLE platform LOGIN;
+CREATE ROLE chatgpt LOGIN;
+CREATE ROLE claude LOGIN;
+CREATE DATABASE platform OWNER platform;
+CREATE DATABASE chatgpt OWNER chatgpt;
+CREATE DATABASE claude OWNER claude;
