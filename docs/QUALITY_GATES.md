@@ -2,7 +2,7 @@
 
 > Status: Implemented  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-23
+> Last reviewed: 2026-08-30
 > Related: `DEVELOPMENT.md`, `TESTING.md`, `THREAT_MODEL.md`, `docs/ARCHITECTURE.md` section 11
 
 ## Scope
@@ -31,6 +31,29 @@ thing here that did.
 
 The retired first-generation client of the same name is a separate thing entirely — a local archive
 with no Git remote, sharing no history with the repository counted above.
+
+## Workspace snapshot gate
+
+`.github/workflows/ci.yml` is the workspace-specific gate added with WS-013. It recursively checks
+out the sixteen public submodules and runs the pinned Rust formatter, Clippy, complete test suite,
+`cargo-deny` license/source/advisory policy, `./ws lock check`, and strict `./ws doctor`.
+
+The same local boundary is:
+
+```bash
+build-gate -- sh -lc 'cd harness && cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-features --locked -- -D warnings && cargo test --workspace --all-features --locked'
+cd harness && cargo deny check
+cd ..
+./ws manifest check
+./ws lock check
+./ws status
+./ws doctor
+```
+
+Fixture tests prove diagnostics and non-mutation; the committed-snapshot test proves the exact 16
+IDs, paths, audited gitlink SHAs, nonempty pinned-object evidence, clean baselines, and lock freshness.
+This gate does not rerun child CI, deploy the fleet, contact a provider, or establish runtime
+end-to-end health.
 
 ## What each repository has
 
@@ -456,7 +479,7 @@ gate and are the clearest of the set:
 | A check on backticked paths that look like files | 156 | 0 |
 | A check that each `> Status:` uses the vocabulary `docs/README.md` defines | 16 | 0 |
 
-The documents legitimately name files that are planned and absent by design (`workspace.toml`), files
+The documents legitimately name files that were planned and absent when that measurement was made (`workspace.toml`), files
 that live in another repository (`ratatoskr-workspace/docs/DEPLOYMENT_TARGET.md`), a file deleted on
 purpose with a note saying when to restore it (`.cargo/config.toml`), and a template placeholder
 (`NNNN-short-title.md`). Each of the 156 is one of those. The `Status:` result has the same shape: all

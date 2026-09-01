@@ -1,0 +1,64 @@
+[submodule "contracts"]
+	path = repos/contracts
+	url = https://github.com/po4yka/ratatoskr-contracts.git
+	branch = main
+[submodule "platform"]
+	path = repos/platform
+	url = https://github.com/po4yka/ratatoskr-platform.git
+	branch = main
+[submodule "extractor"]
+	path = repos/extractor
+	url = https://github.com/po4yka/ratatoskr-extractor.git
+	branch = main
+[submodule "knowledge"]
+	path = repos/knowledge
+	url = https://github.com/po4yka/ratatoskr-knowledge.git
+	branch = main
+[submodule "github"]
+	path = repos/github
+	url = https://github.com/po4yka/ratatoskr-github.git
+	branch = main
+[submodule "vault"]
+	path = repos/vault
+	url = https://github.com/po4yka/ratatoskr-vault.git
+	branch = main
+[submodule "x"]
+	path = repos/social/x
+	url = https://github.com/po4yka/ratatoskr-x.git
+	branch = main
+[submodule "instagram"]
+	path = repos/social/instagram
+	url = https://github.com/po4yka/ratatoskr-instagram.git
+	branch = main
+[submodule "threads"]
+	path = repos/social/threads
+	url = https://github.com/po4yka/ratatoskr-threads.git
+	branch = main
+[submodule "chatgpt"]
+	path = repos/ai-archive/chatgpt
+	url = https://github.com/po4yka/ratatoskr-chatgpt.git
+	branch = main
+[submodule "claude"]
+	path = repos/ai-archive/claude
+	url = https://github.com/po4yka/ratatoskr-claude.git
+	branch = main
+[submodule "telegram"]
+	path = repos/integrations/telegram
+	url = https://github.com/po4yka/ratatoskr-telegram.git
+	branch = main
+[submodule "web"]
+	path = repos/clients/web
+	url = https://github.com/po4yka/ratatoskr-web.git
+	branch = main
+[submodule "mobile"]
+	path = repos/clients/mobile
+	url = https://github.com/po4yka/ratatoskr-mobile.git
+	branch = main
+[submodule "browser-extension"]
+	path = repos/clients/browser-extension
+	url = https://github.com/po4yka/ratatoskr-browser-extension.git
+	branch = main
+[submodule "export-agent"]
+	path = repos/clients/export-agent
+	url = https://github.com/po4yka/ratatoskr-export-agent.git
+	branch = main

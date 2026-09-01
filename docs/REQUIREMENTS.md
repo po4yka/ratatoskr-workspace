@@ -1,7 +1,7 @@
 # Workspace requirements
 
-> Status: Proposed  
-> Last reviewed: 2026-08-17
+> Status: Snapshot requirements implemented; orchestration requirements proposed
+> Last reviewed: 2026-08-30
 
 ## Goals
 
@@ -30,8 +30,9 @@
 
 ## First-slice acceptance
 
-- Parse and validate one manifest.
-- Report repository and pin drift.
-- Prepare and verify one task worktree.
-- Run one repository-local check through the harness.
-- Preserve audit output without secrets.
+- Implemented: validate the exact sixteen-repository manifest and acyclic dependency graph.
+- Implemented: join manifest, `.gitmodules`, and mode-160000 gitlinks without mutation.
+- Implemented: derive deterministic pinned-commit file/tree evidence and reject stale lock data.
+- Implemented: report uninitialized, HEAD-drifted, tracked-dirty, and untracked-dirty baselines.
+- Implemented: run the same strict `./ws doctor` gate locally and in recursive-checkout CI.
+- Deferred: prepare/verify task worktrees and execute repository-local commands through the harness.
