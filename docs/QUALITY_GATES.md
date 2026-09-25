@@ -77,11 +77,11 @@ All 18 repositories are public. The default branch of each repository is `main`.
 | `openspec/config.yaml` | 18 of 18 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
 | `skills-lock.json` | 15 of 18 | The `skills` CLI lockfile. Identical in the 14 whose stack is Rust; `ratatoskr-web` has its own, for design skills |
 | The Rust skill catalogue, `.agents/skills/` | 14 of 18 | 18 skills vendored from `po4yka/rust-skills`, identical in every repository whose stack is Rust. See [The Rust skill catalogue](#the-rust-skill-catalogue) |
-| Size limits in a linter configuration | 8 of 17 | `clippy.toml` in the seven with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
-| A repository gate, `.github/workflows/ci.yml` | 8 of 17 | The seven Rust repositories and `ratatoskr-web` |
+| Size limits in a linter configuration | 16 of 18 | `clippy.toml` in the thirteen with a root `Cargo.toml` and in the workspace `harness/`, `eslint.config.js` in `ratatoskr-web` and `ratatoskr-browser-extension`. See [Size limits](#size-limits) |
+| A repository gate, `.github/workflows/ci.yml` | 18 of 18 | Every repository |
 | The advisory check, `.github/workflows/advisories.yml` | 14 of 18 | Every repository with Rust. The workspace copy runs in `harness/`, so it differs from the other thirteen, and the drift check requires only its presence. `ratatoskr-web` audits its own tree in `ci.yml` because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
 | The drift check, `.github/workflows/drift.yml` | 1 of 18 | In `ratatoskr-workspace`, and it reads all 18. See [The drift check](#the-drift-check) |
-| The release, `.github/workflows/release.yml` | 1 of 17 | In `ratatoskr-platform`. See [Deployment](#deployment) |
+| The release, `.github/workflows/release.yml` | 2 of 18 | In `ratatoskr-platform` and `ratatoskr-browser-extension`. See [Deployment](#deployment) |
 
 ### What the ruleset requires, and what it cannot
 
@@ -147,8 +147,8 @@ deletes the branch.
 
 ## The Rust gate
 
-Seven repositories contain Rust code: Contracts, Extractor, GitHub, Telegram, Knowledge, Platform
-and Vault. Each runs its own gate in `.github/workflows/ci.yml`; its `DEVELOPMENT.md` is the source of
+Fourteen repositories contain Rust code: the thirteen with a root `Cargo.toml`, and this workspace,
+whose Rust is under `harness/`. Each runs its own gate in `.github/workflows/ci.yml`; its `DEVELOPMENT.md` is the source of
 truth for the exact command list.
 
 `ratatoskr-contracts` runs six commands:
@@ -299,9 +299,9 @@ each of them one or two SHA bumps with a green gate behind it.
 ## Size limits
 
 How long a function may be, how many arguments it may take, how deep a block may nest, and how long a
-file may be. Eight repositories hold product code and each carries these in its own linter
-configuration. The other nine enforce nothing yet, and one step in the fleet gate is what keeps that
-from becoming a Rust or Node.js hole.
+file may be. Sixteen repositories carry these in their own linter configuration. The other two,
+`ratatoskr-export-agent` in Swift and `ratatoskr-mobile` in Kotlin Multiplatform, have none yet,
+because the fleet step below covers only a Rust or Node.js manifest.
 
 Every number below is the worst case the tree already had when it was written, plus zero or a stated
 margin. That is the same choice as `shadscan --fail-under` in `ratatoskr-web`: a limit set at the
@@ -404,9 +404,9 @@ that the next `npm run ui:add:aicss` rewrites. A size finding there also cannot 
 one-line edit the way `no-empty` can: the answer is a refactor, and the generator undoes it. The
 alternative is setting the standard for hand-written code at the shape of a generated WebGL harness.
 
-### The nine repositories with no product manifest
+### A repository with no Rust or Node.js manifest
 
-They enforce nothing, because there is nothing to enforce. What keeps that from being a hole is one
+Such a repository has nothing for this configuration to govern. What keeps that from being a hole is one
 step in `fleet.yml`, which is byte-identical in all 18 repositories and sits beside the step that
 already asserts a manifest arrives with its `ci.yml`:
 
@@ -795,7 +795,7 @@ in the same pass. One `git/trees?recursive=1` call per repository, 18 calls.
 | Assertion | The failure it catches |
 |---|---|
 | `fleet.yml`, `zizmor.yml`, `openspec.yml` and `.githooks/pre-commit` are one blob across the fleet | A fix applied in one repository and not the other seventeen |
-| The 19 files `openspec init` generates are one blob each, and the SET of their paths is the same everywhere | A partial `openspec update`: the CLI raised in the repository its author was in, forgotten in the other seventeen. A release that adds a seventh command arrives as a missing path rather than a changed one |
+| The 31 files `openspec init` generates are one blob each, and the SET of their paths is the same everywhere | A partial `openspec update`: the CLI raised in the repository its author was in, forgotten in the other seventeen. A release that adds a seventh command arrives as a missing path rather than a changed one |
 | `openspec/config.yaml` is PRESENT in every repository | The planning root deleted from one. Sameness is not asserted: `context:` names one repository's role, stack and tests |
 | The 93 vendored skill paths are one blob each, and the SET of them is the same, across the 14 repositories whose stack is Rust | A skill edited in place in one repository; a skill added to one and forgotten in the other thirteen; a partial `npx skills update` |
 | `skills-lock.json` is one blob across those same 14 | A lockfile raised in one repository without the files it locks, or the reverse |
@@ -808,9 +808,8 @@ in the same pass. One `git/trees?recursive=1` call per repository, 18 calls.
 | `ci.yml` is PRESENT in every repository with Rust | A gate deleted from a repository that already had one |
 
 The 2026-08-23 inventory found the drift that these last assertions are designed to expose. GitHub,
-Telegram, Knowledge and Vault have Rust but still use the non-Rust `dependabot.yml` form and have no
-`advisories.yml`. The next drift run remains expected to fail until a separate CI change brings those
-four repositories into the Rust class. This documentation change does not weaken that assertion.
+Telegram, Knowledge and Vault had Rust but used the non-Rust `dependabot.yml` form and had no
+`advisories.yml`. All four now have the Rust form and `advisories.yml`.
 
 `ci.yml` is checked for presence and deliberately not for sameness. The gates are legitimately
 different: `ratatoskr-platform` runs a PostgreSQL service, a NATS container and a native arm64 job,
