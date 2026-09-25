@@ -104,6 +104,20 @@ jobs:
           done < repos.txt
           echo "collected $(wc -l < trees.tsv) tracked paths"
 
+          # The wrappers call the reusable workflows at a pinned commit. For each pin, read the
+          # blob the called file had AT that commit, so the next step can compare it with `main`'s.
+          # The wrappers are read from this checkout; `one_of` below asserts every repository
+          # carries the same bytes, so the fleet's pins are these pins.
+          : > pins.tsv
+          # grep's 1 is "no pin found", which the next step reports; anything above 1 is an error.
+          { grep -hoE 'po4yka/ratatoskr-workspace/(\.github/workflows/reusable-[a-z-]+\.yml)@[0-9a-f]{40}' \
+              .github/workflows/*.yml || [ "$?" -eq 1 ]; } | sort -u | while IFS=@ read -r ref sha; do
+            path=${ref#po4yka/ratatoskr-workspace/}
+            blob=$(gh api "repos/po4yka/ratatoskr-workspace/contents/$path?ref=$sha" --jq .sha)
+            printf '%s\t%s\t%s\n' "$path" "$sha" "$blob" >> pins.tsv
+          done
+          echo "wrappers pin $(wc -l < pins.tsv) reusable workflows"
+
       - name: The shared files are still one file
         id: compare
         continue-on-error: true
@@ -160,6 +174,7 @@ jobs:
           one_of([".github/workflows/fleet.yml",
                   ".github/workflows/zizmor.yml",
                   ".github/workflows/openspec.yml",
+                  ".github/workflows/dependabot-automerge.yml",
                   ".githooks/pre-commit",
                   "CLAUDE.md"], repos, "the fleet")
 
@@ -240,6 +255,32 @@ jobs:
               # repository that grows a manifest without a ci.yml; this covers the deletion of one
               # from a repository that already had it.
               present([".github/workflows/ci.yml"], rust, "the repositories with Rust")
+
+          # A wrapper that pins an older revision of a reusable workflow than `main` holds is a fix
+          # that has landed in the workspace and reached no repository. Compared by the called
+          # file's blob, so a workspace commit that does not touch the checks needs no re-pin.
+          ws_repo = "ratatoskr-workspace"
+          pins = [l.split("\t") for l in pathlib.Path("pins.tsv").read_text().splitlines()]
+          if len(pins) < 5:
+              problems.append(f"only {len(pins)} reusable workflows are pinned by this checkout's "
+                              f"wrappers, expected 5: fleet, zizmor, openspec, advisories, automerge")
+          for path, sha, blob in pins:
+              current = tree.get((ws_repo, path), ("absent", "absent"))[1]
+              if blob != current:
+                  problems.append(f"the wrappers pin {path} at {sha[:12]}, which is not the revision "
+                                  f"on main; raise the SHA in every wrapper")
+
+          # Every repository in the fleet is also a repository of the workspace. One that exists on
+          # GitHub and not in workspace.toml has no pinned commit, no profile and no place in the
+          # snapshot, and until this assertion nothing said so: `ratatoskr-channel-digests` lived
+          # outside it for a month.
+          import tomllib
+          manifest = tomllib.loads(pathlib.Path("workspace.toml").read_text())
+          declared = {r["remote"].rstrip("/").removesuffix(".git").rsplit("/", 1)[-1]
+                      for r in manifest.get("repositories", [])}
+          outside = sorted(r for r in repos + sorted(empty) if r not in declared and r != ws_repo)
+          if outside:
+              problems.append(f"{', '.join(outside)} not declared in workspace.toml")
 
           # A hook that is no longer executable is inert, and git records the mode.
           for r in repos:

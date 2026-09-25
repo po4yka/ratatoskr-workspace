@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Weekly on main, so a date-dependent test or a runner change is caught without a push.
+    - cron: "58 4 * * 1"
 
 permissions:
   contents: read
@@ -13,6 +16,23 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Separate from the snapshot so a new RustSec advisory cannot hide a lint, test or snapshot failure.
+  deny:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned cargo-deny
+        run: cargo install cargo-deny --version 0.19.0 --locked # zizmor: ignore[adhoc-packages]
+
+      - name: Dependency policy and advisories
+        working-directory: harness
+        run: cargo deny check
+
   snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -42,13 +62,6 @@ jobs:
       - name: Rust tests
         working-directory: harness
         run: cargo test --workspace --all-features --locked
-
-      - name: Install pinned cargo-deny
-        run: cargo install cargo-deny --version 0.19.0 --locked # zizmor: ignore[adhoc-packages]
-
-      - name: Dependency policy and advisories
-        working-directory: harness
-        run: cargo deny check
 
       - name: Committed snapshot is reproducible
         run: |
