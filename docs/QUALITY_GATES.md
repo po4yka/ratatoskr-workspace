@@ -64,15 +64,15 @@ All 18 repositories are public. The default branch of each repository is `main`.
 | `.gitattributes` | 18 of 18 | One line: `* text=auto eol=lf` |
 | `.editorconfig` | 18 of 18 | Editor defaults. No check enforces the file |
 | `.githooks/pre-commit` | 18 of 18 | Identical file. See [Git hooks](#git-hooks) |
-| Branch ruleset on `main` | 17 of 18 | `deletion`, `required_signatures` and `required_status_checks`. Not yet on `ratatoskr-channel-digests` |
-| Dependabot alerts | 17 of 18 | GitHub reports a vulnerable dependency. Not yet on `ratatoskr-channel-digests` |
+| Branch ruleset on `main` | 18 of 18 | `deletion`, `required_signatures` and `required_status_checks` |
+| Dependabot alerts | 18 of 18 | GitHub reports a vulnerable dependency |
 | `.github/dependabot.yml` | 18 of 18 | Version updates for the `github-actions` ecosystem, grouped, monthly, with a seven-day cooldown |
 | Secret scanning and push protection | 18 of 18 | GitHub gives these to a public repository |
-| `sha_pinning_required` for Actions | 17 of 18 | A workflow must pin each action to a commit SHA. Not yet on `ratatoskr-channel-digests` |
+| `sha_pinning_required` for Actions | 18 of 18 | A workflow must pin each action to a commit SHA |
 | The fleet gate, `.github/workflows/fleet.yml` | 18 of 18 | Identical file. See [The fleet gate](#the-fleet-gate) |
 | The workflow gate, `.github/workflows/zizmor.yml` | 18 of 18 | Identical file. See [The workflow gate](#the-workflow-gate) |
-| `specs` in `required_status_checks` | 17 of 18 | Added after the name had been published by a real run, and read back on each repository. `ratatoskr-channel-digests` has no ruleset yet |
-| `delete_branch_on_merge` | 17 of 18 | A merged branch is deleted by GitHub at the merge. Not yet on `ratatoskr-channel-digests`. See [A merged branch is deleted](#a-merged-branch-is-deleted) |
+| `specs` in `required_status_checks` | 18 of 18 | Added after the name had been published by a real run, and read back on each repository |
+| `delete_branch_on_merge` | 18 of 18 | A merged branch is deleted by GitHub at the merge. See [A merged branch is deleted](#a-merged-branch-is-deleted) |
 | The spec gate, `.github/workflows/openspec.yml` | 18 of 18 | Identical file. See [The spec gate](#the-spec-gate) |
 | `openspec/config.yaml` | 18 of 18 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
 | `skills-lock.json` | 15 of 18 | The `skills` CLI lockfile. Identical in the 14 whose stack is Rust; `ratatoskr-web` has its own, for design skills |
@@ -865,9 +865,8 @@ repository, and only the real one had a 409 in it.
 ## A merged branch is deleted
 
 **A branch that has been merged into `main` is deleted. It is not kept.** `delete_branch_on_merge` is
-set on 17 of the 18 repositories, so GitHub removes the head branch at the moment the pull request
-merges, and nobody has to remember to. `ratatoskr-channel-digests`, the newest, does not have it
-yet.
+set on all 18 repositories, so GitHub removes the head branch at the moment the pull request merges,
+and nobody has to remember to.
 
 The rule states what to do about the branches that already existed, too: delete them. Eighty-two of
 them were, in one pass, leaving `main` alone in every repository.
