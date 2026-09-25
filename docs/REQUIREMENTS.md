@@ -30,9 +30,10 @@
 
 ## First-slice acceptance
 
-- Implemented: validate the exact sixteen-repository manifest and acyclic dependency graph.
+- Implemented: validate the exact seventeen-repository manifest and acyclic dependency graph.
 - Implemented: join manifest, `.gitmodules`, and mode-160000 gitlinks without mutation.
 - Implemented: derive deterministic pinned-commit file/tree evidence and reject stale lock data.
 - Implemented: report uninitialized, HEAD-drifted, tracked-dirty, and untracked-dirty baselines.
 - Implemented: run the same strict `./ws doctor` gate locally and in recursive-checkout CI.
+- Implemented: copy the shared fleet files into a joining repository byte for byte with `./ws fleet init`, refuse a source of the other class and any silent overwrite, and list the required files it cannot copy.
 - Deferred: prepare/verify task worktrees and execute repository-local commands through the harness.

@@ -10,11 +10,16 @@ use workspace_core::{
     validate_manifest,
 };
 
-const EXPECTED_PINS: [(&str, &str, &str); 16] = [
+const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "browser-extension",
         "repos/clients/browser-extension",
         "79bcba985135c4a71a0c7734adb9d855cedbdb53",
+    ),
+    (
+        "channel-digests",
+        "repos/integrations/channel-digests",
+        "8a78b0b1aafe97760176cbfe189390fed6ba366e",
     ),
     (
         "chatgpt",

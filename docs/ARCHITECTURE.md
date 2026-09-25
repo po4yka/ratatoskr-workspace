@@ -100,7 +100,8 @@ ratatoskr-workspace/
 │   │   ├── chatgpt/
 │   │   └── claude/
 │   ├── integrations/
-│   │   └── telegram/
+│   │   ├── telegram/
+│   │   └── channel-digests/
 │   ├── clients/
 │   │   ├── web/
 │   │   ├── mobile/
@@ -148,7 +149,8 @@ The harness:
 - joins `.gitmodules`, gitlink modes/SHAs, and initialized child object databases;
 - reports HEAD drift plus tracked and untracked dirt without mutation;
 - hashes declared pinned Git blobs and canonical trees;
-- generates and checks deterministic `workspace.lock` output.
+- generates and checks deterministic `workspace.lock` output;
+- copies the shared fleet files into a joining repository (`ws fleet init`).
 
 Task worktrees, command execution, contract-impact calculation, generated integration overrides,
 agent backends, PR/release verification, and automatic pin advancement remain planned.
@@ -165,7 +167,12 @@ ws lock generate --output <path>
 ws lock check
 ws doctor
 ws status
+ws fleet init <target-dir> [--from <fleet-repo-dir>] [--force]
 ```
+
+`ws fleet init` copies the files every fleet repository carries identically from the committed tree
+of `--from` (default: the workspace root) into a repository joining the fleet, and lists the
+required files that repository still has to write itself. It is described in `DEVELOPMENT.md`.
 
 Planned commands include:
 

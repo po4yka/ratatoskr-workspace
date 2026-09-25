@@ -41,6 +41,7 @@ fn valid_graph_has_stable_order() {
         order,
         Ok(vec![
             "browser-extension".to_owned(),
+            "channel-digests".to_owned(),
             "chatgpt".to_owned(),
             "claude".to_owned(),
             "contracts".to_owned(),

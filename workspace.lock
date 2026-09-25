@@ -1,6 +1,6 @@
 format_version = 1
-manifest_sha256 = "af71a74bb3093041827cc4ac0f03d81c1145e3df0d947dc108f37d220d7b7dd3"
-gitmodules_sha256 = "4dbf3a7387ac082a1e44cda70c7034454b8767872e2429c34a8c0bb90a03380b"
+manifest_sha256 = "dc5bf9fc43994ee299e11501cff819e67bc2d8cf2916513361d355134d2e5e31"
+gitmodules_sha256 = "e699febd0ff2a6a614af4018c6cbdcc593bd6a2b98195489bbdec182f4fcd128"
 
 [[repositories]]
 id = "browser-extension"
@@ -11,6 +11,17 @@ commit = "79bcba985135c4a71a0c7734adb9d855cedbdb53"
 digests = [
   { path = "openspec/config.yaml", kind = "file", sha256 = "1b16530a25a6253ff24642649b512415c2ca413f8ac81a6740337fc3b0fd8dc0" },
   { path = "package-lock.json", kind = "file", sha256 = "9f6a12c41312b604ed56b19a42c789da7321ae7eadd9ce59246ea6b964a498aa" },
+]
+
+[[repositories]]
+id = "channel-digests"
+path = "repos/integrations/channel-digests"
+remote = "https://github.com/po4yka/ratatoskr-channel-digests.git"
+default_branch = "main"
+commit = "8a78b0b1aafe97760176cbfe189390fed6ba366e"
+digests = [
+  { path = "Cargo.lock", kind = "file", sha256 = "6525ca3d3ebbc0c6e762a38b4dec6d0e3580c49afec5721c642bd9e3c1ee5735" },
+  { path = "openspec/config.yaml", kind = "file", sha256 = "0c7443340bf5effe32168c64be6414c22df6ea2bad236e9f59809b50f62db7b5" },
 ]
 
 [[repositories]]

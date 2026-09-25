@@ -1,5 +1,6 @@
-pub(crate) const REPOSITORY_IDS: [&str; 16] = [
+pub(crate) const REPOSITORY_IDS: [&str; 17] = [
     "browser-extension",
+    "channel-digests",
     "chatgpt",
     "claude",
     "contracts",

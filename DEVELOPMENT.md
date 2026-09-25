@@ -7,7 +7,7 @@
 
 ## Current stage
 
-The repository implements the complete read-only snapshot slice: sixteen public gitlinks, semantic
+The repository implements the complete read-only snapshot slice: seventeen public gitlinks, semantic
 manifest validation, deterministic content evidence, status/doctor commands, and hosted CI. One
 manual, task-namespaced Web/Platform integration profile also exists under `integration/`; see
 `integration/README.md`. Task-worktree lifecycle, generated profiles, PR/release automation, MCP,
@@ -27,9 +27,38 @@ git submodule update --init --recursive
 ./ws doctor
 ```
 
-Only `./ws lock generate --output workspace.lock` writes snapshot state. The four checks above are
+Only `./ws lock generate --output workspace.lock` writes snapshot state; `./ws fleet init` below
+writes only into the repository it is given. The four checks above are
 read-only and never initialize or repair submodules. `ws bootstrap`, task, environment, PR, release,
 drift, graph, and MCP commands remain planned and must not be documented as executable.
+
+## Joining a repository to the fleet
+
+```bash
+./ws fleet init <target-dir> [--from <fleet-repo-dir>] [--force]
+```
+
+It copies, from the committed tree of `--from` (default: this workspace), the files `drift.yml`
+requires to be identical across the fleet: `fleet.yml`, `zizmor.yml`, `openspec.yml`,
+`dependabot-automerge.yml`, `.githooks/pre-commit`, `.gitattributes`, `.editorconfig`, `LICENSE`
+and every file `openspec init` generates. A target with a root `Cargo.toml` is the Rust class and
+also gets `.github/dependabot.yml`, `skills-lock.json`, `advisories.yml` and the vendored Rust skills
+with their `.claude/skills/` symlinks; any other target gets `.github/dependabot.yml` only. Bytes,
+the executable bit and symlinks are kept exactly, and uncommitted content in the source is never
+copied.
+
+- The source must be of the target's class, or the command fails and asks for `--from` a fleet
+  repository of that class. This workspace is the Rust class.
+- `advisories.yml` is copied only from a source with a root `Cargo.toml`. This workspace's copy runs
+  in `harness/` and is reported as not copied; pass `--from` a Rust product repository to get it.
+- A file that exists and differs is a conflict: every conflict is listed and nothing is written,
+  unless `--force` is given.
+- Files the source lacks are reported, and so are the required files the target still has to write
+  itself: `.gitignore`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `DEVELOPMENT.md`, `SECURITY.md`,
+  `openspec/config.yaml`, the five `docs/` files `fleet.yml` requires, and for Rust `clippy.toml`
+  and `.github/workflows/ci.yml`.
+- Relative paths resolve against the workspace root, as for `ws lock generate --output`. The
+  command never commits, and never touches `repos/`.
 
 ## Workflow
 
