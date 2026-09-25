@@ -14,8 +14,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static NEXT_LOCK_WRITE: AtomicU64 = AtomicU64::new(1);
 
-const REQUIRED_REPOSITORIES: [&str; 16] = [
+const REQUIRED_REPOSITORIES: [&str; 17] = [
     "browser-extension",
+    "channel-digests",
     "chatgpt",
     "claude",
     "contracts",

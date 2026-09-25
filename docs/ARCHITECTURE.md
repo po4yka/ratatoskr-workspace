@@ -100,7 +100,8 @@ ratatoskr-workspace/
 │   │   ├── chatgpt/
 │   │   └── claude/
 │   ├── integrations/
-│   │   └── telegram/
+│   │   ├── telegram/
+│   │   └── channel-digests/
 │   ├── clients/
 │   │   ├── web/
 │   │   ├── mobile/

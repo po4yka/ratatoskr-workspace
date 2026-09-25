@@ -18,6 +18,25 @@ dependencies = [
 ]
 
 [[repositories]]
+id = "channel-digests"
+path = "repos/integrations/channel-digests"
+remote = "https://github.com/po4yka/ratatoskr-channel-digests.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["channel_digest.subscription_set_requested", "channel_digest.run_requested", "channel_digest.schedule_occurrence_requested", "knowledge.channel_digest_recap_requested", "knowledge.channel_digest_recap_completed", "knowledge.channel_digest_recap_failed", "platform.operation_reported"]
+profiles = ["core"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "channel digest command and recap contracts" },
+  { repository = "platform", kind = "event", purpose = "channel digest commands and operation reports" },
+  { repository = "knowledge", kind = "event", purpose = "recap requests and terminal recap facts" },
+  { repository = "knowledge", kind = "api", purpose = "bounded recap result read-through" },
+]
+
+[[repositories]]
 id = "chatgpt"
 path = "repos/ai-archive/chatgpt"
 remote = "https://github.com/po4yka/ratatoskr-chatgpt.git"

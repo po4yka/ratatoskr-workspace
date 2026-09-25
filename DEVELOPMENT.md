@@ -7,7 +7,7 @@
 
 ## Current stage
 
-The repository implements the complete read-only snapshot slice: sixteen public gitlinks, semantic
+The repository implements the complete read-only snapshot slice: seventeen public gitlinks, semantic
 manifest validation, deterministic content evidence, status/doctor commands, and hosted CI. One
 manual, task-namespaced Web/Platform integration profile also exists under `integration/`; see
 `integration/README.md`. Task-worktree lifecycle, generated profiles, PR/release automation, MCP,

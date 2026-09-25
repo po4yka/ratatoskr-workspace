@@ -62,3 +62,7 @@
 	path = repos/clients/export-agent
 	url = https://github.com/po4yka/ratatoskr-export-agent.git
 	branch = main
+[submodule "channel-digests"]
+	path = repos/integrations/channel-digests
+	url = https://github.com/po4yka/ratatoskr-channel-digests.git
+	branch = main

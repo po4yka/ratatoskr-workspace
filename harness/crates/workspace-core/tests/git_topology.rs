@@ -19,7 +19,7 @@ fn manifest_gitmodules_and_gitlinks_agree() {
         "matching topology was rejected: {:?}",
         report.diagnostics
     );
-    assert_eq!(report.pins.len(), 16);
+    assert_eq!(report.pins.len(), 17);
     assert!(report.pins.iter().all(|pin| {
         pin.commit.len() == 40
             && pin.initialized

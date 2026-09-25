@@ -30,7 +30,7 @@
 
 ## First-slice acceptance
 
-- Implemented: validate the exact sixteen-repository manifest and acyclic dependency graph.
+- Implemented: validate the exact seventeen-repository manifest and acyclic dependency graph.
 - Implemented: join manifest, `.gitmodules`, and mode-160000 gitlinks without mutation.
 - Implemented: derive deterministic pinned-commit file/tree evidence and reject stale lock data.
 - Implemented: report uninitialized, HEAD-drifted, tracked-dirty, and untracked-dirty baselines.

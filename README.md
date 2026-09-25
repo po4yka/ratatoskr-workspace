@@ -2,7 +2,7 @@
 
 `ratatoskr-workspace` is the coordination repository for Ratatoskr: a self-hosted, multi-repository platform for capturing, extracting, analysing, searching, and backing up personal knowledge from the web, GitHub, social networks, Telegram, ChatGPT, and Claude.
 
-> **Status:** reproducible snapshot slice implemented. Sixteen public child repositories are pinned
+> **Status:** reproducible snapshot slice implemented. Seventeen public child repositories are pinned
 > by gitlinks; `workspace.toml`, `workspace.lock`, the Rust snapshot harness, and hosted snapshot CI
 > are executable. Task-worktree, general integration-profile, PR, release, and MCP orchestration
 > remain later milestones.
@@ -48,7 +48,8 @@ repos/
 ├── github/
 ├── vault/
 ├── integrations/
-│   └── telegram/
+│   ├── telegram/
+│   └── channel-digests/
 ├── social/
 │   ├── x/
 │   ├── instagram/
@@ -238,6 +239,7 @@ Planned profiles:
 | `ratatoskr-github` | GitHub accounts, stars, lists, metadata, watches, and desired backup state |
 | `ratatoskr-vault` | Git mirrors, immutable snapshots, integrity checks, and restore verification |
 | `ratatoskr-telegram` | Telegram Bot API, Mini App authentication, commands, and message projections |
+| `ratatoskr-channel-digests` | Consented MTProto reads of subscribed public Telegram channels, immutable post revisions, digest manifests, and Knowledge recap linkage |
 | `ratatoskr-x` | X OAuth, bookmarks, folders, posts, and authoritative snapshots |
 | `ratatoskr-instagram` | Instagram account data, explicit captures, oEmbed, and export imports |
 | `ratatoskr-threads` | Threads account data, explicit captures, oEmbed, and export imports |
@@ -248,9 +250,9 @@ Planned profiles:
 | `ratatoskr-browser-extension` | Explicit browser capture without provider cookie access |
 | `ratatoskr-mobile` | Android/iOS sharing, offline capture queue, and mobile experience |
 
-This repository is the seventeenth. Besides the responsibilities above it is the OpenSpec store,
+This repository is the eighteenth. Besides the responsibilities above it is the OpenSpec store,
 under the id `ratatoskr-workspace`: `openspec/specs/` holds the behaviour more than one repository
-can see, and `openspec/changes/` holds the cross-repository work in motion. Each of the sixteen
+can see, and `openspec/changes/` holds the cross-repository work in motion. Each of the seventeen
 above references it by name from its own `openspec/config.yaml`. See
 `docs/adr/0008-openspec-and-test-first.md`.
 
@@ -280,7 +282,7 @@ The snapshot slice is implemented and tested. Sections that describe task worktr
 profiles, agent runners, PR/release automation, or MCP are target architecture until their own
 changes land.
 
-The fleet is not. Eight of the sixteen product repositories hold code:
+The fleet is not. Nine of the seventeen product repositories hold code:
 
 | Repository | State |
 |---|---|
@@ -291,6 +293,7 @@ The fleet is not. Eight of the sixteen product repositories hold code:
 | `ratatoskr-github` | Rust. Service foundation, operator plane, and the first current schema. Account and synchronization behavior remains planned. |
 | `ratatoskr-vault` | Rust. Service foundation, operator plane, and the first current schema. Mirror, snapshot, storage, and restore workers remain planned. |
 | `ratatoskr-telegram` | Rust. Service foundation, Bot API client, and durable secure webhook intake. Identity and domain processing remain planned. |
+| `ratatoskr-channel-digests` | Rust. An owner-scoped loopback API and a worker that reads subscribed public channels through one MTProto session, preserves post revisions, builds digest manifests, and exchanges recap requests and results with Knowledge. |
 | `ratatoskr-web` | TypeScript. Generated Edge gateway, authenticated shell, public status, search/reader and archive views, owner operational views, Vitest/Playwright accessibility coverage, build, and CI. |
 | `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents and fleet/OpenSpec gates. No product manifest or runtime yet. |
 

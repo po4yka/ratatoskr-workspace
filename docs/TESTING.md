@@ -29,7 +29,7 @@ Fixtures must use synthetic repositories and credentials. Never use personal exp
 The Rust tests create isolated Git superprojects and child repositories. They cover manifest and
 dependency diagnostics, topology mismatches, uninitialized and dirty baselines, non-mutation,
 canonical lock output, semantic stale-lock diffs, pinned blob/tree evidence, path escape, symlink
-refusal, CLI exit codes, and the real committed sixteen-repository snapshot.
+refusal, CLI exit codes, and the real committed seventeen-repository snapshot.
 
 Run the complete code gate from the repository root:
 
