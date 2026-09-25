@@ -1,13 +1,13 @@
-# Seventeen copies of a handful of files, and nothing that notices when they stop being copies.
+# Eighteen copies of a handful of files, and nothing that notices when they stop being copies.
 #
 # `fleet.yml`, `zizmor.yml`, `openspec.yml`, `.githooks/pre-commit`, `CLAUDE.md` and the command and
 # skill files `openspec init` generates for Claude Code, Codex and OpenCode are byte-identical in
 # every repository. The eighteen vendored Rust skills
-# are byte-identical in the thirteen whose stack is Rust, and `dependabot.yml` has exactly two forms
+# are byte-identical in the fourteen whose stack is Rust, and `dependabot.yml` has exactly two forms
 # — one for a repository that has Rust in it and one for a
 # repository that does not yet have any code. They are identical because they were copied there, not
 # because anything keeps them that way. The next fix will be made in whichever repository its author
-# happened to be working in, and the other sixteen will keep the defect silently.
+# happened to be working in, and the other seventeen will keep the defect silently.
 #
 # `fleet.yml` cannot check this. It runs inside one repository and can only see that repository, so
 # it can assert a file EXISTS and never that it is the same file as elsewhere. This is the one job
@@ -18,7 +18,7 @@
 # comparison covers the content exactly, and the same tree read also carries the file mode — which
 # is how a `pre-commit` that has quietly lost its executable bit is caught in the same pass.
 #
-# The repository list is DISCOVERED rather than written down. A seventeenth repository that joins
+# The repository list is DISCOVERED rather than written down. A new repository that joins
 # the fleet without the shared files is the same drift, and a hardcoded list would report it as
 # healthy by never looking.
 name: drift
@@ -149,8 +149,8 @@ jobs:
 
           print(f"{total} repositories, {len(empty)} empty, "
                 f"{len(rust)} with Rust: {', '.join(rust) or 'none'}")
-          if total < 16:
-              problems.append(f"only {total} repositories discovered, expected at least 16")
+          if total < 18:
+              problems.append(f"only {total} repositories discovered, expected at least 18")
 
           # Identical everywhere, with no exceptions.
           one_of([".github/workflows/fleet.yml",
@@ -161,7 +161,7 @@ jobs:
 
           # `openspec init` and `openspec update` generate the command and skill files that put
           # /opsx:propose in front of an agent. A partial update is a new class of drift and a quiet
-          # one: run the upgrade in the repository you happened to be in, forget the other sixteen,
+          # one: run the upgrade in the repository you happened to be in, forget the other seventeen,
           # and every gate stays green while two versions of the workflow are in use. The SET of
           # paths is compared as well as each blob, because a release that adds a seventh command
           # arrives as a missing path rather than as a changed one.
@@ -177,9 +177,9 @@ jobs:
 
           # The Rust catalogue, vendored from po4yka/rust-skills into `.agents/skills/` with
           # `.claude/skills/` symlinked to it. It belongs to the repositories whose stack is Rust,
-          # which is thirteen of the seventeen and NOT the same set as `rust` above: that set is
-          # derived from a tracked Cargo.toml and holds two repositories today, while eleven more
-          # plan Rust and have no code yet.
+          # which is fourteen of the eighteen and NOT the same set as `rust` above: that set is
+          # derived from a tracked root Cargo.toml and holds thirteen repositories today. The
+          # fourteenth is this workspace, whose Rust is under `harness/`.
           #
           # Membership is read from a file rather than from a written-down list, so a repository
           # that receives the catalogue joins the comparison by receiving it. What that CANNOT see
@@ -190,14 +190,14 @@ jobs:
           # checkable here.
           #
           # The SET of paths is compared as well as each blob, and both directions matter. A skill
-          # added in one repository and forgotten in the other twelve arrives as a path the twelve
+          # added in one repository and forgotten in the other thirteen arrives as a path the thirteen
           # are missing; a skill edited in place arrives as a differing blob. The floor catches the
           # third case, which nothing else here can see: `npx skills update` removing a skill from
           # the catalogue, applied everywhere at once and noticed nowhere.
           rustskills = sorted({r for (r, p) in tree if p == ".agents/skills/rust-tdd/SKILL.md"})
-          if len(rustskills) < 13:
+          if len(rustskills) < 14:
               problems.append(f"only {len(rustskills)} repositories carry the Rust skill catalogue, "
-                              f"expected at least 13: {', '.join(rustskills) or 'none'}")
+                              f"expected at least 14: {', '.join(rustskills) or 'none'}")
           vendored = sorted({p for (r, p) in tree if r in rustskills
                              and p.startswith((".agents/skills/", ".claude/skills/"))
                              and not p.startswith(generated)})
@@ -211,7 +211,7 @@ jobs:
           # `openspec/config.yaml` is checked for presence and deliberately NOT for sameness, the
           # same distinction ci.yml gets below. Its `context:` block names this repository's role,
           # its stack and where its tests live, so it is legitimately different in each of the
-          # seventeen. The rules and the operation guidance under it are the identical part, and a
+          # eighteen. The rules and the operation guidance under it are the identical part, and a
           # tree read compares whole blobs and cannot compare a fragment of one.
           present(["openspec/config.yaml"], repos, "the fleet")
 
