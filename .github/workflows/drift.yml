@@ -201,9 +201,9 @@ jobs:
           vendored = sorted({p for (r, p) in tree if r in rustskills
                              and p.startswith((".agents/skills/", ".claude/skills/"))
                              and not p.startswith(generated)})
-          if vendored and len(vendored) < 66:
-              problems.append(f"only {len(vendored)} vendored skill paths, expected at least 66 — "
-                              f"eighteen skills as 48 files, and 18 symlinks beside them")
+          if vendored and len(vendored) < 93:
+              problems.append(f"only {len(vendored)} vendored skill paths, expected at least 93 — "
+                              f"eighteen skills as 75 files, and 18 symlinks beside them")
           one_of(vendored, rustskills, "the repositories whose stack is Rust")
           one_of(["skills-lock.json"], rustskills, "the repositories whose stack is Rust")
           present([".agents/skills/rust-tdd/SKILL.md"], rust, "the repositories with Rust")

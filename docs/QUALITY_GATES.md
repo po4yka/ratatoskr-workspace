@@ -664,8 +664,8 @@ of the catalogue is absent from all seventeen.
 
 ### Where they come from, and what a clone has to do
 
-`po4yka/rust-skills`, BSD-3-Clause, vendored at commit `cb652d08` with `npx skills add`. That is the
-same CLI and the same layout `ratatoskr-web` already uses for its ten design skills, which is why no
+`po4yka/rust-skills`, BSD-3-Clause, vendored at commit `cb652d08` with `npx skills add`, and updated
+to release `v0.2.0` (commit `9f4a3a4`) with `npx skills update`. That is the same CLI and the same layout `ratatoskr-web` already uses for its ten design skills, which is why no
 second mechanism was introduced for this.
 
 A clone does nothing. This is the one control in this document that needs no per-machine step: the
@@ -744,6 +744,11 @@ The vendored bytes are identical in all thirteen, checked before the first push 
 blob names and modes rather than text: 67 vendored paths in each repository — 48 files, 18 symlinks
 and `skills-lock.json` — and one distinct tree across the thirteen.
 
+The update to `v0.2.0` was checked the same way before its push: 94 vendored paths in each
+repository — 75 files, 18 symlinks and `skills-lock.json` — and one distinct tree across the
+thirteen. The credential, private-key and CR scans above were run again on the thirteen updated
+trees and on all forty-four skills, and each gives 0.
+
 ## The drift check
 
 Four files are the same file in every repository, and until now nothing noticed when they stopped
@@ -765,9 +770,9 @@ in the same pass. One `git/trees?recursive=1` call per repository, 17 calls.
 | `fleet.yml`, `zizmor.yml`, `openspec.yml` and `.githooks/pre-commit` are one blob across the fleet | A fix applied in one repository and not the other sixteen |
 | The 19 files `openspec init` generates are one blob each, and the SET of their paths is the same everywhere | A partial `openspec update`: the CLI raised in the repository its author was in, forgotten in the other sixteen. A release that adds a seventh command arrives as a missing path rather than a changed one |
 | `openspec/config.yaml` is PRESENT in every repository | The planning root deleted from one. Sameness is not asserted: `context:` names one repository's role, stack and tests |
-| The 66 vendored skill paths are one blob each, and the SET of them is the same, across the 13 repositories whose stack is Rust | A skill edited in place in one repository; a skill added to one and forgotten in the other twelve; a partial `npx skills update` |
+| The 93 vendored skill paths are one blob each, and the SET of them is the same, across the 13 repositories whose stack is Rust | A skill edited in place in one repository; a skill added to one and forgotten in the other twelve; a partial `npx skills update` |
 | `skills-lock.json` is one blob across those same 13 | A lockfile raised in one repository without the files it locks, or the reverse |
-| At least 13 repositories carry `.agents/skills/rust-tdd/SKILL.md`, and at least 66 vendored paths exist | The catalogue deleted from one repository, and an update that drops a skill from every repository at once |
+| At least 13 repositories carry `.agents/skills/rust-tdd/SKILL.md`, and at least 93 vendored paths exist | The catalogue deleted from one repository, and an update that drops a skill from every repository at once |
 | Every repository with a tracked `Cargo.toml` carries the catalogue | Rust arriving in a repository that never received the skills. It is the late half of the answer, and it is the only half that is checkable: nothing in a tree of documents says which language the first commit will be in |
 | Each of them is present in every repository | A deletion, in a repository where `fleet.yml` itself was the thing deleted |
 | `.githooks/pre-commit` has mode `100755` everywhere | A hook that is committed but inert |
@@ -900,9 +905,9 @@ Each row is the result of a command that was run against the fleet.
 | A coverage floor per repository, at the value the tree measures today | Not run. `ratatoskr-web` has `@vitest/coverage-v8` installed and could answer in one command. `ratatoskr-platform` cannot answer without a PostgreSQL and a NATS server, so the fleet cannot be measured in one pass today | Deferred rather than rejected. The shape is the one `shadscan --fail-under 69` already uses in `ratatoskr-web`: a floor at today's value fails on a regression and does not fail on work nobody has done yet. What stops it is that a floor is worth adopting only when all three trees can be measured the same way, and two of the three have no number |
 | `cargo-mutants` | Not run | Rejected for now, and it is the most interesting rejection here. It is the only tool that measures whether a test would CATCH a defect, which is precisely what a coverage percentage does not answer and precisely what a test-first rule is for. It is also minutes per mutant, against a workspace whose suite already needs two services. Revisit it on a schedule, the way `advisories.yml` runs, rather than in the gate |
 | A check that the failing test was written before the implementation | Impossible by construction | Rejected. A gate reads the tree, not the hour each line was typed. `git log` cannot answer it either: a test and its implementation land in one commit as often as not, and splitting them in two to satisfy a check is the shape of a rule people work around. What is checkable is the artifact, and two things check it — `openspec validate --archived`, and the step in `fleet.yml` that fails on a manifest whose `ci.yml` never runs a test |
-| Vendoring all 44 Rust skills instead of 18 | 119 files and 1.67 MB per repository, against 67 files and 642 KiB for the eighteen | Rejected. Twenty-six of them have no site in this fleet and the reason for each is listed in [The Rust skill catalogue](#the-rust-skill-catalogue). A skill that cannot fire is a file to re-read on every update |
-| Installing the Rust skills per machine, with `npx skills add --global`, instead of vendoring them | Not adopted | Rejected. It is genuinely one copy, which is what a central catalogue sounds like, but it is invisible to a fresh clone, to a second machine and to review, and nothing can check it. The fleet already carries two per-machine steps and records both as limits; a third that governs how code gets written is worse than 642 KiB of tracked text |
-| A git submodule of `po4yka/rust-skills` instead of vendored copies | Not adopted | Rejected. One pinned SHA rather than 67 paths is a real advantage, and an uninitialised submodule is a silently empty directory: the agent reports nothing and simply has no skills. That is the failure mode this project refuses in a gate, and it is no better in a catalogue |
+| Vendoring all 44 Rust skills instead of 18 | 184 files and 1.98 MB per repository, against 94 files and 763 KiB for the eighteen, as of `v0.2.0` | Rejected. Twenty-six of them have no site in this fleet and the reason for each is listed in [The Rust skill catalogue](#the-rust-skill-catalogue). A skill that cannot fire is a file to re-read on every update |
+| Installing the Rust skills per machine, with `npx skills add --global`, instead of vendoring them | Not adopted | Rejected. It is genuinely one copy, which is what a central catalogue sounds like, but it is invisible to a fresh clone, to a second machine and to review, and nothing can check it. The fleet already carries two per-machine steps and records both as limits; a third that governs how code gets written is worse than 763 KiB of tracked text |
+| A git submodule of `po4yka/rust-skills` instead of vendored copies | Not adopted | Rejected. One pinned SHA rather than 94 paths is a real advantage, and an uninitialised submodule is a silently empty directory: the agent reports nothing and simply has no skills. That is the failure mode this project refuses in a gate, and it is no better in a catalogue |
 | A step in `fleet.yml` asserting that the Rust skills are present | Not added | Rejected. `fleet.yml` is byte-identical in all 17 and four of them legitimately have no Rust, so the step has no condition it can read. `Cargo.toml` is the only Rust signal a repository can see about itself and eleven of the thirteen do not have one yet. The drift check is where it belongs, because it is the one job that sees more than one repository at a time |
 | Asserting that `openspec/config.yaml` is one blob across the fleet | 17 of 17 differ, by design | Rejected. Its `context:` block names one repository's role, its stack and where its tests live. The `rules` and `operations` beneath it ARE identical, and a tree read compares whole blobs and cannot compare a fragment of one. Presence is asserted instead |
 
