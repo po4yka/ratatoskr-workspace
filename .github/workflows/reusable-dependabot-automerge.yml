@@ -1,0 +1,43 @@
+# Dependabot's pull requests merge themselves once every required check is green.
+#
+# Every one of those pull requests moves an action SHA or a lockfile entry, and the fleet already
+# requires the gates that decide whether the move is safe: the ruleset on `main` lists each
+# repository's CI jobs beside `invariants`, `audit` and `specs`, and auto-merge waits for all of
+# them. What this removes is the part no reviewer added anything to — a human clicking merge on a
+# green pull request, which in September 2026 took four rounds because Dependabot superseded its own
+# pull requests while they waited.
+#
+# THE LIMIT, stated rather than discovered. A merge made through the workflow's GITHUB_TOKEN does not
+# trigger the `push` workflows on `main`: GitHub suppresses them to prevent recursive runs. The merged
+# commit is the pull request's tested head squashed onto `main`, and the weekly scheduled run of each
+# `ci.yml` is what re-verifies `main` itself.
+#
+# THIS IS THE ONE COPY. Every repository calls it from `dependabot-automerge.yml`, a wrapper pinned to
+# a commit of `ratatoskr-workspace`.
+name: dependabot automerge
+
+on:
+  workflow_call:
+
+# SECURITY.md: deny by default. Raised on the one job that needs it.
+permissions: {}
+
+jobs:
+  automerge:
+    # The pull request's author, not `github.actor`: the actor is whoever caused this run, and a
+    # human re-running a job on a Dependabot pull request would otherwise be read as the bot.
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.user.login == 'dependabot[bot]'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write       # auto-merge squashes onto the base branch
+      pull-requests: write  # to enable auto-merge on the pull request
+    steps:
+      - name: Merge when every required check passes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
