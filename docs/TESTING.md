@@ -31,6 +31,12 @@ dependency diagnostics, topology mismatches, uninitialized and dirty baselines, 
 canonical lock output, semantic stale-lock diffs, pinned blob/tree evidence, path escape, symlink
 refusal, CLI exit codes, and the real committed seventeen-repository snapshot.
 
+`harness/crates/workspace-core/tests/fleet.rs` builds a committed fleet source and an empty target in
+temporary directories and covers `ws fleet init`: byte-for-byte copies with the executable bit and
+symbolic links kept, class selection and the class-mismatch refusal, conflicts with and without
+`--force`, idempotence, committed-only content, the withheld `advisories.yml`, and the lists of
+absent and still-missing files. `commands.rs` covers the command line and its exit codes.
+
 Run the complete code gate from the repository root:
 
 ```bash

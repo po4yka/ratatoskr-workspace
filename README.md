@@ -110,7 +110,11 @@ ws lock generate --output <path>
 ws lock check
 ws status
 ws doctor
+ws fleet init <target-dir> [--from <fleet-repo-dir>] [--force]
 ```
+
+`ws fleet init` gives a repository joining the fleet the files every fleet repository carries
+identically; `DEVELOPMENT.md` describes what it copies and what it leaves to you.
 
 Later harness milestones are planned to add:
 

@@ -5,7 +5,12 @@
 #[path = "../../workspace-core/tests/support/mod.rs"]
 mod support;
 
+#[path = "../../workspace-core/tests/support/fleet.rs"]
+mod fleet_support;
+
+use fleet_support::{FleetFixture, SourceLayout, content, write};
 use std::fs;
+use std::path::Path;
 use std::process::{Command, Output};
 use support::{GitWorkspace, complete_manifest};
 use workspace_core::{
@@ -109,6 +114,87 @@ fn uninitialized_output_names_exact_bootstrap_command() {
     assert!(stderr.contains("topology.submodule-uninitialized"));
     assert!(stderr.contains("repository `x`"));
     assert!(stderr.contains("git submodule update --init --recursive"));
+}
+
+#[test]
+fn fleet_init_copies_and_reports_missing_files() {
+    let fixture = FleetFixture::new();
+    let source = fixture.source(SourceLayout::RustAtRoot);
+    let target = fixture.target(true);
+
+    let output = ws_at(&source, &["fleet", "init", path_arg(&target)]);
+
+    assert_success(&output);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("fleet: Rust target"), "{stdout}");
+    assert!(
+        stdout.contains("fleet: copied .githooks/pre-commit"),
+        "{stdout}"
+    );
+    assert!(
+        stdout
+            .contains("fleet: absent from the source: .github/workflows/dependabot-automerge.yml"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("fleet: still missing, write by hand: SECURITY.md"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("fleet: still missing, write by hand: clippy.toml"),
+        "{stdout}"
+    );
+    assert_eq!(
+        fs::read_to_string(target.join(".githooks/pre-commit")).expect("hook was copied"),
+        content(".githooks/pre-commit")
+    );
+}
+
+#[test]
+fn fleet_init_conflict_exits_with_validation_status() {
+    let fixture = FleetFixture::new();
+    let source = fixture.source(SourceLayout::RustAtRoot);
+    let target = fixture.target(true);
+    write(&target, "LICENSE", "a different licence\n");
+    let arguments = [
+        "fleet",
+        "init",
+        path_arg(&target),
+        "--from",
+        path_arg(&source),
+    ];
+
+    let refused = ws_at(&target, &arguments);
+
+    assert_eq!(refused.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&refused.stderr);
+    assert!(stderr.contains("fleet.conflict"), "{stderr}");
+    assert!(stderr.contains("`LICENSE`"), "{stderr}");
+    assert_eq!(
+        fs::read_to_string(target.join("LICENSE")).expect("licence is kept"),
+        "a different licence\n"
+    );
+
+    let forced = ws_at(&target, &[&arguments[..], &["--force"]].concat());
+
+    assert_success(&forced);
+    assert_eq!(
+        fs::read_to_string(target.join("LICENSE")).expect("licence is replaced"),
+        content("LICENSE")
+    );
+}
+
+fn path_arg(path: &Path) -> &str {
+    path.to_str().expect("fixture path is UTF-8")
+}
+
+fn ws_at(root: &Path, arguments: &[&str]) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_workspace-cli"))
+        .args(arguments)
+        .current_dir(root)
+        .env_remove("RATATOSKR_WORKSPACE_ROOT")
+        .output()
+        .expect("run workspace CLI")
 }
 
 fn write_manifest(workspace: &GitWorkspace) {

@@ -9,14 +9,21 @@ use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process;
 use workspace_core::{
-    GitTopologyReport, ManifestDiagnostic, ValidatedManifest, compare_workspace_lock,
-    dependency_order, generate_workspace_lock, inspect_baseline, inspect_git_topology,
-    render_workspace_lock, validate_manifest, write_workspace_lock_atomic,
+    FleetClass, FleetInitReport, GitTopologyReport, ManifestDiagnostic, ValidatedManifest,
+    compare_workspace_lock, dependency_order, fleet_init, generate_workspace_lock,
+    inspect_baseline, inspect_git_topology, render_workspace_lock, validate_manifest,
+    write_workspace_lock_atomic,
 };
 
 const EXIT_VALIDATION: u8 = 2;
 const EXIT_USAGE: u8 = 64;
 const EXIT_IO: u8 = 74;
+
+struct FleetInitArguments<'a> {
+    target: &'a str,
+    from: Option<&'a str>,
+    force: bool,
+}
 
 struct SnapshotContext {
     manifest_source: String,
@@ -48,14 +55,96 @@ fn run() -> u8 {
         }
         [command] if command == "status" => status(&root),
         [command] if command == "doctor" => doctor(&root),
-        _ => {
-            let message = concat!(
-                "usage: ws manifest check | ws lock generate --output PATH | ",
-                "ws lock check | ws status | ws doctor\n"
-            );
-            write_stderr(message).map_or(EXIT_IO, |()| EXIT_USAGE)
+        [group, command, rest @ ..] if group == "fleet" && command == "init" => {
+            parse_fleet_init(rest).map_or_else(usage, |arguments| fleet(&root, &arguments))
+        }
+        _ => usage(),
+    }
+}
+
+fn usage() -> u8 {
+    let message = concat!(
+        "usage: ws manifest check | ws lock generate --output PATH | ",
+        "ws lock check | ws status | ws doctor | ",
+        "ws fleet init TARGET [--from SOURCE] [--force]\n"
+    );
+    write_stderr(message).map_or(EXIT_IO, |()| EXIT_USAGE)
+}
+
+fn parse_fleet_init(arguments: &[String]) -> Option<FleetInitArguments<'_>> {
+    let mut target = None;
+    let mut from = None;
+    let mut force = false;
+    let mut arguments = arguments.iter();
+    while let Some(argument) = arguments.next() {
+        match argument.as_str() {
+            "--force" if !force => force = true,
+            "--from" if from.is_none() => from = Some(arguments.next()?.as_str()),
+            value if !value.starts_with("--") && target.is_none() => target = Some(value),
+            _ => return None,
         }
     }
+    Some(FleetInitArguments {
+        target: target?,
+        from,
+        force,
+    })
+}
+
+fn fleet(root: &Path, arguments: &FleetInitArguments<'_>) -> u8 {
+    let target = workspace_relative_path(root, arguments.target);
+    let source = arguments.from.map_or_else(
+        || root.to_owned(),
+        |from| workspace_relative_path(root, from),
+    );
+    match fleet_init(&source, &target, arguments.force) {
+        Ok(report) => write_stdout(&render_fleet_report(&report)).map_or(EXIT_IO, |()| 0),
+        Err(diagnostics) => {
+            let status = if diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "fleet.io")
+            {
+                EXIT_IO
+            } else {
+                EXIT_VALIDATION
+            };
+            emit_diagnostics(&diagnostics, OutputStream::Stderr).map_or(EXIT_IO, |()| status)
+        }
+    }
+}
+
+fn render_fleet_report(report: &FleetInitReport) -> String {
+    let class = match report.class {
+        FleetClass::Rust => "Rust",
+        FleetClass::NonRust => "non-Rust",
+    };
+    let mut lines = vec![format!("fleet: {class} target")];
+    lines.extend(
+        report
+            .copied
+            .iter()
+            .map(|path| format!("fleet: copied {path}")),
+    );
+    lines.push(format!("fleet: unchanged {} files", report.unchanged.len()));
+    lines.extend(
+        report
+            .absent_from_source
+            .iter()
+            .map(|path| format!("fleet: absent from the source: {path}")),
+    );
+    lines.extend(report.withheld.iter().map(|path| {
+        format!(
+            "fleet: not copied: {path} (the source keeps its Rust below the root, so its copy is not the fleet form; pass --from a repository with a root Cargo.toml)"
+        )
+    }));
+    lines.extend(
+        report
+            .still_missing
+            .iter()
+            .map(|path| format!("fleet: still missing, write by hand: {path}")),
+    );
+    lines.push(String::new());
+    lines.join("\n")
 }
 
 fn manifest_check(root: &Path) -> u8 {
@@ -114,7 +203,7 @@ fn lock_generate(root: &Path, output: &str) -> u8 {
         Ok(lock) => lock,
         Err(diagnostics) => return emit_validation(&diagnostics, OutputStream::Stderr),
     };
-    let output = explicit_output_path(root, output);
+    let output = workspace_relative_path(root, output);
     if let Err(error) = write_workspace_lock_atomic(&output, &render_workspace_lock(&lock)) {
         return emit_io_error("lock.write", &error);
     }
@@ -193,7 +282,7 @@ fn load_context(root: &Path) -> Result<SnapshotContext, Vec<ManifestDiagnostic>>
     })
 }
 
-fn explicit_output_path(root: &Path, output: &str) -> PathBuf {
+fn workspace_relative_path(root: &Path, output: &str) -> PathBuf {
     let output = PathBuf::from(output);
     if output.is_absolute() {
         output

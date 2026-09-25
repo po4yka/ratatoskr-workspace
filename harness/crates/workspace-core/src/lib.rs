@@ -12,6 +12,10 @@ use std::path::{Component, Path};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+mod fleet;
+
+pub use fleet::{FleetClass, FleetInitReport, fleet_init};
+
 static NEXT_LOCK_WRITE: AtomicU64 = AtomicU64::new(1);
 
 const REQUIRED_REPOSITORIES: [&str; 17] = [
