@@ -1,0 +1,57 @@
+name: workspace snapshot
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workspace-snapshot-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Use the committed Rust toolchain
+        working-directory: harness
+        run: |
+          test -f rust-toolchain.toml
+          grep -F 'channel = "1.97.0"' rust-toolchain.toml
+          cargo --version
+
+      - name: Rust formatting
+        working-directory: harness
+        run: cargo fmt --all -- --check
+
+      - name: Rust lints
+        working-directory: harness
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Rust tests
+        working-directory: harness
+        run: cargo test --workspace --all-features --locked
+
+      - name: Install pinned cargo-deny
+        run: cargo install cargo-deny --version 0.19.0 --locked # zizmor: ignore[adhoc-packages]
+
+      - name: Dependency policy and advisories
+        working-directory: harness
+        run: cargo deny check
+
+      - name: Committed snapshot is reproducible
+        run: |
+          test -f harness/rust-toolchain.toml
+          ./ws lock check
+          ./ws doctor

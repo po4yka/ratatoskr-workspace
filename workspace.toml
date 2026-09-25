@@ -1,0 +1,273 @@
+format_version = 1
+
+[[repositories]]
+id = "browser-extension"
+path = "repos/clients/browser-extension"
+remote = "https://github.com/po4yka/ratatoskr-browser-extension.git"
+default_branch = "main"
+kind = "client"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["lint", "test", "build"]
+contracts = ["platform.public-api", "social.capture"]
+profiles = ["clients", "social"]
+digest_inputs = ["openspec/config.yaml", "package-lock.json"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "capture and operation wire contracts" },
+  { repository = "platform", kind = "api", purpose = "authenticated capture API" },
+]
+
+[[repositories]]
+id = "chatgpt"
+path = "repos/ai-archive/chatgpt"
+remote = "https://github.com/po4yka/ratatoskr-chatgpt.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["ai_archive.archive", "ai_archive.events"]
+profiles = ["ai-archive"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "AI archive wire contracts" },
+  { repository = "platform", kind = "event", purpose = "durable archive event transport" },
+]
+
+[[repositories]]
+id = "claude"
+path = "repos/ai-archive/claude"
+remote = "https://github.com/po4yka/ratatoskr-claude.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["ai_archive.archive", "ai_archive.events"]
+profiles = ["ai-archive"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "AI archive wire contracts" },
+  { repository = "platform", kind = "event", purpose = "durable archive event transport" },
+]
+
+[[repositories]]
+id = "contracts"
+path = "repos/contracts"
+remote = "https://github.com/po4yka/ratatoskr-contracts.git"
+default_branch = "main"
+kind = "contract"
+owner = "po4yka"
+security = "public-contracts"
+commands = ["fmt", "lint", "test", "generate"]
+contracts = ["event-envelope", "document", "social", "ai-archive", "backup", "notification", "github"]
+profiles = ["core", "social", "ai-archive", "clients", "export"]
+digest_inputs = ["contracts.toml", "schemas"]
+dependencies = []
+
+[[repositories]]
+id = "export-agent"
+path = "repos/clients/export-agent"
+remote = "https://github.com/po4yka/ratatoskr-export-agent.git"
+default_branch = "main"
+kind = "client"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["lint", "test", "build"]
+contracts = ["portable-export", "platform.public-api"]
+profiles = ["clients", "export"]
+digest_inputs = ["Package.swift", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "portable export contracts" },
+  { repository = "platform", kind = "api", purpose = "export orchestration API" },
+]
+
+[[repositories]]
+id = "extractor"
+path = "repos/extractor"
+remote = "https://github.com/po4yka/ratatoskr-extractor.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["document", "content.document.extracted.v1"]
+profiles = ["core"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "Document IR and event envelope" },
+  { repository = "platform", kind = "event", purpose = "document command and event transport" },
+]
+
+[[repositories]]
+id = "github"
+path = "repos/github"
+remote = "https://github.com/po4yka/ratatoskr-github.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["github.catalog", "github.actions"]
+profiles = ["core"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "GitHub catalogue and action contracts" },
+  { repository = "platform", kind = "event", purpose = "durable catalogue event transport" },
+]
+
+[[repositories]]
+id = "instagram"
+path = "repos/social/instagram"
+remote = "https://github.com/po4yka/ratatoskr-instagram.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["social.source", "social.lifecycle"]
+profiles = ["social"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "social source and lifecycle events" },
+  { repository = "platform", kind = "event", purpose = "durable social event transport" },
+]
+
+[[repositories]]
+id = "knowledge"
+path = "repos/knowledge"
+remote = "https://github.com/po4yka/ratatoskr-knowledge.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["knowledge.analysis", "knowledge.search", "document"]
+profiles = ["core", "social", "ai-archive"]
+digest_inputs = ["openspec/config.yaml", "schemas/article-analysis.v1.schema.json"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "analysis and source contracts" },
+  { repository = "extractor", kind = "document", purpose = "normalized Document IR source stream" },
+  { repository = "github", kind = "event", purpose = "repository source events" },
+  { repository = "instagram", kind = "event", purpose = "Instagram source events" },
+  { repository = "platform", kind = "event", purpose = "durable commands and event transport" },
+]
+
+[[repositories]]
+id = "mobile"
+path = "repos/clients/mobile"
+remote = "https://github.com/po4yka/ratatoskr-mobile.git"
+default_branch = "main"
+kind = "client"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["check", "test", "build"]
+contracts = ["platform.public-api", "github.actions"]
+profiles = ["clients"]
+digest_inputs = ["contracts/github/ratatoskr-contracts.lock.json", "contracts/platform-openapi.lock.json", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "mobile wire and GitHub action contracts" },
+  { repository = "github", kind = "api", purpose = "repository catalogue actions" },
+  { repository = "platform", kind = "api", purpose = "authenticated public API" },
+]
+
+[[repositories]]
+id = "platform"
+path = "repos/platform"
+remote = "https://github.com/po4yka/ratatoskr-platform.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test", "serve"]
+contracts = ["platform.public-api", "event-envelope", "operations"]
+profiles = ["core", "social", "ai-archive", "clients", "export"]
+digest_inputs = ["openapi/openapi.json", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "canonical public API and event contracts" },
+]
+
+[[repositories]]
+id = "telegram"
+path = "repos/integrations/telegram"
+remote = "https://github.com/po4yka/ratatoskr-telegram.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["notification", "platform.public-api"]
+profiles = ["core"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "notification and operation contracts" },
+  { repository = "platform", kind = "api", purpose = "notification dispatch and operation API" },
+]
+
+[[repositories]]
+id = "threads"
+path = "repos/social/threads"
+remote = "https://github.com/po4yka/ratatoskr-threads.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["social.source", "social.lifecycle"]
+profiles = ["social"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "social source and lifecycle events" },
+  { repository = "platform", kind = "event", purpose = "durable social event transport" },
+]
+
+[[repositories]]
+id = "vault"
+path = "repos/vault"
+remote = "https://github.com/po4yka/ratatoskr-vault.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test", "serve"]
+contracts = ["backup", "blob-transfer", "platform.public-api"]
+profiles = ["core", "export"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "backup and blob transfer contracts" },
+  { repository = "platform", kind = "api", purpose = "authenticated backup orchestration" },
+]
+
+[[repositories]]
+id = "web"
+path = "repos/clients/web"
+remote = "https://github.com/po4yka/ratatoskr-web.git"
+default_branch = "main"
+kind = "client"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["lint", "test", "build"]
+contracts = ["platform.public-api"]
+profiles = ["clients"]
+digest_inputs = ["openapi/openapi.lock.json", "openspec/config.yaml", "package-lock.json"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "wire contract vocabulary" },
+  { repository = "platform", kind = "api", purpose = "authenticated public API" },
+]
+
+[[repositories]]
+id = "x"
+path = "repos/social/x"
+remote = "https://github.com/po4yka/ratatoskr-x.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test"]
+contracts = ["social.source", "social.lifecycle"]
+profiles = ["social"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "social source and lifecycle events" },
+  { repository = "platform", kind = "event", purpose = "durable social event transport" },
+]

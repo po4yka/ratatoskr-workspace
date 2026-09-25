@@ -1,32 +1,35 @@
 # Developing Ratatoskr Workspace
 
-> Status: Proposed  
+> Status: Implemented snapshot slice; later orchestration proposed
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-27
+> Last reviewed: 2026-08-30
 > Related: `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`
 
 ## Current stage
 
-The repository is in architecture bootstrap. It already holds the fleet OpenSpec store, shared
-agent instructions and fleet-level CI. One manual, task-namespaced Web/Platform integration profile
-is implemented under `integration/`; see `integration/README.md`. The `ws` harness, manifests,
-lockfile, submodules, generated profiles, and deterministic agent runners are not implemented.
-`.workspaces/local/` is an
-operator-created checkout set, not a reproducible workspace snapshot, and `scripts/sync-all.sh`
-targets the planned `repos/` baseline that is not present yet.
+The repository implements the complete read-only snapshot slice: sixteen public gitlinks, semantic
+manifest validation, deterministic content evidence, status/doctor commands, and hosted CI. One
+manual, task-namespaced Web/Platform integration profile also exists under `integration/`; see
+`integration/README.md`. Task-worktree lifecycle, generated profiles, PR/release automation, MCP,
+and deterministic agent runners remain proposed.
 
 ## Intended toolchain
 
 Rust, system Git, Docker Compose, GitHub APIs, and adapters for Claude Code and Codex. Toolchain versions must be pinned and used consistently by local development and CI.
 
-## Expected commands
+## Snapshot commands
 
-- `ws bootstrap`, `ws status`, `ws doctor`, `ws drift`
-- `ws task prepare <id>`, `ws task verify <id>`
-- `ws env up <id> --profile <profile>`, `ws env test <id>`
-- `ws lock check`, `ws release snapshot`
+```bash
+git submodule update --init --recursive
+./ws manifest check
+./ws lock check
+./ws status
+./ws doctor
+```
 
-The first implementation PR must replace these expectations with exact prerequisites, commands, ports, environment variables, and troubleshooting.
+Only `./ws lock generate --output workspace.lock` writes snapshot state. The four checks above are
+read-only and never initialize or repair submodules. `ws bootstrap`, task, environment, PR, release,
+drift, graph, and MCP commands remain planned and must not be documented as executable.
 
 ## Workflow
 
