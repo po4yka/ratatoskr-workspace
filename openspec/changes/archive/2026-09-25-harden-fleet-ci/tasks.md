@@ -7,20 +7,20 @@
 
 ## 2. Implementation by repository
 
-These items record the branch each repository's change is made on; the coordinator opens the pull requests and records their links at publication. Each is CI configuration, manifests and test fixes whose failing state is the fleet wall-clock check above.
+These items record the branch each repository's change is made on; each names its pull request. Each is CI configuration, manifests and test fixes whose failing state is the fleet wall-clock check above.
 
-- [x] 2.1 `ratatoskr-workspace` (`chore/reusable-fleet-workflows`): reusable workflows, wrappers, drift assertions, weekly schedule, `docs/QUALITY_GATES.md`; merges first
-- [x] 2.2 `ratatoskr-contracts` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
-- [x] 2.3 `ratatoskr-platform` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
-- [x] 2.4 `ratatoskr-extractor` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
-- [x] 2.5 `ratatoskr-knowledge` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
-- [x] 2.6 `ratatoskr-github` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
-- [x] 2.7 `ratatoskr-vault` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, the `=0.23.43`-style exact pins removed, wall-clock and silent-check audit
-- [x] 2.8 `ratatoskr-telegram` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
-- [x] 2.9 `ratatoskr-channel-digests` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, exact pins, and the outbox audit made fail-closed
-- [x] 2.10 `ratatoskr-x`, `ratatoskr-instagram`, `ratatoskr-threads`, `ratatoskr-chatgpt`, `ratatoskr-claude` (`chore/fleet-hardening`): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
-- [x] 2.11 `ratatoskr-web`, `ratatoskr-browser-extension`, `ratatoskr-export-agent` (`chore/fleet-hardening`): wrappers, weekly schedule, wall-clock and silent-check audit
-- [x] 2.12 `ratatoskr-mobile` (`chore/fleet-hardening`): wrappers, weekly schedule, the injected clock in `ResumableUploadCoordinatorTest` with the production `Clock.System` default removed, silent-check audit
+- [x] 2.1 `ratatoskr-workspace` (`chore/reusable-fleet-workflows`, po4yka/ratatoskr-workspace#14, wrappers in the follow-up pull request): reusable workflows, wrappers, drift assertions, weekly schedule, `docs/QUALITY_GATES.md`; merges first
+- [x] 2.2 `ratatoskr-contracts` (`chore/fleet-hardening`, po4yka/ratatoskr-contracts#15): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
+- [x] 2.3 `ratatoskr-platform` (`chore/fleet-hardening`, po4yka/ratatoskr-platform#11): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
+- [x] 2.4 `ratatoskr-extractor` (`chore/fleet-hardening`, po4yka/ratatoskr-extractor#11): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
+- [x] 2.5 `ratatoskr-knowledge` (`chore/fleet-hardening`, po4yka/ratatoskr-knowledge#13): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
+- [x] 2.6 `ratatoskr-github` (`chore/fleet-hardening`, po4yka/ratatoskr-github#11): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
+- [x] 2.7 `ratatoskr-vault` (`chore/fleet-hardening`, po4yka/ratatoskr-vault#12): wrappers, weekly schedule, `deny` job, the `=0.23.43`-style exact pins removed, wall-clock and silent-check audit
+- [x] 2.8 `ratatoskr-telegram` (`chore/fleet-hardening`, po4yka/ratatoskr-telegram#13): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
+- [x] 2.9 `ratatoskr-channel-digests` (`chore/fleet-hardening`, po4yka/ratatoskr-channel-digests#5): wrappers, weekly schedule, `deny` job, exact pins, and the outbox audit made fail-closed
+- [x] 2.10 `ratatoskr-x`, `ratatoskr-instagram`, `ratatoskr-threads`, `ratatoskr-chatgpt`, `ratatoskr-claude` (`chore/fleet-hardening`; po4yka/ratatoskr-x#11, po4yka/ratatoskr-instagram#11, po4yka/ratatoskr-threads#11, po4yka/ratatoskr-chatgpt#11, po4yka/ratatoskr-claude#11): wrappers, weekly schedule, `deny` job, exact pins, wall-clock and silent-check audit
+- [x] 2.11 `ratatoskr-web`, `ratatoskr-browser-extension`, `ratatoskr-export-agent` (`chore/fleet-hardening`; po4yka/ratatoskr-web#2, po4yka/ratatoskr-browser-extension#7, po4yka/ratatoskr-export-agent#7): wrappers, weekly schedule, wall-clock and silent-check audit
+- [x] 2.12 `ratatoskr-mobile` (`chore/fleet-hardening`, po4yka/ratatoskr-mobile#10): wrappers, weekly schedule, the injected clock in `ResumableUploadCoordinatorTest` with the production `Clock.System` default removed, silent-check audit
 
 ## 3. Repository settings and documentation
 
