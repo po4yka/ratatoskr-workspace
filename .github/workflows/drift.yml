@@ -88,6 +88,7 @@ jobs:
             printf '%s' "$tree" \
               | jq -r --arg r "$r" '.tree[]
                   | select(.path == "Cargo.toml"
+                        or (.path | endswith("/Cargo.toml"))
                         or .path == "CLAUDE.md"
                         or .path == ".githooks/pre-commit"
                         or .path == ".github/dependabot.yml"
@@ -119,7 +120,10 @@ jobs:
           present_repos = [r for r in repos if r not in empty]
           rows = [l.split("\t") for l in pathlib.Path("trees.tsv").read_text().splitlines()]
           tree = {(r, p): (mode, sha) for r, p, mode, sha in rows}
-          rust = sorted({r for (r, p) in tree if p == "Cargo.toml"})
+          # A Cargo.toml at any depth counts. This workspace keeps its Rust under `harness/`, and its
+          # `dependabot.yml` and `advisories.yml` are the Rust forms, so a root-only test put it with
+          # the repositories that have no code and reported its `dependabot.yml` as a second form.
+          rust = sorted({r for (r, p) in tree if p == "Cargo.toml" or p.endswith("/Cargo.toml")})
           docs = [r for r in present_repos if r not in rust]
 
           problems = [f"{r} has no commits on main, so it carries none of the shared files"
@@ -177,9 +181,9 @@ jobs:
 
           # The Rust catalogue, vendored from po4yka/rust-skills into `.agents/skills/` with
           # `.claude/skills/` symlinked to it. It belongs to the repositories whose stack is Rust,
-          # which is fourteen of the eighteen and NOT the same set as `rust` above: that set is
-          # derived from a tracked root Cargo.toml and holds thirteen repositories today. The
-          # fourteenth is this workspace, whose Rust is under `harness/`.
+          # which is fourteen of the eighteen. Today that is the same set as `rust` above, including
+          # this workspace, whose Rust is under `harness/`. The two sets are computed separately,
+          # because a repository can plan Rust and receive the catalogue before its first manifest.
           #
           # Membership is read from a file rather than from a written-down list, so a repository
           # that receives the catalogue joins the comparison by receiving it. What that CANNOT see
@@ -222,7 +226,14 @@ jobs:
               # `advisories.yml` is identical in both, and must stay so: it is the same question
               # asked of the same tool. `fleet.yml` cannot assert its presence, because a scheduled
               # workflow is invisible to a push trigger and deleting it leaves every gate green.
-              one_of([".github/workflows/advisories.yml"], rust, "the repositories with Rust")
+              # Sameness applies where the Rust sits at the root. This workspace runs the same check
+              # in `harness/`, with its own workflow name, concurrency group and issue title, so its
+              # copy is checked for presence only.
+              root_rust = [r for r in rust if (r, "Cargo.toml") in tree]
+              present([".github/workflows/advisories.yml"], [r for r in rust if r not in root_rust],
+                      "the repositories with Rust below the root")
+              one_of([".github/workflows/advisories.yml"], root_rust,
+                     "the repositories with a root Cargo.toml")
               # `ci.yml` is checked for presence and NOT for sameness, on purpose. The two gates are
               # legitimately different: platform's runs a PostgreSQL service, a NATS container and a
               # native arm64 job, and contracts has none of those to run. `fleet.yml` already fails a

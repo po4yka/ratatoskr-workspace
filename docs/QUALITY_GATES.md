@@ -79,7 +79,7 @@ All 18 repositories are public. The default branch of each repository is `main`.
 | The Rust skill catalogue, `.agents/skills/` | 14 of 18 | 18 skills vendored from `po4yka/rust-skills`, identical in every repository whose stack is Rust. See [The Rust skill catalogue](#the-rust-skill-catalogue) |
 | Size limits in a linter configuration | 8 of 17 | `clippy.toml` in the seven with Rust, `eslint.config.js` in `ratatoskr-web`. See [Size limits](#size-limits) |
 | A repository gate, `.github/workflows/ci.yml` | 8 of 17 | The seven Rust repositories and `ratatoskr-web` |
-| The advisory check, `.github/workflows/advisories.yml` | 3 of 17 | Present in Contracts, Extractor and Platform. The four newer Rust repositories are a known drift gap. `ratatoskr-web` audits its own tree in `ci.yml` because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
+| The advisory check, `.github/workflows/advisories.yml` | 14 of 18 | Every repository with Rust. The workspace copy runs in `harness/`, so it differs from the other thirteen, and the drift check requires only its presence. `ratatoskr-web` audits its own tree in `ci.yml` because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
 | The drift check, `.github/workflows/drift.yml` | 1 of 18 | In `ratatoskr-workspace`, and it reads all 18. See [The drift check](#the-drift-check) |
 | The release, `.github/workflows/release.yml` | 1 of 17 | In `ratatoskr-platform`. See [Deployment](#deployment) |
 
@@ -800,11 +800,11 @@ in the same pass. One `git/trees?recursive=1` call per repository, 18 calls.
 | The 93 vendored skill paths are one blob each, and the SET of them is the same, across the 14 repositories whose stack is Rust | A skill edited in place in one repository; a skill added to one and forgotten in the other thirteen; a partial `npx skills update` |
 | `skills-lock.json` is one blob across those same 14 | A lockfile raised in one repository without the files it locks, or the reverse |
 | At least 14 repositories carry `.agents/skills/rust-tdd/SKILL.md`, and at least 93 vendored paths exist | The catalogue deleted from one repository, and an update that drops a skill from every repository at once |
-| Every repository with a tracked `Cargo.toml` carries the catalogue | Rust arriving in a repository that never received the skills. It is the late half of the answer, and it is the only half that is checkable: nothing in a tree of documents says which language the first commit will be in |
+| Every repository with a tracked `Cargo.toml`, at the root or below it, carries the catalogue | Rust arriving in a repository that never received the skills. It is the late half of the answer, and it is the only half that is checkable: nothing in a tree of documents says which language the first commit will be in |
 | Each of them is present in every repository | A deletion, in a repository where `fleet.yml` itself was the thing deleted |
 | `.githooks/pre-commit` has mode `100755` everywhere | A hook that is committed but inert |
-| `dependabot.yml` is one blob within each of its two classes | The two forms drifting into three |
-| `advisories.yml` is present and one blob in every repository with Rust | A deletion that no `push` trigger can see, because the file has no `push` trigger |
+| `dependabot.yml` is one blob within each of its two classes. A `Cargo.toml` at any depth puts a repository in the Rust class | The two forms drifting into three |
+| `advisories.yml` is present in every repository with Rust, and one blob across those with a root `Cargo.toml` | A deletion that no `push` trigger can see, because the file has no `push` trigger |
 | `ci.yml` is PRESENT in every repository with Rust | A gate deleted from a repository that already had one |
 
 The 2026-08-23 inventory found the drift that these last assertions are designed to expose. GitHub,
