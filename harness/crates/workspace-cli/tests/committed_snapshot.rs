@@ -89,12 +89,12 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "web",
         "repos/clients/web",
-        "bc783cbea9b64bfeb1f1b93ae43a23d5507c6b8b",
+        "3ebb32a8414463d37c134402f12d2510cbf38e75",
     ),
     (
         "x",
         "repos/social/x",
-        "12f4f9590803c618311e99eb5097811fbe3d5625",
+        "30e1ccd2999bd0914439a723eafda605419152c6",
     ),
 ];
 

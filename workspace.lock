@@ -173,7 +173,7 @@ id = "web"
 path = "repos/clients/web"
 remote = "https://github.com/po4yka/ratatoskr-web.git"
 default_branch = "main"
-commit = "bc783cbea9b64bfeb1f1b93ae43a23d5507c6b8b"
+commit = "3ebb32a8414463d37c134402f12d2510cbf38e75"
 digests = [
   { path = "openapi/openapi.lock.json", kind = "file", sha256 = "20ac286db7044cea31adfcd5f6fe39ff1ae2e5f8f8c684157a0315b28d3daebe" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "fb6ab0888f3cc431a9f8d573c6a2edc8a1aab1c3d27d6cec609151ba9ae3f8a3" },
@@ -185,7 +185,7 @@ id = "x"
 path = "repos/social/x"
 remote = "https://github.com/po4yka/ratatoskr-x.git"
 default_branch = "main"
-commit = "12f4f9590803c618311e99eb5097811fbe3d5625"
+commit = "30e1ccd2999bd0914439a723eafda605419152c6"
 digests = [
   { path = "Cargo.lock", kind = "file", sha256 = "36bb2f0049d9c5f8d6b6053cb534fb404f2b8d6a3b4804c819823db114fd738f" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "8d41fd46cfcb9df9c69763f767012fc3a4224adfa543e475df8aa4f1740cb55f" },
