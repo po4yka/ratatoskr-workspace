@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ratatoskr fleet map</title>
+<style>
+:root {
+  --ground: #edf0ea;
+  --surface: #fafbf7;
+  --ink: #17201a;
+  --muted: #56615a;
+  --rule: #c6cec5;
+  --frame: #8f9a92;
+  --api: #1d5fb4;
+  --event: #a85f06;
+  --document: #7438ab;
+  --contract: #56655d;
+  --flow: #0b7a68;
+  --focus: #1d5fb4;
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #111613;
+    --surface: #19201b;
+    --ink: #e4eae3;
+    --muted: #9ba79f;
+    --rule: #334039;
+    --frame: #5d6a62;
+    --api: #74a9ee;
+    --event: #e3a24c;
+    --document: #bb8ee9;
+    --contract: #8d9c93;
+    --flow: #4cc2ac;
+    --focus: #74a9ee;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #111613;
+  --surface: #19201b;
+  --ink: #e4eae3;
+  --muted: #9ba79f;
+  --rule: #334039;
+  --frame: #5d6a62;
+  --api: #74a9ee;
+  --event: #e3a24c;
+  --document: #bb8ee9;
+  --contract: #8d9c93;
+  --flow: #4cc2ac;
+  --focus: #74a9ee;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 15px/1.55 var(--body);
+}
+.page { max-width: 1680px; margin: 0 auto; padding: 28px 16px 64px; display: grid; gap: 28px; }
+@media (min-width: 720px) { .page { padding: 40px 32px 72px; } }
+
+header { display: grid; gap: 10px; }
+.masthead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 { font: 600 clamp(2rem, 4vw, 2.9rem)/1.05 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { max-width: 68ch; margin: 0; color: var(--ink); }
+.source { margin: 0; color: var(--muted); font-size: 13px; max-width: 90ch; }
+code, .mono { font-family: var(--mono); font-size: 0.9em; }
+
+button { font: inherit; color: inherit; }
+.theme-toggle {
+  border: 1px solid var(--rule); background: var(--surface); border-radius: 4px;
+  padding: 6px 12px; cursor: pointer; font-size: 13px;
+}
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 20px 36px; align-items: flex-start; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+legend { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; padding: 0; }
+.toggles, .profiles { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.toggles label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.toggles input { accent-color: var(--ink); width: 16px; height: 16px; margin: 0; }
+.swatch { width: 28px; height: 0; border-top: 3px solid currentColor; display: inline-block; }
+.swatch.dash { border-top-style: dashed; }
+.k-api { color: var(--api); } .k-event { color: var(--event); } .k-document { color: var(--document); }
+.k-contract { color: var(--contract); } .k-flow { color: var(--flow); }
+.count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.profiles { gap: 6px; }
+.profiles label { position: relative; }
+.profiles input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.profiles span {
+  display: inline-block; padding: 4px 11px; border: 1px solid var(--rule); border-radius: 3px;
+  font: 13px var(--mono); background: var(--surface); cursor: pointer;
+}
+.profiles input:checked + span { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+.profiles input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.workbench { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+.page > * { min-width: 0; }
+@media (min-width: 1240px) { .workbench { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } }
+
+.stage {
+  overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.stage svg { display: block; width: 100%; min-width: 980px; height: auto; }
+.hint { font-size: 13px; color: var(--muted); margin: 8px 2px 0; }
+
+/* diagram */
+.frame { fill: none; stroke: var(--frame); stroke-width: 1.25; stroke-dasharray: 2 4; }
+.tab rect { fill: var(--ink); }
+.tab text { fill: var(--ground); font: 600 12.5px var(--mono); }
+.tab:hover rect, .tab[aria-pressed="true"] rect { fill: var(--api); }
+.tier { fill: var(--muted); font: 600 10.5px var(--body); letter-spacing: 0.12em; }
+.tier-bg { fill: var(--surface); }
+.node { cursor: pointer; transition: opacity 120ms ease; }
+.node .box { fill: var(--surface); stroke: var(--ink); stroke-width: 1.25; }
+.node.client .box { stroke-width: 1.25; }
+.node .id { fill: var(--ink); font: 600 13px var(--mono); }
+.node .sub { fill: var(--muted); font: 11px var(--body); }
+.node:hover .box { stroke-width: 2.25; }
+.node:focus { outline: none; }
+.node:focus-visible .box { stroke: var(--focus); stroke-width: 3; }
+.node.is-selected .box { stroke-width: 3; }
+.node.hub .box { fill: var(--ground); }
+.cell rect { fill: var(--surface); stroke: var(--rule); }
+.cell .id { font-size: 12px; }
+.cell .sub { font-size: 10.5px; }
+.node.is-dim { opacity: 0.28; }
+
+.edge { fill: none; stroke-width: 2; transition: opacity 120ms ease; }
+.edge.api { stroke: var(--api); }
+.edge.event { stroke: var(--event); }
+.edge.document { stroke: var(--document); stroke-width: 2.5; }
+.edge.contract { stroke: var(--contract); stroke-width: 1.25; opacity: 0.75; }
+.edge.flow { stroke: var(--flow); stroke-width: 1.75; stroke-dasharray: 6 4; }
+.edge.is-dim { opacity: 0.1; }
+.edge.is-hot { stroke-width: 3.25; opacity: 1; }
+.edge.flow.is-hot { stroke-width: 2.5; }
+.edge.is-hidden { display: none; }
+.m-api { fill: var(--api); } .m-event { fill: var(--event); } .m-document { fill: var(--document); }
+.m-contract { fill: var(--contract); } .m-flow { fill: var(--flow); }
+
+/* panel */
+.panel {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 20px 22px 24px;
+  display: grid; gap: 14px; align-content: start;
+}
+@media (min-width: 1240px) { .panel { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; } }
+.panel h2 { font: 600 1.45rem/1.15 var(--display); margin: 0; overflow-wrap: anywhere; }
+.panel .eyebrow { font: 12px var(--mono); color: var(--muted); margin: 0; overflow-wrap: anywhere; }
+.panel p { margin: 0; }
+.panel h3 { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 6px 0 6px; font-weight: 600; }
+.panel ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.panel li { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline; }
+.panel li .why { grid-column: 2; color: var(--muted); font-size: 13.5px; }
+.tag { font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 6px; border: 1.5px solid currentColor; border-radius: 3px; }
+.tag.flow { border-style: dashed; }
+.link { background: none; border: 0; padding: 0; cursor: pointer; font: 600 13.5px var(--mono); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; text-align: left; }
+.link:hover { text-decoration-color: currentColor; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font: 12px var(--mono); padding: 1px 7px; border: 1px solid var(--rule); border-radius: 3px; }
+.notes li { display: block; font-size: 13.5px; padding-left: 12px; border-left: 2px solid var(--rule); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { border-top: 2px solid var(--ink); padding-top: 6px; }
+.stat b { display: block; font: 600 1.7rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12.5px; color: var(--muted); }
+.clear { justify-self: start; border: 1px solid var(--rule); background: transparent; border-radius: 4px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+
+/* table */
+section.inventory { display: grid; gap: 12px; }
+section.inventory h2 { font: 600 1.5rem var(--display); margin: 0; }
+section.inventory > p { margin: 0; color: var(--muted); max-width: 80ch; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 980px; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+th { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--ground); position: sticky; top: 0; }
+tbody tr:last-child td { border-bottom: 0; }
+td.n { font-variant-numeric: tabular-nums; }
+.dep { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .node, .edge { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="masthead">
+      <h1>Ratatoskr fleet map</h1>
+      <button class="theme-toggle" id="theme" type="button" aria-label="Switch colour theme">Theme: system</button>
+    </div>
+    <p class="lede">Seventeen repositories, pinned together by <code>ratatoskr-workspace</code>. Read from top to bottom like the tree the squirrel runs on: the surfaces people touch, the platform trunk that carries every event, the bounded contexts on its branches, and the wire contracts at the roots. Every arrow points from a repository to what it relies on.</p>
+    <p class="source">Source: <code>workspace.toml</code> (dependencies, profiles, contracts) and each child <code>README.md</code> at the pins of workspace <code>main</code> (<code>b410b09</code>), plus the port table in <code>docs/DEPLOYMENT_TARGET.md</code>. Solid lines are manifest dependencies. Dashed lines are relationships the READMEs describe that the manifest does not list.</p>
+  </header>
+
+  <div class="controls">
+    <fieldset>
+      <legend>Connections</legend>
+      <div class="toggles" id="layers"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Compose profile</legend>
+      <div class="profiles" id="profiles" role="radiogroup"></div>
+    </fieldset>
+  </div>
+
+  <div class="workbench">
+    <div>
+      <div class="stage" id="stage">
+        <svg id="map" viewBox="0 0 1320 820" role="group" aria-label="Diagram of the Ratatoskr repositories and their dependencies. The table below lists the same information.">
+          <defs id="defs"></defs>
+          <rect x="0" y="0" width="1320" height="820" fill="transparent" id="backdrop"></rect>
+          <rect class="frame" x="6" y="6" width="1308" height="808" rx="4"></rect>
+          <g id="edges"></g>
+          <g id="tiers"></g>
+          <g id="nodes"></g>
+        </svg>
+      </div>
+      <p class="hint">Select a repository, by click or with Tab and Enter, to trace its connections. Esc clears the selection. On a narrow screen the map scrolls sideways.</p>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <section class="inventory" aria-labelledby="inv-h">
+    <h2 id="inv-h">Every repository</h2>
+    <p>The same graph as a table. "Relies on" comes from the manifest; "Relied on by" is its reverse. Every repository except <code>contracts</code> relies on <code>contracts</code>, so that column leaves it out.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Repository</th><th>Kind</th><th>Stack</th><th>Profiles</th><th>Relies on</th><th>Relied on by</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const ROW = { A: { y: 66, h: 52 }, B: { y: 186, h: 64 }, C: { y: 370, h: 52 }, D: { y: 536, h: 52 }, E: { y: 726, h: 64 } };
+  const ALL_PROFILES = ["core", "social", "ai-archive", "clients", "export"];
+
+  // Facts from workspace.toml; role sentences condensed from each README.
+  const REPOS = [
+    { id: "telegram", row: "A", cx: 340, w: 150, kind: "service", label: "Bot · notifications", stack: "Rust",
+      path: "repos/integrations/telegram", profiles: ["core"], contracts: ["notification", "platform.public-api"],
+      role: "Telegram interaction context. A Bot API interface for submitting articles, tracking GitHub repositories and following operations; it consumes the Platform notification subject and dispatches messages with per-chat preferences and quiet hours.",
+      deps: [["contracts", "contract", "notification and operation contracts"], ["platform", "api", "notification dispatch and operation API"]],
+      runtime: ["ratatoskr-telegram-webhook public listener :8182, through cloudflared", "ratatoskr-telegram-dispatcher, outbound delivery; operator listener :9468", "Mini App authentication (plan item 9) is still gated"] },
+    { id: "web", row: "A", cx: 510, w: 150, kind: "client", label: "Browser client", stack: "TypeScript · React · Vite",
+      path: "repos/clients/web", profiles: ["clients"], contracts: ["platform.public-api"],
+      role: "The browser client where a user reads, searches, organizes and operates their archive: articles, GitHub repositories, X, Instagram and Threads sources, ChatGPT and Claude exports, Git Vault snapshots, and the operations that produced them.",
+      deps: [["contracts", "contract", "wire contract vocabulary"], ["platform", "api", "authenticated public API"]] },
+    { id: "mobile", row: "A", cx: 680, w: 150, kind: "client", label: "Android + iOS", stack: "Kotlin · Compose Multiplatform",
+      path: "repos/clients/mobile", profiles: ["clients"], contracts: ["platform.public-api", "github.actions"],
+      role: "Android and iOS client: system Share targets, a durable offline capture queue, operation progress, archive browsing, search, and account and device management against the public Edge API. Status: architecture bootstrap.",
+      deps: [["contracts", "contract", "mobile wire and GitHub action contracts"], ["github", "api", "repository catalogue actions"], ["platform", "api", "authenticated public API"]] },
+    { id: "browser-extension", row: "A", cx: 850, w: 150, kind: "client", label: "Page capture (MV3)", stack: "TypeScript · Manifest V3",
+      path: "repos/clients/browser-extension", profiles: ["clients", "social"], contracts: ["platform.public-api", "social.capture"],
+      role: "Explicit capture client. Saves the current page, a selection, or a supported social or GitHub URL to the local deployment without exposing provider passwords, session cookies or hidden browser APIs.",
+      deps: [["contracts", "contract", "capture and operation wire contracts"], ["platform", "api", "authenticated capture API"]] },
+    { id: "export-agent", row: "A", cx: 1020, w: 150, kind: "client", label: "macOS export import", stack: "Swift · SwiftPM",
+      path: "repos/clients/export-agent", profiles: ["clients", "export"], contracts: ["portable-export", "platform.public-api"],
+      role: "macOS menu-bar companion. Watches a user-controlled inbox for official ChatGPT and Claude data exports, verifies and submits them, preserves the original files, and reports backup freshness and import completeness.",
+      deps: [["contracts", "contract", "portable export contracts"], ["platform", "api", "export orchestration API"]] },
+
+    { id: "platform", row: "B", cx: 680, w: 760, kind: "service", hub: true, label: "control plane · event transport", stack: "Rust",
+      path: "repos/platform", profiles: ALL_PROFILES, contracts: ["platform.public-api", "event-envelope", "operations"],
+      role: "The public control plane: identity and authentication, the Edge API, long-running operation tracking, generic ingest and deterministic scheduling. Its NATS JetStream is the durable transport for every service's commands and events.",
+      deps: [["contracts", "contract", "canonical public API and event contracts"]],
+      runtime: ["ratatoskr-edge public API :8080, through cloudflared", "ratatoskr-ingest webhook adapter :8181, through cloudflared", "ratatoskr-scheduler publishes periodic commands", "NATS :4222 and PostgreSQL :5432, host only", "Edge proxies the loopback domain APIs: /v1/k to knowledge :8091, /v1/gh to github :8092, /v1/vault to vault :8093", "Archive acceptance forwards to the ChatGPT :8096 and Claude :8097 receipt listeners"] },
+
+    { id: "x", row: "C", cx: 190, w: 132, kind: "service", label: "Bookmarks archive", stack: "Rust",
+      path: "repos/social/x", profiles: ["social"], contracts: ["social.source", "social.lifecycle"],
+      role: "X account and bookmark archive: official OAuth, bookmark and folder synchronization, normalized post content and media metadata, and authoritative social-source events for indexing and analysis.",
+      deps: [["contracts", "contract", "social source and lifecycle events"], ["platform", "event", "durable social event transport"]] },
+    { id: "threads", row: "C", cx: 340, w: 132, kind: "service", label: "Threads capture", stack: "Rust",
+      path: "repos/social/threads", profiles: ["social"], contracts: ["social.source", "social.lifecycle"],
+      role: "Threads account and capture context: official user-authorized capabilities, explicit capture of public posts and official public representations, and versioned Data Export imports.",
+      deps: [["contracts", "contract", "social source and lifecycle events"], ["platform", "event", "durable social event transport"]] },
+    { id: "instagram", row: "C", cx: 490, w: 132, kind: "service", label: "Instagram capture", stack: "Rust",
+      path: "repos/social/instagram", profiles: ["social"], contracts: ["social.source", "social.lifecycle"],
+      role: "Instagram account and capture context: official account access where available, explicit user-initiated captures, public oEmbed resolution, and versioned Data Export imports.",
+      deps: [["contracts", "contract", "social source and lifecycle events"], ["platform", "event", "durable social event transport"]] },
+    { id: "extractor", row: "C", cx: 640, w: 132, kind: "service", label: "URL → Document IR", stack: "Rust",
+      path: "repos/extractor", profiles: ["core"], contracts: ["document", "content.document.extracted.v1"],
+      role: "Turns external URLs and files into deterministic, provenance-preserving documents: fetch once, parse once, score deterministically, and escalate to a browser only when necessary.",
+      deps: [["contracts", "contract", "Document IR and event envelope"], ["platform", "event", "document command and event transport"]] },
+    { id: "github", row: "C", cx: 790, w: 132, kind: "service", label: "Stars & catalogue", stack: "Rust",
+      path: "repos/github", profiles: ["core"], contracts: ["github.catalog", "github.actions"],
+      role: "GitHub Catalog: the repositories a user starred or tracks, their metadata and list membership, repository analysis, and the desired backup state that Git Vault consumes.",
+      deps: [["contracts", "contract", "GitHub catalogue and action contracts"], ["platform", "event", "durable catalogue event transport"]],
+      runtime: ["Domain API /v1/gh on loopback :8092, reached only through Edge"] },
+    { id: "chatgpt", row: "C", cx: 940, w: 132, kind: "service", label: "ChatGPT exports", stack: "Rust",
+      path: "repos/ai-archive/chatgpt", profiles: ["ai-archive"], contracts: ["ai_archive.archive", "ai_archive.events"],
+      role: "ChatGPT archive: preserves official data exports as immutable evidence, normalizes projects and conversation graphs, archives referenced assets, and publishes searchable local projections.",
+      deps: [["contracts", "contract", "AI archive wire contracts"], ["platform", "event", "durable archive event transport"]],
+      runtime: ["Archive receipt /v1/ai-archives/receipt on loopback :8096, reached only through Platform archive acceptance"] },
+    { id: "claude", row: "C", cx: 1090, w: 132, kind: "service", label: "Claude exports", stack: "Rust",
+      path: "repos/ai-archive/claude", profiles: ["ai-archive"], contracts: ["ai_archive.archive", "ai_archive.events"],
+      role: "Claude archive: preserves official exports and supported Compliance data as immutable evidence, and normalizes projects, project knowledge, conversation graphs, files and Artifacts.",
+      deps: [["contracts", "contract", "AI archive wire contracts"], ["platform", "event", "durable archive event transport"]],
+      runtime: ["Archive receipt /v1/ai-archives/receipt on loopback :8097, reached only through Platform archive acceptance"] },
+    { id: "channel-digests", row: "C", cx: 1240, w: 132, kind: "service", label: "Telegram channels", stack: "Rust",
+      path: "repos/integrations/channel-digests", profiles: ["core"],
+      contracts: ["channel_digest.subscription_set_requested", "channel_digest.run_requested", "channel_digest.schedule_occurrence_requested", "knowledge.channel_digest_recap_requested", "knowledge.channel_digest_recap_completed", "knowledge.channel_digest_recap_failed", "platform.operation_reported"],
+      role: "Acquires explicitly subscribed public Telegram channels through one operator-authorized MTProto account, preserves immutable post revisions, builds deterministic digest manifests, and coordinates recap analysis with Knowledge.",
+      deps: [["contracts", "contract", "channel digest command and recap contracts"], ["platform", "event", "channel digest commands and operation reports"], ["knowledge", "event", "recap requests and terminal recap facts"], ["knowledge", "api", "bounded recap result read-through"]] },
+
+    { id: "knowledge", row: "D", cx: 565, w: 200, kind: "service", label: "Analysis & search", stack: "Rust",
+      path: "repos/knowledge", profiles: ["core", "social", "ai-archive"], contracts: ["knowledge.analysis", "knowledge.search", "document"],
+      role: "The interpretation bounded context. Accepts canonical Document IR, prepares a bounded analysis prompt, validates the structured analysis, and persists the evidence and result.",
+      deps: [["contracts", "contract", "analysis and source contracts"], ["extractor", "document", "normalized Document IR source stream"], ["github", "event", "repository source events"], ["instagram", "event", "Instagram source events"], ["platform", "event", "durable commands and event transport"]],
+      runtime: ["Domain API /v1/k on loopback :8091, reached only through Edge"] },
+    { id: "vault", row: "D", cx: 865, w: 150, kind: "service", label: "Git backup & restore", stack: "Rust",
+      path: "repos/vault", profiles: ["core", "export"], contracts: ["backup", "blob-transfer", "platform.public-api"],
+      role: "Durable backup and restore. Converges desired repository-backup policies into verified Git mirrors, immutable snapshots, content manifests, off-host copies and repeatable restore drills.",
+      deps: [["contracts", "contract", "backup and blob transfer contracts"], ["platform", "api", "authenticated backup orchestration"]],
+      runtime: ["Domain API /v1/vault on loopback :8093, reached only through Edge"] },
+
+    { id: "contracts", row: "E", cx: 715, w: 1182, kind: "contract", hub: true, label: "wire definitions and generated artifacts", stack: "Rust · JSON Schema",
+      path: "repos/contracts", profiles: ALL_PROFILES, contracts: ["event-envelope", "document", "social", "ai-archive", "backup", "notification", "github"],
+      role: "The wire-contract repository: versioned structures exchanged between independently deployed services, the public API artifacts clients consume, and the deterministic generator (cargo contracts).",
+      deps: [] },
+  ];
+
+  // Relationships the READMEs state that workspace.toml does not list. Direction: from relies on to.
+  const README_FLOWS = [
+    ["vault", "github", "consumes the desired repository-backup state", "ratatoskr-vault README"],
+    ["x", "extractor", "delegates linked public URLs", "ratatoskr-x README"],
+    ["threads", "extractor", "delegates external URLs from posts", "ratatoskr-threads README"],
+    ["knowledge", "x", "interprets normalized X source material", "ratatoskr-x README"],
+    ["knowledge", "threads", "optional analysis of Threads captures", "ratatoskr-threads README"],
+    ["knowledge", "chatgpt", "consumes normalized archive events", "ratatoskr-chatgpt README"],
+    ["knowledge", "claude", "consumes normalized project and conversation events", "ratatoskr-claude README"],
+  ];
+
+  const WORKSPACE = {
+    role: "The integration and orchestration superproject. It pins a compatible set of child commits as Git submodules, describes their topology in workspace.toml, records the resolved snapshot in workspace.lock, and validates the fleet. It owns no runtime domain data or business logic.",
+    facts: [
+      "17 gitlinks under repos/, one per repository on this map",
+      "ws CLI (Rust, harness/): manifest check, lock generate / check, doctor, status, fleet init",
+      "drift.yml compares the shared fleet files across all 18 repositories weekly",
+      "web-operational is the one integration profile implemented today",
+      "Deployment target: one Raspberry Pi 5 (aarch64); cloudflared is the only public path",
+    ],
+  };
+
+  const KINDS = {
+    api: { name: "API call", tag: "api" },
+    event: { name: "Event transport", tag: "event" },
+    document: { name: "Document stream", tag: "document" },
+    contract: { name: "Wire contract", tag: "contract" },
+    flow: { name: "Described in READMEs", tag: "readme" },
+  };
+
+  // Hand-routed paths for edges that would otherwise cut through nodes. Points run from source to target.
+  const ROUTES = {
+    "mobile>github:api": [[700, 118], [700, 148], [1092, 148], [1092, 346], [805, 346], [805, 370]],
+    "channel-digests>knowledge:event": [[1222, 422], [1222, 652], [577, 652], [577, 588]],
+    "channel-digests>knowledge:api": [[1258, 422], [1258, 666], [553, 666], [553, 588]],
+    "knowledge>chatgpt:flow": [[610, 588], [610, 626], [958, 626], [958, 422]],
+    "knowledge>claude:flow": [[634, 588], [634, 638], [1088, 638], [1088, 422]],
+    "knowledge>x:flow": [[465, 574], [176, 574], [176, 422]],
+    "knowledge>threads:flow": [[465, 558], [326, 558], [326, 422]],
+    "x>extractor:flow": [[206, 422], [206, 446], [592, 446], [592, 422]],
+    "threads>extractor:flow": [[356, 422], [356, 468], [690, 468], [690, 422]],
+  };
+  const ANCHORS = {
+    "knowledge>instagram:event": { sx: 520, tx: 500 },
+    "knowledge>platform:event": { sx: 565, tx: 565 },
+    "knowledge>extractor:document": { sx: 602, tx: 640 },
+    "knowledge>github:event": { sx: 646, tx: 778 },
+    "vault>platform:api": { sx: 865, tx: 865 },
+    "vault>github:flow": { sx: 812, tx: 808 },
+    "claude>platform:event": { tx: 1000 },
+    "channel-digests>platform:event": { tx: 1036 },
+    "mobile>platform:api": { sx: 662 },
+    "platform>contracts:contract": { sx: 715, tx: 715 },
+  };
+
+  const byId = Object.fromEntries(REPOS.map(r => [r.id, { ...r, y: ROW[r.row].y, h: ROW[r.row].h }]));
+  const EDGES = [];
+  for (const r of REPOS) for (const [to, kind, why] of r.deps) EDGES.push({ from: r.id, to, kind, why, src: "workspace.toml" });
+  for (const [from, to, why, src] of README_FLOWS) EDGES.push({ from, to, kind: "flow", why, src });
+  for (const e of EDGES) e.key = `${e.from}>${e.to}:${e.kind}`;
+
+  const state = { selected: null, profile: "all", layers: { api: true, event: true, document: true, contract: false, flow: true } };
+
+  const el = (tag, attrs = {}, parent) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  function rounded(points, r = 10) {
+    let d = `M${points[0][0]} ${points[0][1]}`;
+    for (let i = 1; i < points.length - 1; i++) {
+      const [px, py] = points[i - 1], [cx, cy] = points[i], [nx, ny] = points[i + 1];
+      const inLen = Math.hypot(cx - px, cy - py), outLen = Math.hypot(nx - cx, ny - cy);
+      const rr = Math.min(r, inLen / 2, outLen / 2);
+      const bx = cx - ((cx - px) / inLen) * rr, by = cy - ((cy - py) / inLen) * rr;
+      const ax = cx + ((nx - cx) / outLen) * rr, ay = cy + ((ny - cy) / outLen) * rr;
+      d += ` L${bx} ${by} Q${cx} ${cy} ${ax} ${ay}`;
+    }
+    const last = points[points.length - 1];
+    return d + ` L${last[0]} ${last[1]}`;
+  }
+
+  function pathFor(e) {
+    if (ROUTES[e.key]) return rounded(ROUTES[e.key]);
+    const s = byId[e.from], t = byId[e.to], a = ANCHORS[e.key] || {};
+    const up = t.y < s.y;
+    const y1 = up ? s.y : s.y + s.h;
+    const y2 = up ? t.y + t.h : t.y;
+    const x1 = a.sx ?? s.cx;
+    const x2 = a.tx ?? clamp(x1, t.cx - t.w / 2 + 24, t.cx + t.w / 2 - 24);
+    if (Math.abs(x1 - x2) < 1) return `M${x1} ${y1} V${y2}`;
+    const ym = (y1 + y2) / 2;
+    return `M${x1} ${y1} C${x1} ${ym} ${x2} ${ym} ${x2} ${y2}`;
+  }
+
+  // markers
+  const defs = document.getElementById("defs");
+  for (const k of Object.keys(KINDS)) {
+    const m = el("marker", { id: `arrow-${k}`, viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0 1 L10 5 L0 9 z", class: `m-${k}` }, m);
+  }
+
+  // tiers and workspace tab
+  const tiers = document.getElementById("tiers");
+  [[54, "SURFACES · CLIENTS AND THE BOT"], [176, "TRUNK · PLATFORM"], [360, "BRANCHES · BOUNDED CONTEXTS"], [526, "INTERPRETATION · PRESERVATION"], [716, "ROOTS · WIRE CONTRACTS"]]
+    .forEach(([y, t]) => {
+      const bg = el("rect", { class: "tier-bg" }, tiers);
+      const tx = el("text", { x: 24, y, class: "tier" }, tiers);
+      tx.textContent = t;
+      const b = tx.getBBox();
+      Object.entries({ x: b.x - 4, y: b.y - 2, width: b.width + 8, height: b.height + 4 }).forEach(([k, v]) => bg.setAttribute(k, v));
+    });
+  const tab = el("g", { class: "tab", tabindex: "0", role: "button", "aria-pressed": "false", "aria-label": "ratatoskr-workspace: show what the workspace holds", "data-id": "workspace" }, tiers);
+  const tabBox = el("rect", { x: 6, y: 6, height: 26, rx: 3 }, tab);
+  const tabText = el("text", { x: 18, y: 23.5 }, tab);
+  tabText.textContent = "ratatoskr-workspace · pins all 17 · workspace.toml · workspace.lock";
+  tabBox.setAttribute("width", tabText.getBBox().width + 24);
+
+  // edges
+  const edgeLayer = document.getElementById("edges");
+  const edgeEls = new Map();
+  for (const e of EDGES) {
+    const p = el("path", { d: pathFor(e), class: `edge ${e.kind}`, "marker-end": `url(#arrow-${e.kind})` }, edgeLayer);
+    el("title", {}, p).textContent = `${e.from} relies on ${e.to} (${KINDS[e.kind].name}): ${e.why}`;
+    edgeEls.set(e.key, p);
+  }
+
+  // nodes
+  const nodeLayer = document.getElementById("nodes");
+  const nodeEls = new Map();
+  for (const n of Object.values(byId)) {
+    const g = el("g", { class: `node ${n.kind}${n.hub ? " hub" : ""}`, tabindex: "0", role: "button", "aria-pressed": "false", "aria-label": `ratatoskr-${n.id}: ${n.label}`, "data-id": n.id }, nodeLayer);
+    const x = n.cx - n.w / 2;
+    el("rect", { class: "box", x, y: n.y, width: n.w, height: n.h, rx: n.kind === "client" ? n.h / 2 : 3 }, g);
+    if (n.id === "platform") {
+      el("text", { class: "id", x: x + 18, y: n.y + 28, style: "font-size:15px" }, g).textContent = "platform";
+      el("text", { class: "sub", x: x + 18, y: n.y + 47 }, g).textContent = n.label;
+      [["edge :8080", "public API"], ["ingest :8181", "webhooks"], ["scheduler", "periodic commands"], ["NATS :4222", "JetStream events"]].forEach(([a, b], i) => {
+        const c = el("g", { class: "cell" }, g);
+        const cx = x + 262 + i * 124;
+        el("rect", { x: cx, y: n.y + 8, width: 118, height: n.h - 16, rx: 2 }, c);
+        el("text", { class: "id", x: cx + 10, y: n.y + 28 }, c).textContent = a;
+        el("text", { class: "sub", x: cx + 10, y: n.y + 44 }, c).textContent = b;
+      });
+    } else if (n.id === "contracts") {
+      el("text", { class: "id", x: x + 18, y: n.y + 28, style: "font-size:15px" }, g).textContent = "contracts";
+      el("text", { class: "sub", x: x + 18, y: n.y + 47 }, g).textContent = "the root every other repository relies on";
+      el("text", { class: "sub", x: x + 380, y: n.y + 28 }, g).textContent = "event envelope · Document IR · social · AI archive · backup · notification · GitHub";
+      el("text", { class: "sub", x: x + 380, y: n.y + 47 }, g).textContent = "plus the public API artifacts and a deterministic generator, cargo contracts";
+    } else {
+      el("text", { class: "id", x: n.cx, y: n.y + 23, "text-anchor": "middle" }, g).textContent = n.id;
+      el("text", { class: "sub", x: n.cx, y: n.y + 40, "text-anchor": "middle" }, g).textContent = n.label;
+    }
+    nodeEls.set(n.id, g);
+  }
+
+  // controls
+  const layersBox = document.getElementById("layers");
+  for (const [k, meta] of Object.entries(KINDS)) {
+    const count = EDGES.filter(e => e.kind === k).length;
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="checkbox" ${state.layers[k] ? "checked" : ""} data-layer="${k}"><span class="swatch k-${k}${k === "flow" ? " dash" : ""}" aria-hidden="true"></span>${meta.name} <span class="count">${count}</span>`;
+    layersBox.appendChild(lab);
+  }
+  layersBox.addEventListener("change", ev => { const k = ev.target.dataset.layer; if (k) { state.layers[k] = ev.target.checked; render(); } });
+
+  const profBox = document.getElementById("profiles");
+  for (const p of ["all", ...ALL_PROFILES]) {
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="radio" name="profile" value="${p}" ${p === "all" ? "checked" : ""}><span>${p}</span>`;
+    profBox.appendChild(lab);
+  }
+  profBox.addEventListener("change", ev => { state.profile = ev.target.value; render(); });
+
+  const inProfile = id => state.profile === "all" || byId[id].profiles.includes(state.profile);
+
+  function select(id) {
+    state.selected = state.selected === id ? null : id;
+    render();
+  }
+
+  function edgeVisible(e) {
+    if (state.layers[e.kind]) return true;
+    const s = state.selected;
+    return e.kind === "contract" && s && (e.from === s || e.to === s);
+  }
+
+  function render() {
+    const s = state.selected;
+    const neighbours = new Set();
+    for (const e of EDGES) {
+      const vis = edgeVisible(e);
+      const hot = vis && s && (e.from === s || e.to === s);
+      if (hot) { neighbours.add(e.from); neighbours.add(e.to); }
+      const dim = (s && s !== "workspace" && !hot) || !(inProfile(e.from) && inProfile(e.to));
+      const p = edgeEls.get(e.key);
+      p.classList.toggle("is-hidden", !vis);
+      p.classList.toggle("is-hot", !!hot);
+      p.classList.toggle("is-dim", !!dim && !hot);
+    }
+    for (const [id, g] of nodeEls) {
+      const dim = (s && s !== "workspace" && id !== s && !neighbours.has(id)) || !inProfile(id);
+      g.classList.toggle("is-dim", !!dim);
+      g.classList.toggle("is-selected", id === s);
+      g.setAttribute("aria-pressed", String(id === s));
+    }
+    tab.setAttribute("aria-pressed", String(s === "workspace"));
+    renderPanel();
+  }
+
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const linkBtn = id => `<button type="button" class="link" data-select="${id}">${id}</button>`;
+  const tagFor = k => `<span class="tag k-${k}${k === "flow" ? " flow" : ""}">${KINDS[k].tag}</span>`;
+
+  function edgeList(list, other) {
+    if (!list.length) return `<p class="why">None.</p>`;
+    return `<ul>${list.map(e => `<li>${tagFor(e.kind)}${linkBtn(e[other])}<span class="why">${esc(e.why)}${e.kind === "flow" ? ` (${esc(e.src)})` : ""}</span></li>`).join("")}</ul>`;
+  }
+
+  const panel = document.getElementById("panel");
+  function renderPanel() {
+    const s = state.selected;
+    if (!s) {
+      const manifest = EDGES.filter(e => e.src === "workspace.toml");
+      const onPlatform = new Set(manifest.filter(e => e.to === "platform").map(e => e.from)).size;
+      panel.innerHTML = `
+        <p class="eyebrow">overview</p>
+        <h2>One trunk, one root</h2>
+        <div class="stats">
+          <div class="stat"><b>${REPOS.length}</b><span>repositories pinned</span></div>
+          <div class="stat"><b>${manifest.length}</b><span>manifest dependencies</span></div>
+          <div class="stat"><b>${README_FLOWS.length}</b><span>README-only relations</span></div>
+        </div>
+        <p><code>contracts</code> has no dependencies, and every other repository relies on it. <code>platform</code> relies only on <code>contracts</code>, and ${onPlatform} repositories rely on <code>platform</code>: clients through its API, services through its NATS event transport.</p>
+        <p>Away from the trunk there are few direct links: <code>knowledge</code> reads from <code>extractor</code>, <code>github</code> and <code>instagram</code>; <code>channel-digests</code> calls <code>knowledge</code>; <code>mobile</code> calls <code>github</code>.</p>
+        <p class="why">Select any box on the map, or a name in the table, for its role, contracts, runtime listeners and every connection.</p>`;
+      return;
+    }
+    if (s === "workspace") {
+      panel.innerHTML = `
+        <p class="eyebrow">po4yka/ratatoskr-workspace</p>
+        <h2>ratatoskr-workspace</h2>
+        <p>${esc(WORKSPACE.role)}</p>
+        <h3>What it holds</h3>
+        <ul class="notes">${WORKSPACE.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+        <button type="button" class="clear" data-clear>Clear selection</button>`;
+      return;
+    }
+    const r = byId[s];
+    const out = EDGES.filter(e => e.from === s);
+    const inc = EDGES.filter(e => e.to === s);
+    const incShown = s === "contracts" ? [] : inc;
+    panel.innerHTML = `
+      <p class="eyebrow">${esc(r.path)}</p>
+      <h2>ratatoskr-${esc(r.id)}</h2>
+      <p>${esc(r.role)}</p>
+      <dl class="facts">
+        <dt>Kind</dt><dd>${esc(r.kind)} · ${r.id === "contracts" ? "public-contracts" : "private-user-data"}</dd>
+        <dt>Stack</dt><dd>${esc(r.stack)}</dd>
+        <dt>Profiles</dt><dd class="chips">${r.profiles.map(p => `<span class="chip">${p}</span>`).join("")}</dd>
+        <dt>Contracts</dt><dd class="chips">${r.contracts.map(c => `<span class="chip">${esc(c)}</span>`).join("")}</dd>
+      </dl>
+      <h3>Relies on</h3>${edgeList(out, "to")}
+      <h3>Relied on by</h3>${s === "contracts" ? `<p class="why">All ${inc.length} other repositories. Turn on the Wire contract layer to draw them.</p>` : edgeList(incShown, "from")}
+      ${r.runtime ? `<h3>Runtime</h3><ul class="notes">${r.runtime.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+      <button type="button" class="clear" data-clear>Clear selection</button>`;
+  }
+  // table
+  const rows = document.getElementById("rows");
+  const order = ["contracts", "platform", "extractor", "knowledge", "github", "vault", "x", "instagram", "threads", "chatgpt", "claude", "telegram", "channel-digests", "web", "mobile", "browser-extension", "export-agent"];
+  for (const id of order) {
+    const r = byId[id];
+    const out = EDGES.filter(e => e.from === id && e.kind !== "contract");
+    const inc = EDGES.filter(e => e.to === id && e.kind !== "contract");
+    const fmt = (list, other) => list.length ? list.map(e => `<span class="dep">${linkBtn(e[other])} <span class="count">${KINDS[e.kind].tag}</span></span>`).join("<br>") : `<span class="count">${id === "contracts" && other === "from" ? "every repository" : "none"}</span>`;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${linkBtn(id)}<br><span class="count">${esc(r.label)}</span></td><td>${esc(r.kind)}</td><td>${esc(r.stack)}</td><td>${r.profiles.join(", ")}</td><td>${fmt(out, "to")}</td><td>${fmt(inc, "from")}</td>`;
+    rows.appendChild(tr);
+  }
+
+  // interaction
+  const svg = document.getElementById("map");
+  svg.addEventListener("click", ev => {
+    const g = ev.target.closest("[data-id]");
+    if (g) select(g.dataset.id);
+    else if (state.selected) { state.selected = null; render(); }
+  });
+  svg.addEventListener("keydown", ev => {
+    const g = ev.target.closest("[data-id]");
+    if (g && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); select(g.dataset.id); }
+  });
+  document.addEventListener("click", ev => {
+    const b = ev.target.closest("[data-select]");
+    if (b) {
+      state.selected = b.dataset.select; render();
+      if (b.closest("table")) document.getElementById("stage").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      nodeEls.get(b.dataset.select)?.focus({ preventScroll: true });
+    }
+    if (ev.target.closest("[data-clear]")) { state.selected = null; render(); }
+  });
+  document.addEventListener("keydown", ev => {
+    if (ev.key === "Escape" && state.selected) { const prev = state.selected; state.selected = null; render(); nodeEls.get(prev)?.focus(); }
+  });
+
+  // theme
+  const themeBtn = document.getElementById("theme");
+  const THEMES = ["system", "light", "dark"];
+  let theme = "system";
+  try { theme = localStorage.getItem("fleet-map-theme") || "system"; } catch (_) {}
+  const applyTheme = () => {
+    if (theme === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+    themeBtn.textContent = `Theme: ${theme}`;
+  };
+  themeBtn.addEventListener("click", () => {
+    theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+    try { localStorage.setItem("fleet-map-theme", theme); } catch (_) {}
+    applyTheme();
+  });
+  applyTheme();
+  render();
+})();
+</script>
+</body>
+</html>
