@@ -77,7 +77,7 @@ All 18 repositories are public. The default branch of each repository is `main`.
 | `delete_branch_on_merge` | 18 of 18 | A merged branch is deleted by GitHub at the merge. See [A merged branch is deleted](#a-merged-branch-is-deleted) |
 | The spec gate, `.github/workflows/openspec.yml` | 18 of 18 | Identical wrapper around the workspace's `reusable-openspec.yml`. See [The spec gate](#the-spec-gate) |
 | `openspec/config.yaml` | 18 of 18 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
-| `skills-lock.json` | 15 of 18 | The `skills` CLI lockfile. Identical in the 14 whose stack is Rust; `ratatoskr-web` has its own, for design skills |
+| `skills-lock.json` | 15 of 18 | The `skills` CLI lockfile. Its `po4yka/rust-skills` entries are identical in the 14 whose stack is Rust; the workspace also locks `plannotator/effective-html`, and `ratatoskr-web` has its own, for design skills |
 | The Rust skill catalogue, `.agents/skills/` | 14 of 18 | 18 skills vendored from `po4yka/rust-skills`, identical in every repository whose stack is Rust. See [The Rust skill catalogue](#the-rust-skill-catalogue) |
 | Size limits in a linter configuration | 16 of 18 | `clippy.toml` in the thirteen with a root `Cargo.toml` and in the workspace `harness/`, `eslint.config.js` in `ratatoskr-web` and `ratatoskr-browser-extension`. See [Size limits](#size-limits) |
 | A repository gate, `.github/workflows/ci.yml` | 18 of 18 | Every repository, on `push`, `pull_request` and a weekly schedule. See [A `main` nobody pushes to](#a-main-nobody-pushes-to) |
@@ -909,7 +909,7 @@ call for each reusable workflow the wrappers pin, to read that file's blob at th
 | The 31 files `openspec init` generates are one blob each, and the SET of their paths is the same everywhere | A partial `openspec update`: the CLI raised in the repository its author was in, forgotten in the other seventeen. A release that adds a seventh command arrives as a missing path rather than a changed one |
 | `openspec/config.yaml` is PRESENT in every repository | The planning root deleted from one. Sameness is not asserted: `context:` names one repository's role, stack and tests |
 | The 93 vendored skill paths are one blob each, and the SET of them is the same, across the 14 repositories whose stack is Rust | A skill edited in place in one repository; a skill added to one and forgotten in the other thirteen; a partial `npx skills update` |
-| `skills-lock.json` is one blob across those same 14 | A lockfile raised in one repository without the files it locks, or the reverse |
+| The `po4yka/rust-skills` entries of `skills-lock.json`, digested with sorted keys, are one value across those same 14. Other entries and other `.agents/skills/` directories are not compared | A lockfile raised in one repository without the files it locks, or the reverse |
 | At least 14 repositories carry `.agents/skills/rust-tdd/SKILL.md`, and at least 93 vendored paths exist | The catalogue deleted from one repository, and an update that drops a skill from every repository at once |
 | Every repository with a tracked `Cargo.toml`, at the root or below it, carries the catalogue | Rust arriving in a repository that never received the skills. It is the late half of the answer, and it is the only half that is checkable: nothing in a tree of documents says which language the first commit will be in |
 | Each of them is present in every repository | A deletion, in a repository where `fleet.yml` itself was the thing deleted |

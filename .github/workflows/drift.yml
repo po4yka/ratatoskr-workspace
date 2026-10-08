@@ -104,6 +104,18 @@ jobs:
           done < repos.txt
           echo "collected $(wc -l < trees.tsv) tracked paths"
 
+          # `skills-lock.json` may lock skills beside the Rust catalogue — the workspace carries
+          # plannotator/effective-html — so its blob is not comparable. What is comparable is its
+          # `po4yka/rust-skills` entries, digested here with sorted keys for the next step.
+          : > locks.tsv
+          awk -F'\t' '$2 == "skills-lock.json" { print $1 }' trees.tsv | while read -r r; do
+            digest=$(gh api -H 'Accept: application/vnd.github.raw+json' \
+                       "repos/po4yka/$r/contents/skills-lock.json" \
+                     | jq -cS '.skills | with_entries(select(.value.source == "po4yka/rust-skills"))' \
+                     | sha256sum | cut -d' ' -f1)
+            printf '%s\t%s\n' "$r" "$digest" >> locks.tsv
+          done
+
           # The wrappers call the reusable workflows at a pinned commit. For each pin, read the
           # blob the called file had AT that commit, so the next step can compare it with `main`'s.
           # The wrappers are read from this checkout; `one_of` below asserts every repository
@@ -134,6 +146,9 @@ jobs:
           present_repos = [r for r in repos if r not in empty]
           rows = [l.split("\t") for l in pathlib.Path("trees.tsv").read_text().splitlines()]
           tree = {(r, p): (mode, sha) for r, p, mode, sha in rows}
+          # The lockfile's identity is the digest of its catalogue entries, not its blob.
+          for r, digest in (l.split("\t") for l in pathlib.Path("locks.tsv").read_text().splitlines()):
+              tree[(r, "skills-lock.json")] = (tree[(r, "skills-lock.json")][0], digest)
           # A Cargo.toml at any depth counts. This workspace keeps its Rust under `harness/`, and its
           # `dependabot.yml` and `advisories.yml` are the Rust forms, so a root-only test put it with
           # the repositories that have no code and reported its `dependabot.yml` as a second form.
@@ -213,13 +228,17 @@ jobs:
           # are missing; a skill edited in place arrives as a differing blob. The floor catches the
           # third case, which nothing else here can see: `npx skills update` removing a skill from
           # the catalogue, applied everywhere at once and noticed nowhere.
+          #
+          # Only the catalogue's own names are compared. Every one of its skills is `rust-*` or
+          # `cargo-*`, and a repository may vendor other skills beside it — the workspace carries
+          # plannotator/effective-html — without the other thirteen having to follow.
           rustskills = sorted({r for (r, p) in tree if p == ".agents/skills/rust-tdd/SKILL.md"})
           if len(rustskills) < 14:
               problems.append(f"only {len(rustskills)} repositories carry the Rust skill catalogue, "
                               f"expected at least 14: {', '.join(rustskills) or 'none'}")
-          vendored = sorted({p for (r, p) in tree if r in rustskills
-                             and p.startswith((".agents/skills/", ".claude/skills/"))
-                             and not p.startswith(generated)})
+          catalogue = tuple(f"{d}/{n}" for d in (".agents/skills", ".claude/skills")
+                            for n in ("rust-", "cargo-"))
+          vendored = sorted({p for (r, p) in tree if r in rustskills and p.startswith(catalogue)})
           if vendored and len(vendored) < 93:
               problems.append(f"only {len(vendored)} vendored skill paths, expected at least 93 — "
                               f"eighteen skills as 75 files, and 18 symlinks beside them")

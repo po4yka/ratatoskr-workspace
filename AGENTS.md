@@ -118,6 +118,11 @@ The catalogue holds forty-four skills and eighteen are vendored here.
 under BSD-3-Clause, (c) 2026 Nikita Pochaev, who also owns this repository; each `SKILL.md` keeps its
 `license` field, and the full text is in that repository's `LICENSE`.
 
+This workspace alone also vendors six HTML-artifact skills from `plannotator/effective-html` (MIT):
+`html`, `design-artifact`, `html-wireframe`, `html-prototype`, `html-plan` and `html-diagram`. They
+sit beside the catalogue in `.agents/skills/` and `skills-lock.json`, and `drift.yml` compares only
+the catalogue's `rust-*` and `cargo-*` names, so the other thirteen do not carry them.
+
 ## Sources of truth
 
 Use the following precedence order:
