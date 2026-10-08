@@ -344,6 +344,11 @@ td.n { font-variant-numeric: tabular-nums; }
     ["knowledge", "threads", "optional analysis of Threads captures", "ratatoskr-threads README"],
     ["knowledge", "chatgpt", "consumes normalized archive events", "ratatoskr-chatgpt README"],
     ["knowledge", "claude", "consumes normalized project and conversation events", "ratatoskr-claude README"],
+    ["browser-extension", "extractor", "a captured web article is extracted server side; routed through platform", "ratatoskr-browser-extension README"],
+    ["browser-extension", "github", "a captured GitHub repository URL (metadata, track or star); routed through platform", "ratatoskr-browser-extension README"],
+    ["browser-extension", "x", "an explicit X permalink capture, cmd.x.capture.requested.v1; routed through platform", "ratatoskr-browser-extension and ratatoskr-x READMEs"],
+    ["browser-extension", "instagram", "an explicit Instagram post or reel capture; routed through platform", "ratatoskr-browser-extension README"],
+    ["browser-extension", "threads", "an explicit Threads post capture; routed through platform", "ratatoskr-browser-extension README"],
   ];
 
   const WORKSPACE = {
@@ -377,6 +382,11 @@ td.n { font-variant-numeric: tabular-nums; }
     "x>extractor:flow": [[206, 422], [206, 446], [592, 446], [592, 422]],
     "threads>extractor:flow": [[356, 422], [356, 468], [690, 468], [690, 422]],
   };
+  // Browser captures enter the platform trunk and leave it for the owning service; the box hides the
+  // segment inside it, which is the point: the extension never reaches those services directly.
+  for (const [to, tx] of [["extractor", 670], ["github", 820], ["x", 220], ["instagram", 520], ["threads", 370]]) {
+    ROUTES[`browser-extension>${to}:flow`] = `M890 118 V262 C890 306 ${tx} 326 ${tx} 370`;
+  }
   const ANCHORS = {
     "knowledge>instagram:event": { sx: 520, tx: 500 },
     "knowledge>platform:event": { sx: 565, tx: 565 },
@@ -421,6 +431,7 @@ td.n { font-variant-numeric: tabular-nums; }
   }
 
   function pathFor(e) {
+    if (typeof ROUTES[e.key] === "string") return ROUTES[e.key];
     if (ROUTES[e.key]) return rounded(ROUTES[e.key]);
     const s = byId[e.from], t = byId[e.to], a = ANCHORS[e.key] || {};
     const up = t.y < s.y;
@@ -442,7 +453,7 @@ td.n { font-variant-numeric: tabular-nums; }
 
   // tiers and workspace tab
   const tiers = document.getElementById("tiers");
-  [[54, "SURFACES · CLIENTS AND THE BOT"], [176, "TRUNK · PLATFORM"], [360, "BRANCHES · BOUNDED CONTEXTS"], [526, "INTERPRETATION · PRESERVATION"], [716, "ROOTS · WIRE CONTRACTS"]]
+  [[54, "SURFACES · CLIENTS AND THE BOT"], [176, "TRUNK · PLATFORM"], [360, "BRANCHES · SERVICES"], [526, "INTERPRETATION · PRESERVATION"], [716, "ROOTS · WIRE CONTRACTS"]]
     .forEach(([y, t]) => {
       const bg = el("rect", { class: "tier-bg" }, tiers);
       const tx = el("text", { x: 24, y, class: "tier" }, tiers);
@@ -572,7 +583,7 @@ td.n { font-variant-numeric: tabular-nums; }
           <div class="stat"><b>${README_FLOWS.length}</b><span>README-only relations</span></div>
         </div>
         <p><code>contracts</code> has no dependencies, and every other repository relies on it. <code>platform</code> relies only on <code>contracts</code>, and ${onPlatform} repositories rely on <code>platform</code>: clients through its API, services through its NATS event transport.</p>
-        <p>Away from the trunk there are few direct links: <code>knowledge</code> reads from <code>extractor</code>, <code>github</code> and <code>instagram</code>; <code>channel-digests</code> calls <code>knowledge</code>; <code>mobile</code> calls <code>github</code>.</p>
+        <p>Away from the trunk there are few direct links: <code>knowledge</code> reads from <code>extractor</code>, <code>github</code> and <code>instagram</code>; <code>channel-digests</code> calls <code>knowledge</code>; <code>mobile</code> calls <code>github</code>. Captures from <code>browser-extension</code> reach <code>extractor</code>, <code>github</code>, <code>x</code>, <code>instagram</code> and <code>threads</code> only by way of <code>platform</code>, which is why their dashed lines pass through the trunk.</p>
         <p class="why">Select any box on the map, or a name in the table, for its role, contracts, runtime listeners and every connection.</p>`;
       return;
     }
