@@ -72,7 +72,7 @@ header { display: grid; gap: 10px; }
 h1 { font: 600 clamp(2rem, 4vw, 2.9rem)/1.05 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
 .lede { max-width: 68ch; margin: 0; color: var(--ink); }
 .source { margin: 0; color: var(--muted); font-size: 13px; max-width: 90ch; }
-code, .mono { font-family: var(--mono); font-size: 0.9em; }
+code, .mono { font-family: var(--mono); font-size: 0.9em; overflow-wrap: anywhere; }
 
 button { font: inherit; color: inherit; }
 .theme-toggle {
@@ -104,6 +104,8 @@ legend { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; col
 
 .workbench { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
 .page > * { min-width: 0; }
+.chapter > *, .jstage > *, .split > *, .workbench > *, .lanes > *, .shared > * { min-width: 0; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (min-width: 1240px) { .workbench { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } }
 
 .stage {
@@ -189,6 +191,147 @@ tbody tr:last-child td { border-bottom: 0; }
 td.n { font-variant-numeric: tabular-nums; }
 .dep { white-space: nowrap; }
 
+
+/* chapters */
+nav.toc { position: sticky; top: 0; z-index: 5; background: var(--ground); border-bottom: 1px solid var(--rule); margin: 0 -16px; padding: 10px 16px; display: flex; gap: 4px 22px; flex-wrap: wrap; font-size: 14px; }
+@media (min-width: 720px) { nav.toc { margin: 0 -32px; padding: 10px 32px; } }
+nav.toc a { color: var(--ink); text-decoration: none; padding: 2px 0; border-bottom: 2px solid transparent; }
+nav.toc a:hover, nav.toc a[aria-current="true"] { border-bottom-color: var(--ink); }
+.chapter { display: grid; gap: 14px; scroll-margin-top: 56px; }
+.chapter > h2 { font: 600 clamp(1.6rem, 2.6vw, 2rem)/1.1 var(--display); margin: 0; }
+.chapter > p { margin: 0; max-width: 80ch; }
+.chapter > p.source { color: var(--muted); font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; }
+.split { display: grid; gap: 20px; align-items: start; }
+@media (min-width: 1100px) { .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+
+/* profiles and layers */
+table.matrix { min-width: 560px; }
+table.matrix td.m { text-align: center; width: 1%; padding: 9px 14px; }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: var(--ink); }
+.dot.no { background: transparent; border: 1px solid var(--rule); }
+.layers { display: grid; gap: 12px; padding: 18px; grid-auto-flow: row; }
+@media (min-width: 900px) { .layers { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); } }
+.layer { display: grid; gap: 8px; align-content: start; padding: 0 0 0 12px; border-left: 3px solid var(--ink); }
+.layer h3 { margin: 0; font: 600 11px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.layer p { margin: 0; font-size: 13px; color: var(--muted); }
+.layer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+
+
+/* deployment */
+.banner { border-left: 4px solid var(--event); background: var(--surface); padding: 12px 16px; border-radius: 0 4px 4px 0; max-width: 90ch; }
+.banner p { margin: 0; }
+.lanes { display: grid; gap: 10px; padding: 16px; }
+@media (min-width: 1000px) { .lanes { grid-template-columns: 0.8fr 0.9fr 1fr 1.35fr; align-items: stretch; } }
+.lane { display: grid; gap: 8px; align-content: start; position: relative; }
+.lane h3 { margin: 0; font: 600 11px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+@media (min-width: 1000px) { .lane + .lane::before { content: "\2192"; position: absolute; left: -11px; top: -2px; color: var(--muted); } .lane + .lane h3 { padding-left: 8px; } }
+.box { border: 1.25px solid var(--ink); border-radius: 3px; padding: 7px 10px; background: var(--surface); font-size: 13px; display: grid; gap: 2px; }
+.box b { font: 600 13px var(--mono); overflow-wrap: anywhere; }
+.box span { color: var(--muted); }
+.box.soft { border-style: dashed; border-color: var(--frame); }
+.route { display: grid; grid-template-columns: 7.5em 1fr auto; gap: 8px; align-items: baseline; font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--rule); }
+.route:last-child { border-bottom: 0; }
+.route code { font-weight: 600; }
+.st { font: 600 10.5px var(--mono); text-transform: uppercase; padding: 1px 6px; border-radius: 3px; border: 1.5px solid currentColor; white-space: nowrap; }
+.st.installed { color: var(--flow); } .st.unit { color: var(--api); } .st.bound { color: var(--contract); }
+.st.routed { color: var(--event); } .st.unresolved, .st.conflict { color: #b3261e; }
+:root[data-theme="dark"] .st.unresolved, :root[data-theme="dark"] .st.conflict { color: #ff8a80; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .st.unresolved, :root:not([data-theme="light"]) .st.conflict { color: #ff8a80; } }
+.shared { display: grid; gap: 10px; padding: 0 16px 16px; }
+@media (min-width: 1000px) { .shared { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.shared .box { align-content: start; }
+.shared ul { margin: 4px 0 0; padding-left: 16px; color: var(--ink); }
+.timeline { padding: 16px; display: grid; gap: 10px; overflow-x: auto; }
+.timeline svg { width: 100%; min-width: 640px; height: auto; display: block; }
+.timeline .tick { fill: var(--muted); font: 11px var(--mono); }
+.timeline .axis { stroke: var(--rule); }
+.timeline .ev { fill: var(--ink); }
+.timeline .lbl { fill: var(--ink); font: 600 12px var(--body); }
+.timeline .sub { fill: var(--muted); font: 11px var(--body); }
+.issues { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 95ch; }
+
+/* contracts */
+.cm-wrap { max-height: 78vh; overflow: auto; }
+table.cm { min-width: 1180px; font-size: 13px; }
+table.cm th.svc { writing-mode: vertical-rl; transform: rotate(180deg); text-transform: none; letter-spacing: 0; font: 600 12px var(--mono); color: var(--ink); padding: 10px 4px; vertical-align: bottom; text-align: left; cursor: pointer; }
+table.cm th.svc.on { background: var(--ink); color: var(--ground); }
+table.cm td.c { text-align: center; padding: 6px 3px; width: 46px; white-space: nowrap; }
+.pc + .pc { margin-left: 2px; }
+table.cm td.c.on { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+table.cm tr.fam td { background: var(--ground); font: 600 11px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-top: 14px; }
+table.cm td.name { min-width: 300px; }
+table.cm td.name code { font-weight: 600; overflow-wrap: anywhere; }
+table.cm td.name .why { display: block; color: var(--muted); font-size: 12.5px; }
+table.cm thead th { z-index: 2; }
+table.cm td.name, table.cm thead th:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
+table.cm thead th:first-child { background: var(--ground); z-index: 3; }
+.pc { display: inline-block; min-width: 18px; font: 700 10.5px var(--mono); padding: 1px 3px; border-radius: 2px; }
+.pc.p { background: var(--ink); color: var(--ground); }
+.pc.c { border: 1.5px solid var(--ink); color: var(--ink); }
+tr.dim-row { opacity: 0.35; }
+.k-tag { font: 600 10px var(--mono); text-transform: uppercase; color: var(--muted); margin-left: 6px; }
+.api-grid { display: grid; gap: 12px; }
+@media (min-width: 900px) { .api-grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); } }
+.api-grid .card { padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.api-grid h3 { margin: 0 0 2px; font: 600 1.05rem var(--display); }
+.op { display: grid; grid-template-columns: 4.2em 1fr; gap: 2px 8px; font-size: 13px; }
+.op .m { font: 700 11px var(--mono); padding-top: 2px; }
+.op code { overflow-wrap: anywhere; font-size: 12px; }
+.op .why { grid-column: 2; color: var(--muted); font-size: 12.5px; }
+.radios { display: flex; flex-wrap: wrap; gap: 6px; }
+.radios label { position: relative; }
+.radios input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.radios span { display: inline-block; padding: 4px 11px; border: 1px solid var(--rule); border-radius: 3px; font-size: 13px; background: var(--surface); cursor: pointer; }
+.radios input:checked + span { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+.radios span span { border: 0; padding: 0; background: none; display: inline; color: inherit; opacity: 0.75; }
+.radios input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+
+/* journeys */
+.jpick { display: flex; flex-wrap: wrap; gap: 6px; }
+.jstage { display: grid; gap: 16px; }
+@media (min-width: 1240px) { .jstage { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; } }
+.seq { overflow-x: auto; }
+.seq svg { display: block; width: 100%; min-width: 900px; height: auto; }
+.seq:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ll-head rect { fill: var(--surface); stroke: var(--ink); stroke-width: 1.25; }
+.ll-head text { fill: var(--ink); font: 600 12.5px var(--mono); }
+.ll-head .sub { fill: var(--muted); font: 11px var(--body); }
+.ll { stroke: var(--rule); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.msg { transition: opacity 120ms ease; cursor: pointer; }
+.msg line, .msg path { fill: none; stroke-width: 2; }
+.msg.http line { stroke: var(--api); } .msg.bus line { stroke: var(--event); } .msg.ext line { stroke: var(--document); }
+.msg.gap line { stroke-dasharray: 6 5; }
+.msg.bug line { stroke: #b3261e; }
+:root[data-theme="dark"] .msg.bug line { stroke: #ff8a80; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .msg.bug line { stroke: #ff8a80; } }
+.msg .note { fill: var(--ground); stroke: var(--frame); stroke-width: 1; }
+.msg.gap .note { stroke-dasharray: 4 3; }
+.msg text.lab { fill: var(--ink); font: 12px var(--mono); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
+.msg text.lab.plain { font-family: var(--body); }
+.msg .num { fill: var(--ink); } .msg .numt { fill: var(--ground); font: 700 11px var(--body); }
+.msg.is-dim { opacity: 0.22; }
+.msg.is-cur line, .msg.is-cur path { stroke-width: 3.25; }
+.msg.is-cur .note { stroke: var(--ink); stroke-width: 2; }
+.ma-http { fill: var(--api); } .ma-bus { fill: var(--event); } .ma-ext { fill: var(--document); } .ma-bug { fill: #b3261e; }
+.jctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.jctl button { border: 1px solid var(--rule); background: var(--surface); border-radius: 4px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+.jctl .count { margin-left: 4px; }
+.jdetail { padding: 18px 20px; display: grid; gap: 10px; align-content: start; }
+.jdetail h3 { margin: 0; font: 600 1.15rem/1.25 var(--display); }
+.jdetail .eyebrow { margin: 0; font: 12px var(--mono); color: var(--muted); }
+.jdetail p { margin: 0; font-size: 14px; }
+.jdetail code { overflow-wrap: anywhere; }
+.state { font: 600 10.5px var(--mono); text-transform: uppercase; padding: 1px 6px; border-radius: 3px; border: 1.5px solid currentColor; justify-self: start; }
+.state.ok { color: var(--flow); } .state.local { color: var(--muted); } .state.gap { color: var(--event); border-style: dashed; } .state.bug { color: #b3261e; }
+:root[data-theme="dark"] .state.bug { color: #ff8a80; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .state.bug { color: #ff8a80; } }
+.cite { font: 12px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.jsteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 260px; overflow-y: auto; border-top: 1px solid var(--rule); padding-top: 8px; }
+.jsteps button { width: 100%; text-align: left; background: none; border: 0; padding: 3px 4px; cursor: pointer; font-size: 13px; display: grid; grid-template-columns: 1.6em 1fr auto; gap: 6px; border-radius: 3px; }
+.jsteps button[aria-current="step"] { background: var(--ground); font-weight: 600; }
+
 @media (prefers-reduced-motion: reduce) {
   .node, .edge { transition: none; }
 }
@@ -205,13 +348,23 @@ td.n { font-variant-numeric: tabular-nums; }
     <p class="source">Source: <code>workspace.toml</code> (dependencies, profiles, contracts) and each child <code>README.md</code> at the pins of workspace <code>main</code> (<code>b410b09</code>), plus the port table in <code>docs/DEPLOYMENT_TARGET.md</code>. Solid lines are manifest dependencies. Dashed lines are relationships the READMEs describe that the manifest does not list.</p>
   </header>
 
+  <nav class="toc" aria-label="Sections">
+    <a href="#map">Map</a>
+    <a href="#journeys">Journeys</a>
+    <a href="#deployment">Deployment</a>
+    <a href="#contracts">Contracts &amp; events</a>
+    <a href="#order">Profiles &amp; build order</a>
+  </nav>
+
+  <section class="chapter" id="map" aria-labelledby="map-h">
+  <h2 id="map-h" class="vh">Map</h2>
   <div class="controls">
     <fieldset>
       <legend>Connections</legend>
       <div class="toggles" id="layers"></div>
     </fieldset>
     <fieldset>
-      <legend>Compose profile</legend>
+      <legend>Profile</legend>
       <div class="profiles" id="profiles" role="radiogroup"></div>
     </fieldset>
   </div>
@@ -233,6 +386,8 @@ td.n { font-variant-numeric: tabular-nums; }
     <aside class="panel" id="panel" aria-live="polite"></aside>
   </div>
 
+  </section>
+
   <section class="inventory" aria-labelledby="inv-h">
     <h2 id="inv-h">Every repository</h2>
     <p>The same graph as a table. "Relies on" comes from the manifest; "Relied on by" is its reverse. Every repository except <code>contracts</code> relies on <code>contracts</code>, so that column leaves it out.</p>
@@ -242,6 +397,142 @@ td.n { font-variant-numeric: tabular-nums; }
         <tbody id="rows"></tbody>
       </table>
     </div>
+  </section>
+
+  <section class="chapter" id="journeys" aria-labelledby="jour-h">
+    <h2 id="jour-h">Journeys</h2>
+    <p>Six end-to-end flows, traced through the code rather than the plans. Each step says how it travels and whether the running code does it today. A dashed step has no transport wired yet; a red one is a mismatch between two repositories that would fail at runtime.</p>
+    <fieldset>
+      <legend>Journey</legend>
+      <div class="radios jpick" id="jpick"></div>
+    </fieldset>
+    <div class="jstage">
+      <div class="card">
+        <div class="seq" id="seq" tabindex="0" aria-label="Sequence diagram. Use the left and right arrow keys to step."><svg id="seq-svg" role="img"></svg></div>
+        <div class="jctl" style="padding:10px 16px 14px;border-top:1px solid var(--rule)">
+          <button type="button" id="jprev">&#8592; Previous</button>
+          <button type="button" id="jnext">Next &#8594;</button>
+          <button type="button" id="jall">Show every step</button>
+          <span class="count" id="jpos"></span>
+          <span class="count" style="margin-left:auto"><span class="swatch k-api" aria-hidden="true"></span> HTTP <span class="swatch k-event" aria-hidden="true"></span> JetStream <span class="swatch k-document" aria-hidden="true"></span> provider API</span>
+        </div>
+      </div>
+      <aside class="card jdetail" id="jdetail" aria-live="polite"></aside>
+    </div>
+    <h3 style="margin:6px 0 0;font:600 1.1rem var(--display)">Mismatches found while tracing</h3>
+    <ol class="issues">
+      <li>Edge forwards an archive receipt as <code>PUT</code> (<code>platform/crates/public-api/src/archives.rs:636</code>); chatgpt and claude route <code>/v1/ai-archives/receipt</code> for <code>POST</code> only, so a live import would be refused.</li>
+      <li>Knowledge fetches a digest manifest from <code>v1/channel-digest/manifests/{id}</code> (<code>knowledge/crates/knowledge/src/channel_digest_recap.rs:213</code>); channel-digests serves <code>/v1/manifests/{id}</code> (<code>integrations/channel-digests/src/api.rs:63</code>).</li>
+      <li>channel-digests reports operation status <code>"completed"</code> (<code>src/intake.rs:94</code>), which is not a value of <code>OperationStatus</code>; the terminal value is <code>Succeeded</code>.</li>
+      <li>The X scan command is <code>x.bookmarks.scan_requested.v1</code> in X's code and <code>x.bookmarks.snapshot_requested.v1</code> in the platform README.</li>
+    </ol>
+    <p class="source">Traced in source under <code>repos/</code>; each step cites the file and line. Not wired today: extractor to knowledge, AI archive and social facts to knowledge, github to vault and back, and every producer of <code>platform.notification.raised.v1</code>.</p>
+  </section>
+
+  <section class="chapter" id="deployment" aria-labelledby="dep-h">
+    <h2 id="dep-h">Deployment</h2>
+    <div class="banner"><p><b>The host is frozen as of 2026-08-21.</b> Nothing is deployed to it or changed on it. Only Platform's three units were ever installed, on 2026-08-19 (milestone 10), and that slice ran end to end. The rest of this view is the target every service must fit, read from the deploy files and config defaults in each repository.</p></div>
+    <p>One Raspberry Pi 5 (4 × Cortex-A76, 15 GiB RAM, <code>aarch64</code>, 16 KiB pages, Debian 12 class). Ratatoskr binaries run as systemd units, one per role; PostgreSQL, NATS, cloudflared and the metrics stack are containers.</p>
+    <div class="card lanes">
+      <div class="lane">
+        <h3>Outside</h3>
+        <div class="box"><b>clients</b><span>web, mobile, browser-extension, export-agent</span></div>
+        <div class="box"><b>Telegram Bot API</b><span>delivers webhook updates</span></div>
+        <div class="box"><b>operators</b><span>over Tailscale only</span></div>
+      </div>
+      <div class="lane">
+        <h3>Ingress</h3>
+        <div class="box"><b>cloudflared</b><span>container; the only public path. Reaches 8080, 8181 and 8182, nothing else</span></div>
+        <div class="box"><b>Tailscale</b><span>operator access to /health, /metrics, /version, PostgreSQL and NATS</span></div>
+        <div class="box soft"><b>ufw</b><span>INPUT policy DROP; the monitoring bridge reaches 9464 to 9468</span></div>
+      </div>
+      <div class="lane">
+        <h3>Public listeners, loopback bound</h3>
+        <div class="box"><b>ratatoskr-edge :8080</b><span>authenticates, strips inbound <code>x-ratatoskr-*</code>, mints user, device and correlation headers. The only NATS publisher</span></div>
+        <div class="box"><b>ratatoskr-ingest :8181</b><span>webhook adapter; bypasses Edge as a recorded exception (platform ADR-0015). Holds no NATS credential</span></div>
+        <div class="box"><b>ratatoskr-telegram-webhook :8182</b><span>Bot API updates; the dispatcher unit requires it</span></div>
+        <div class="box soft"><b>ratatoskr-scheduler</b><span>no public listener; publishes periodic commands</span></div>
+      </div>
+      <div class="lane">
+        <h3>Edge gateway to loopback domain APIs</h3>
+        <div id="routes"></div>
+      </div>
+    </div>
+    <div class="card shared">
+      <div class="box"><b>NATS JetStream</b><span>container <code>ratatoskr-nats</code>, 127.0.0.1:4222</span>
+        <ul><li><code>ratatoskr_commands</code>: <code>cmd.&gt;</code>, refuses a publish when full</li><li><code>ratatoskr_events</code>: <code>evt.&gt;</code>, drops the oldest when full</li><li>each 1 GiB / 7 days; per-service NKey identities</li></ul></div>
+      <div class="box"><b>PostgreSQL 17.7</b><span>container <code>shared-postgres</code> (PostGIS), 127.0.0.1:5432</span>
+        <ul><li>one database, <code>ratatoskr</code>, ICU collation</li><li>Platform schemas <code>identity</code>, <code>operations</code>, <code>platform_ingest</code></li><li>a least-privilege role per service: edge, ingest, scheduler, extractor, telegram</li></ul></div>
+      <div class="box"><b>Storage</b><span>466 GB NVMe, 954 GB SATA SSD</span>
+        <ul><li>logs: <code>/mnt/nvme/ratatoskr/logs/&lt;role&gt;.log</code>, daily rotation, 14 kept</li><li>extractor blobs and AI archive staging under <code>/mnt/nvme/ratatoskr/</code></li><li><code>/var/log</code> is a 128 MiB log2ram tmpfs</li></ul></div>
+      <div class="box"><b>Monitoring</b><span>containers on <code>monitoring_default</code></span>
+        <ul><li>VictoriaMetrics, vmalert, Grafana, Alertmanager, node-exporter</li><li>alerts reach Telegram through receiver <code>local-only</code></li><li>alert rules are not written yet; node-exporter has no disk series</li></ul></div>
+    </div>
+    <h3 class="vh">Port allocation</h3>
+    <div class="table-wrap"><table><thead><tr><th>Port</th><th>Bind</th><th>Owner</th><th>Repository</th><th>Plane</th><th>Status</th><th>Note</th></tr></thead><tbody id="ports"></tbody></table></div>
+    <p class="source">Status: <span class="st installed">installed</span> ran on the host at milestone 10 · <span class="st unit">unit</span> systemd unit in the repository, never installed · <span class="st bound">bound</span> the repository's code binds it by default, no deploy unit yet · <span class="st routed">routed</span> Edge routes there but the owning service does not bind it yet · <span class="st unresolved">unresolved</span> no repository binds it · <span class="st conflict">conflict</span> two owners claim it.</p>
+    <div class="card timeline">
+      <h3 class="vh">Backups</h3>
+      <svg viewBox="0 0 960 150" role="img" aria-label="Nightly backup schedule: 02:30 database dump, 03:00 borgmatic copy, 04:00 encrypted off-host copy; Sundays 08:00 restore drill on a separate machine." id="backup-svg"></svg>
+      <p class="source">Not backed up: JetStream, and the Vault and AI archive blobs. The SATA copy is in the same machine, so the 04:00 S3 copy is the only off-host one.</p>
+    </div>
+    <h3 style="margin:6px 0 0;font:600 1.1rem var(--display)">Where the documents disagree</h3>
+    <ol class="issues">
+      <li>Port <code>9467</code> is the telegram-webhook operator listener and also the extractor admin listener; both example configs bind <code>0.0.0.0:9467</code>.</li>
+      <li>Port <code>9084</code> is the default listener for threads, chatgpt and claude alike.</li>
+      <li>Edge routes <code>/v1/k</code>, <code>/v1/vault</code>, <code>/v1/social</code>, <code>/v1/ai</code>, <code>/v1/chatgpt</code> and <code>/v1/claude</code> to ports 8091 and 8093 to 8097, and no repository binds those ports yet.</li>
+      <li>The PostgreSQL data directory is <code>/mnt/nvme/ratatoskr/postgres</code> in the storage table and <code>/mnt/nvme/shared-postgres/data</code> in the container note of the same document.</li>
+      <li>The ufw rule opens <code>9464:9466</code> in the platform deploy README and <code>9464:9468</code> in DEPLOYMENT_TARGET.md.</li>
+      <li>Extractor, github and channel-digests listeners are missing from the DEPLOYMENT_TARGET.md port table.</li>
+    </ol>
+    <p class="source">Sources: <code>docs/DEPLOYMENT_TARGET.md</code>; <code>repos/platform/deploy/</code> (systemd, nats, postgres, backup, monitoring); <code>repos/integrations/telegram/deploy/</code>; <code>repos/extractor/deploy/</code>; listener defaults in each service's <code>config.rs</code>; Edge routes in <code>platform/crates/core/src/config/validate.rs</code>.</p>
+  </section>
+
+  <section class="chapter" id="contracts" aria-labelledby="con-h">
+    <h2 id="con-h">Contracts &amp; events</h2>
+    <p>Every contract registered in <code>ratatoskr-contracts</code>, with the services that produce (<span class="pc p">P</span>) and consume (<span class="pc c">C</span>) it. On the bus an event travels as <code>evt.&lt;type&gt;</code> and a command as <code>cmd.&lt;type&gt;</code> (platform ADR-0005). Click a service name to highlight its column.</p>
+    <fieldset>
+      <legend>Show</legend>
+      <div class="radios" id="ckind"></div>
+    </fieldset>
+    <div class="table-wrap cm-wrap"><table class="cm"><thead id="cm-head"></thead><tbody id="cm-body"></tbody></table></div>
+    <p class="source">Generated from <code>repos/contracts/contracts.toml</code>: 55 contracts, all major version 1. The four <code>operational.*</code> contracts are <code>accepted</code>; the rest are <code>proposed</code>.</p>
+    <div class="split">
+      <div class="card" style="padding:14px 18px">
+        <h3 style="margin:0 0 8px;font:600 1.05rem var(--display)">On the bus, outside the registry</h3>
+        <ul class="notes" style="list-style:none;padding:0;margin:0;display:grid;gap:8px">
+          <li><code>cmd.content.capture.requested.v1</code>: platform to extractor; the one command shape a client capture and a webhook both produce (DEPLOYMENT_TARGET.md, extractor README)</li>
+          <li><code>evt.content.document.extracted.v1</code>: extractor to knowledge, carrying Document IR (extractor README)</li>
+          <li><code>cmd.x.capture.requested.v1</code>, and the instagram and threads equivalents: per-provider routing of <code>social.capture.requested.v1</code> (platform NATS README, x README)</li>
+          <li><code>cmd.github.sync.requested.v1</code>: the platform scheduler to github (github README)</li>
+          <li><code>cmd.vault.target.desired.v1</code>: github to vault, the desired backup state (github and vault READMEs)</li>
+          <li><code>evt.platform.notification.raised.v1</code>: the only filter on the telegram dispatcher's durable consumer (platform NATS README)</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:14px 18px">
+        <h3 style="margin:0 0 8px;font:600 1.05rem var(--display)">Registry and READMEs disagree</h3>
+        <ul class="notes" style="list-style:none;padding:0;margin:0;display:grid;gap:8px">
+          <li><code>platform.operation.reported.v1</code> is also published by threads and channel-digests per their docs; the registry lists neither.</li>
+          <li><code>knowledge.analysis.completed.v1</code> is consumed by x per its README; the registry lists only instagram.</li>
+          <li><code>platform.operation.progressed.v1</code> is registered, but the platform README says Platform does not publish it today.</li>
+          <li>The <code>contracts</code> labels in <code>workspace.toml</code> are loose names: <code>portable-export</code>, <code>knowledge.search</code>, <code>github.catalog</code> and <code>platform.public-api</code> match no registry id.</li>
+        </ul>
+      </div>
+    </div>
+    <h3 style="margin:10px 0 0;font:600 1.4rem var(--display)">Public API</h3>
+    <p>Platform owns the public HTTP surface and generates its OpenAPI 3.1 document from its own routes; contracts owns the types the routes carry (platform ADR-0006). Web generates its client with openapi-typescript 7.13.0 and mobile with openapi-generator 7.25.0, each pinned by a lock file.</p>
+    <div class="api-grid" id="api"></div>
+    <p class="source">Generated from <code>repos/platform/openapi/openapi.json</code>, "Ratatoskr Platform public API" 0.1.0: 31 paths.</p>
+  </section>
+
+  <section class="chapter" id="order" aria-labelledby="order-h">
+    <h2 id="order-h">Profiles &amp; build order</h2>
+    <p>Which repositories each manifest profile groups, and the order a cross-repository change has to move in. The profiles are declared in <code>workspace.toml</code>; the Compose files that will start them are planned, and the one integration profile running today is <code>web-operational</code>. A repository's manifest dependencies all sit in earlier layers, so a layer can be built and verified once the layers to its left are green. Contract changes still follow expand, migrate, contract.</p>
+    <div class="split">
+      <div class="table-wrap"><table class="matrix"><thead id="pm-head"></thead><tbody id="pm-body"></tbody></table></div>
+      <div class="card layers" id="layers-view"></div>
+    </div>
+    <p class="source">Computed in this page from <code>workspace.toml</code>: <code>profiles</code> for the matrix, and the <code>dependencies</code> graph for the layers. README-only relations are not counted.</p>
   </section>
 </div>
 
@@ -279,7 +570,7 @@ td.n { font-variant-numeric: tabular-nums; }
       path: "repos/platform", profiles: ALL_PROFILES, contracts: ["platform.public-api", "event-envelope", "operations"],
       role: "The public control plane: identity and authentication, the Edge API, long-running operation tracking, generic ingest and deterministic scheduling. Its NATS JetStream is the durable transport for every service's commands and events.",
       deps: [["contracts", "contract", "canonical public API and event contracts"]],
-      runtime: ["ratatoskr-edge public API :8080, through cloudflared", "ratatoskr-ingest webhook adapter :8181, through cloudflared", "ratatoskr-scheduler publishes periodic commands", "NATS :4222 and PostgreSQL :5432, host only", "Edge proxies the loopback domain APIs: /v1/k to knowledge :8091, /v1/gh to github :8092, /v1/vault to vault :8093", "Archive acceptance forwards to the ChatGPT :8096 and Claude :8097 receipt listeners"] },
+      runtime: ["ratatoskr-edge public API :8080, through cloudflared", "ratatoskr-ingest webhook adapter :8181, through cloudflared", "ratatoskr-scheduler publishes periodic commands", "NATS :4222 and PostgreSQL :5432, host only", "Edge routes /v1/k :8091, /v1/gh :8092, /v1/vault :8093, /v1/social :8094, /v1/ai :8095; only :8092 (github) is bound today", "Archive acceptance forwards to :8096 (chatgpt) and :8097 (claude) with PUT; see Journeys for the mismatch", "The host is frozen; only these three units were ever installed (2026-08-19)"] },
 
     { id: "x", row: "C", cx: 190, w: 132, kind: "service", label: "Bookmarks archive", stack: "Rust",
       path: "repos/social/x", profiles: ["social"], contracts: ["social.source", "social.lifecycle"],
@@ -301,17 +592,17 @@ td.n { font-variant-numeric: tabular-nums; }
       path: "repos/github", profiles: ["core"], contracts: ["github.catalog", "github.actions"],
       role: "GitHub Catalog: the repositories a user starred or tracks, their metadata and list membership, repository analysis, and the desired backup state that Git Vault consumes.",
       deps: [["contracts", "contract", "GitHub catalogue and action contracts"], ["platform", "event", "durable catalogue event transport"]],
-      runtime: ["Domain API /v1/gh on loopback :8092, reached only through Edge"] },
+      runtime: ["Domain API /v1/gh on loopback :8092, reached only through Edge; admin listener 9095"] },
     { id: "chatgpt", row: "C", cx: 940, w: 132, kind: "service", label: "ChatGPT exports", stack: "Rust",
       path: "repos/ai-archive/chatgpt", profiles: ["ai-archive"], contracts: ["ai_archive.archive", "ai_archive.events"],
       role: "ChatGPT archive: preserves official data exports as immutable evidence, normalizes projects and conversation graphs, archives referenced assets, and publishes searchable local projections.",
       deps: [["contracts", "contract", "AI archive wire contracts"], ["platform", "event", "durable archive event transport"]],
-      runtime: ["Archive receipt /v1/ai-archives/receipt on loopback :8096, reached only through Platform archive acceptance"] },
+      runtime: ["Edge forwards archive receipts to loopback :8096, but chatgpt-archive listens on its default 9084 and routes /v1/ai-archives/receipt for POST only, while Edge sends PUT. See Journeys."] },
     { id: "claude", row: "C", cx: 1090, w: 132, kind: "service", label: "Claude exports", stack: "Rust",
       path: "repos/ai-archive/claude", profiles: ["ai-archive"], contracts: ["ai_archive.archive", "ai_archive.events"],
       role: "Claude archive: preserves official exports and supported Compliance data as immutable evidence, and normalizes projects, project knowledge, conversation graphs, files and Artifacts.",
       deps: [["contracts", "contract", "AI archive wire contracts"], ["platform", "event", "durable archive event transport"]],
-      runtime: ["Archive receipt /v1/ai-archives/receipt on loopback :8097, reached only through Platform archive acceptance"] },
+      runtime: ["Edge forwards archive receipts to loopback :8097, but claude-archive listens on its default 9084 and routes /v1/ai-archives/receipt for POST only, while Edge sends PUT. See Journeys."] },
     { id: "channel-digests", row: "C", cx: 1240, w: 132, kind: "service", label: "Telegram channels", stack: "Rust",
       path: "repos/integrations/channel-digests", profiles: ["core"],
       contracts: ["channel_digest.subscription_set_requested", "channel_digest.run_requested", "channel_digest.schedule_occurrence_requested", "knowledge.channel_digest_recap_requested", "knowledge.channel_digest_recap_completed", "knowledge.channel_digest_recap_failed", "platform.operation_reported"],
@@ -322,12 +613,12 @@ td.n { font-variant-numeric: tabular-nums; }
       path: "repos/knowledge", profiles: ["core", "social", "ai-archive"], contracts: ["knowledge.analysis", "knowledge.search", "document"],
       role: "The interpretation bounded context. Accepts canonical Document IR, prepares a bounded analysis prompt, validates the structured analysis, and persists the evidence and result.",
       deps: [["contracts", "contract", "analysis and source contracts"], ["extractor", "document", "normalized Document IR source stream"], ["github", "event", "repository source events"], ["instagram", "event", "Instagram source events"], ["platform", "event", "durable commands and event transport"]],
-      runtime: ["Domain API /v1/k on loopback :8091, reached only through Edge"] },
+      runtime: ["Edge routes /v1/k to loopback :8091, which knowledge does not bind yet; it runs only an admin listener on 9081", "Consumes cmd.knowledge.channel_digest_recap.requested.v1; has no Document IR consumer wired yet"] },
     { id: "vault", row: "D", cx: 865, w: 150, kind: "service", label: "Git backup & restore", stack: "Rust",
       path: "repos/vault", profiles: ["core", "export"], contracts: ["backup", "blob-transfer", "platform.public-api"],
       role: "Durable backup and restore. Converges desired repository-backup policies into verified Git mirrors, immutable snapshots, content manifests, off-host copies and repeatable restore drills.",
       deps: [["contracts", "contract", "backup and blob transfer contracts"], ["platform", "api", "authenticated backup orchestration"]],
-      runtime: ["Domain API /v1/vault on loopback :8093, reached only through Edge"] },
+      runtime: ["Edge routes /v1/vault to loopback :8093; Vault serves no public listener at this milestone, only an admin listener on 9570", "The desired-state consumer from github is not implemented yet"] },
 
     { id: "contracts", row: "E", cx: 715, w: 1182, kind: "contract", hub: true, label: "wire definitions and generated artifacts", stack: "Rust · JSON Schema",
       path: "repos/contracts", profiles: ALL_PROFILES, contracts: ["event-envelope", "document", "social", "ai-archive", "backup", "notification", "github"],
@@ -629,6 +920,291 @@ td.n { font-variant-numeric: tabular-nums; }
     rows.appendChild(tr);
   }
 
+  // profiles matrix
+  const pmHead = document.getElementById("pm-head"), pmBody = document.getElementById("pm-body");
+  pmHead.innerHTML = `<tr><th>Repository</th>${ALL_PROFILES.map(p => `<th>${p} <span class="count">${REPOS.filter(r => r.profiles.includes(p)).length}</span></th>`).join("")}</tr>`;
+  for (const id of order) {
+    const r = byId[id];
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${linkBtn(id)}</td>` + ALL_PROFILES.map(p => r.profiles.includes(p)
+      ? `<td class="m"><span class="dot" role="img" aria-label="in ${p}"></span></td>`
+      : `<td class="m"><span class="dot no" role="img" aria-label="not in ${p}"></span></td>`).join("");
+    pmBody.appendChild(tr);
+  }
+
+  // dependency layers (longest path from a repository with no dependencies)
+  const level = {};
+  const depth = id => level[id] ?? (level[id] = Math.max(-1, ...byId[id].deps.map(([to]) => depth(to))) + 1);
+  REPOS.forEach(r => depth(r.id));
+  const layerCount = Math.max(...Object.values(level)) + 1;
+  const layerNote = ["no dependencies", "contracts only", "contracts and platform", "a layer-2 service", "a layer-3 service"];
+  document.getElementById("layers-view").innerHTML = Array.from({ length: layerCount }, (_, i) => {
+    const ids = order.filter(id => level[id] === i);
+    return `<div class="layer"><h3>Layer ${i}</h3><p>relies on ${layerNote[i] ?? "earlier layers"}</p><ul>${ids.map(id => `<li>${linkBtn(id)}</li>`).join("")}</ul></div>`;
+  }).join("");
+
+  // journeys: [from, to, label, how (http|bus|ext|local), state (ok|local|gap|bug), transport, detail, cite]
+  const JOURNEYS = [
+    { id: "article", name: "Save an article", actors: [["browser-extension", "client"], ["platform edge", ":8080"], ["extractor", "worker"], ["knowledge", "service"]], steps: [
+      ["browser-extension", "browser-extension", "queue the capture", "local", "local", "in-process", "The draft is validated and stored as a queue item with an idempotency key, so it survives the service worker being suspended.", "clients/browser-extension/docs/ARCHITECTURE.md:223-229"],
+      ["browser-extension", "platform edge", "POST /v1/captures", "http", "ok", "HTTPS, Bearer + idempotency-key", "Body {url}. Edge answers 202 with {operation_id, status: \"accepted\"}.", "clients/browser-extension/src/capture/platform-client.ts:61-85"],
+      ["platform edge", "platform edge", "accept + outbox, one transaction", "local", "local", "PostgreSQL", "Idempotency reservation, an operation of kind content.capture.submit, an operations.outbox row for the command, and an audit row, committed together.", "platform/crates/public-api/src/captures.rs:107-222"],
+      ["platform edge", "extractor", "cmd.content.capture.requested.v1", "bus", "ok", "JetStream ratatoskr_commands, durable ratatoskr_extractor_capture", "The Edge outbox pump publishes; the extractor writes an inbox row and a run, then reports Queued.", "platform/services/edge/src/main.rs:288-295; extractor/crates/eventing/src/lib.rs:780-797"],
+      ["extractor", "extractor", "fetch, parse, score", "local", "local", "in-process", "Safe retrieval, one parse, deterministic quality scoring; browser rendering is off by default.", "extractor/crates/eventing/src/lib.rs:310-372"],
+      ["extractor", "platform edge", "evt.platform.operation.reported.v1", "bus", "ok", "JetStream ratatoskr_events, durable platform_edge_projection", "Succeeded or Failed. Edge's ProgressProjection records it on the operation.", "extractor/crates/eventing/src/lib.rs:640-675; platform/services/edge/src/main.rs:522-531"],
+      ["browser-extension", "platform edge", "GET /v1/operations/{id}", "http", "ok", "HTTPS polling", "The extension polls. Edge also offers SSE at /v1/operations/{id}/events, backed by a 500 ms read of operation progress.", "clients/browser-extension/src/capture/platform-client.ts:88-99"],
+      ["extractor", "knowledge", "evt.content.document.extracted.v1", "bus", "gap", "JetStream, no consumer", "The Document IR is published, and Knowledge's docs list it as consumed, but the knowledge service starts no document consumer: only the indexing worker, the recap worker and the admin listener.", "knowledge/services/knowledge/src/main.rs:21-90"],
+    ] },
+    { id: "github", name: "Track a GitHub repository", actors: [["browser-extension", "client"], ["platform edge", ":8080"], ["github", "catalog :8092"], ["vault", "library"]], steps: [
+      ["browser-extension", "platform edge", "GET /v1/capabilities", "http", "ok", "HTTPS", "Repository actions are offered only when the deployment's capabilities allow them.", "clients/browser-extension/src/github/client.ts:34-50"],
+      ["browser-extension", "platform edge", "POST /v1/gh/repositories/actions", "http", "ok", "HTTPS", "Mode is metadata, track or star, after a preview request to /v1/gh/repositories/preview.", "clients/browser-extension/src/github/client.ts:20-27"],
+      ["platform edge", "github", "proxy to 127.0.0.1:8092", "http", "ok", "loopback HTTP, minted identity headers", "Edge sets x-ratatoskr-user-id, x-ratatoskr-device-id and x-correlation-id. No Platform operation is created.", "platform/crates/public-api/src/gateway.rs:352-470"],
+      ["github", "github", "metadata, optional star, track", "ext", "ok", "GitHub API + github_catalog", "The request is claimed for idempotent replay; metadata is fetched, the star applied if asked, and tracking marks the backup policy dirty.", "github/services/catalog/src/repository_api.rs:150-260"],
+      ["github", "browser-extension", "RepositoryActionResult (via Edge)", "http", "ok", "synchronous HTTP response", "Three parts: metadata, provider star, desired backup. \"accepted\" for backup means accepted for publication, not preserved.", "github/README.md:207-216"],
+      ["github", "github", "debounced policy publication", "local", "gap", "outbox row, 60 s debounce", "Writes backup_policy_publications and an outbox row for cmd.vault.target.desired.v1. No binary calls this function yet.", "github/crates/catalog/src/backup_policy.rs:166-200"],
+      ["github", "vault", "cmd.vault.target.desired.v1", "bus", "gap", "JetStream, not implemented", "github: live fleet-bus handling is not implemented. vault: the event-bus publisher and consumer are not yet implemented.", "github/DEVELOPMENT.md:6; vault/README.md:399-401"],
+      ["vault", "vault", "mirror, bundle, signed manifest", "local", "local", "library", "Ingest the desired-state revision, plan, mirror, bundle and sign a content manifest. Exists as a library; no running consumer feeds it.", "vault/crates/persistence/src/lib.rs:290-390"],
+      ["vault", "github", "evt.vault.backup_policy.acknowledged.v1", "bus", "gap", "JetStream, not implemented", "The recording function exists in github but is never called; the actual-state events have no transport.", "github/crates/catalog/src/backup_policy.rs:219-230"],
+    ] },
+    { id: "archive", name: "Import a ChatGPT or Claude export", actors: [["export-agent", "macOS"], ["platform edge", ":8080"], ["chatgpt / claude", ":8096 / :8097"], ["knowledge", "service"]], steps: [
+      ["export-agent", "platform edge", "POST /v1/ai-archives/{provider}", "http", "ok", "HTTPS", "Body {sha256, byte_size}. Edge creates an operation of kind ai_archive.import and an acceptance record.", "platform/crates/public-api/src/archives.rs:73-183"],
+      ["export-agent", "platform edge", "chunked upload + finalize", "http", "ok", "HTTPS, blob-transfer protocol", "POST uploads, PUT chunks/{index}, GET status, POST finalize. Edge stages the bytes and verifies the digest.", "platform/crates/public-api/src/archives.rs:237-628"],
+      ["platform edge", "chatgpt / claude", "PUT /v1/ai-archives/receipt", "http", "bug", "loopback HTTP", "Edge forwards the verified archive with PUT; both archive services route this path for POST only, so the receipt would be refused.", "platform/crates/public-api/src/archives.rs:636; ai-archive/chatgpt/crates/chatgpt-archive/src/receipt/http.rs:124; ai-archive/claude/services/claude-archive/src/lib.rs:317"],
+      ["chatgpt / claude", "chatgpt / claude", "hash, store, inspect, parse, reconcile", "local", "local", "in-process", "The receipt pipeline. ChatGPT real-export parsing is not implemented yet.", "ai-archive/chatgpt/README.md:5"],
+      ["chatgpt / claude", "platform edge", "evt.ai-archive.<provider>.operation.reported.v1", "bus", "ok", "JetStream, durables platform_ai_archive_{chatgpt,claude}_projection", "The projection rejects a report whose subject and producer do not match.", "platform/crates/eventing/src/stream.rs:104-113"],
+      ["export-agent", "platform edge", "GET /v1/operations/{id}", "http", "ok", "HTTPS polling", "The agent polls until the import is terminal.", "clients/export-agent/Sources/AgentCore/BackendImportPolling.swift:53"],
+      ["chatgpt / claude", "knowledge", "ai_archive.* normalized events", "bus", "gap", "no transport", "Claude writes them to its outbox but the relay publishes only operation reports; ChatGPT does not persist them yet; Knowledge has no consumer wired.", "ai-archive/claude/crates/claude-archive/src/events.rs:93-167; knowledge/crates/knowledge/src/source_inbox.rs"],
+    ] },
+    { id: "digest", name: "Channel digest recap", actors: [["platform", "scheduler + edge"], ["channel-digests", "worker"], ["Telegram channels", "MTProto"], ["knowledge", "service"], ["channel-digests api", ":8098"]], steps: [
+      ["platform", "channel-digests", "cmd.channel_digest.*", "bus", "gap", "JetStream, three durables", "The worker consumes subscription, run and schedule-occurrence commands. The scheduler mechanism exists, but nothing in Platform or Telegram produces these commands yet.", "integrations/channel-digests/src/bus.rs:23-28; integrations/channel-digests/docs/INTERFACES.md:49-57"],
+      ["channel-digests", "platform", "platform.operation.reported.v1", "bus", "bug", "JetStream", "Reports \"running\" for a run, but \"completed\" on the subscription path, which is not an OperationStatus value.", "integrations/channel-digests/src/intake.rs:94,191; contracts/crates/operation-contracts/src/status.rs:33-45"],
+      ["channel-digests", "Telegram channels", "acquire channel revisions", "ext", "ok", "MTProto, one operator account", "Only this worker decrypts the MTProto session.", "integrations/channel-digests/src/executor.rs:40"],
+      ["channel-digests", "channel-digests", "commit digest manifest", "local", "local", "PostgreSQL", "Immutable post revisions and a deterministic manifest.", "integrations/channel-digests/src/coordinator.rs:46"],
+      ["channel-digests", "knowledge", "cmd.knowledge.channel_digest_recap.requested.v1", "bus", "ok", "JetStream, durable ratatoskr_knowledge_channel_recap", "", "integrations/channel-digests/src/coordinator.rs:142; knowledge/crates/knowledge/src/config.rs:830-836"],
+      ["knowledge", "channel-digests api", "GET v1/channel-digest/manifests/{id}", "http", "bug", "loopback HTTP", "The API serves /v1/manifests/{id}, so this read would miss.", "knowledge/crates/knowledge/src/channel_digest_recap.rs:213; integrations/channel-digests/src/api.rs:61-69"],
+      ["knowledge", "channel-digests", "evt.knowledge.channel_digest_recap.completed.v1", "bus", "ok", "JetStream, durables ..._recap_completed / _failed", "Or .failed.v1. The worker settles the result into digest_results.", "knowledge/crates/knowledge/src/channel_digest_recap_store.rs:447,480; integrations/channel-digests/src/coordinator.rs:180-380"],
+      ["channel-digests", "platform", "terminal operation report", "bus", "gap", "none", "No terminal operation report is enqueued at settlement, so the operation never finishes.", "integrations/channel-digests/src/coordinator.rs:180-380"],
+      ["channel-digests api", "knowledge", "GET /internal/channel-digest-results/{id}", "http", "ok", "loopback HTTP", "An owner's GET /v1/results/{id} on :8098 reads through to Knowledge.", "integrations/channel-digests/docs/INTERFACES.md:11-41"],
+    ] },
+    { id: "notify", name: "Notification to Telegram", actors: [["producers", "knowledge, github, vault, x"], ["platform edge", "provisions consumer"], ["telegram-dispatcher", ":9468 operator"], ["Telegram Bot API", "provider"]], steps: [
+      ["producers", "telegram-dispatcher", "evt.platform.notification.raised.v1", "bus", "gap", "JetStream, durable ratatoskr_telegram_notifications", "Declared producers are knowledge, github, vault and x; no production code publishes it. Only integration/run-telegram-notification.sh does.", "contracts/contracts.toml:1327-1348"],
+      ["platform edge", "platform edge", "provision the durable consumer", "local", "local", "JetStream ratatoskr_events", "Filtered to evt.platform.notification.raised.v1, explicit acknowledgement.", "platform/crates/eventing/src/stream.rs:115-120"],
+      ["telegram-dispatcher", "telegram-dispatcher", "admit: preferences, quiet hours", "local", "local", "PostgreSQL", "Suppressed, deferred until release_at, or queued into telegram.outbound_jobs; high priority bypasses quiet hours. Then the message is acknowledged.", "integrations/telegram/crates/persistence/src/notification_delivery.rs:113-300"],
+      ["telegram-dispatcher", "Telegram Bot API", "sendMessage", "ext", "ok", "HTTPS", "The outbound sender claims a job and delivers it.", "integrations/telegram/services/dispatcher/src/outbound/sender/sink.rs:56-63"],
+    ] },
+    { id: "xsync", name: "X bookmark sync", actors: [["platform", "scheduler"], ["x", "bookmarks"], ["X API", "provider"], ["knowledge", "service"]], steps: [
+      ["platform", "x", "cmd.x.bookmarks.scan_requested.v1", "bus", "bug", "JetStream, no consumer", "X defines this command type but nothing consumes it; the platform README names it x.bookmarks.snapshot_requested.v1.", "social/x/crates/x-sync/src/incremental.rs:48; platform/README.md:60"],
+      ["x", "X API", "incremental scan or full snapshot", "ext", "ok", "official OAuth API", "A partial scan never marks a bookmark removed; only a complete snapshot has absence authority.", "social/x/README.md:100-120"],
+      ["x", "x", "social.source.captured / updated", "local", "local", "x_archive.outbox_events", "", "social/x/crates/x-sync/src/social_sources.rs:200-235"],
+      ["x", "knowledge", "social.source.* to Knowledge", "bus", "gap", "no transport", "The outbox and inbox transport is not built: \"Neither runtime facility exists\".", "social/x/README.md:198-199"],
+    ] },
+  ];
+
+  const jState = { j: 0, step: null };
+  const jPick = document.getElementById("jpick");
+  JOURNEYS.forEach((j, i) => {
+    const bad = j.steps.filter(s => s[4] === "gap" || s[4] === "bug").length;
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="radio" name="journey" value="${i}" ${i === 0 ? "checked" : ""}><span>${j.name} <span class="count">${j.steps.length} steps${bad ? `, ${bad} open` : ""}</span></span>`;
+    jPick.appendChild(lab);
+  });
+  const seqSvg = document.getElementById("seq-svg");
+  const STATE_TEXT = { ok: "works today", local: "inside one service", gap: "no transport yet", bug: "mismatch" };
+
+  function drawJourney() {
+    const j = JOURNEYS[jState.j];
+    seqSvg.innerHTML = "";
+    const COL = 236, X0 = 150, TOP = 20, ROW = 52, HEAD = 46;
+    const W = X0 + COL * (j.actors.length - 1) + 140;
+    const H = TOP + HEAD + 30 + ROW * j.steps.length + 10;
+    seqSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    seqSvg.setAttribute("aria-label", `${j.name}: ${j.steps.length} steps between ${j.actors.map(a => a[0]).join(", ")}`);
+    const defs = el("defs", {}, seqSvg);
+    for (const k of ["http", "bus", "ext", "bug"]) {
+      const m = el("marker", { id: `sa-${k}`, viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" }, defs);
+      el("path", { d: "M0 1 L10 5 L0 9 z", class: `ma-${k}` }, m);
+    }
+    const ax = {};
+    j.actors.forEach(([name, sub], i) => {
+      const x = X0 + i * COL; ax[name] = x;
+      el("line", { class: "ll", x1: x, x2: x, y1: TOP + HEAD, y2: H - 6 }, seqSvg);
+      const g = el("g", { class: "ll-head" }, seqSvg);
+      el("rect", { x: x - 100, y: TOP, width: 200, height: HEAD, rx: 3 }, g);
+      el("text", { x, y: TOP + 20, "text-anchor": "middle" }, g).textContent = name;
+      el("text", { class: "sub", x, y: TOP + 36, "text-anchor": "middle" }, g).textContent = sub;
+    });
+    j.steps.forEach((st, i) => {
+      const [from, to, label, how, state] = st;
+      const y = TOP + HEAD + 36 + i * ROW;
+      const g = el("g", { class: `msg ${how} ${state}`, "data-step": i }, seqSvg);
+      el("title", {}, g).textContent = `${i + 1}. ${label}: ${STATE_TEXT[state]}`;
+      el("circle", { class: "num", cx: 22, cy: y, r: 11 }, g);
+      el("text", { class: "numt", x: 22, y: y + 4, "text-anchor": "middle" }, g).textContent = i + 1;
+      if (from === to && how === "local") {
+        const x = ax[from];
+        el("rect", { class: "note", x: x - 8, y: y - 15, width: 230, height: 30, rx: 3 }, g);
+        el("text", { class: "lab plain", x: x + 4, y: y + 4 }, g).textContent = label;
+      } else if (from === to) {
+        const x = ax[from];
+        el("line", { x1: x, x2: x + 44, y1: y - 8, y2: y - 8 }, g);
+        el("line", { x1: x + 44, x2: x + 44, y1: y - 8, y2: y + 8 }, g);
+        el("line", { x1: x + 44, x2: x + 4, y1: y + 8, y2: y + 8, "marker-end": `url(#sa-${state === "bug" ? "bug" : how})` }, g);
+        el("text", { class: "lab plain", x: x + 52, y: y + 4 }, g).textContent = label;
+      } else {
+        const x1 = ax[from], x2 = ax[to], dir = Math.sign(x2 - x1);
+        el("line", { x1, x2: x2 - dir * 3, y1: y + 6, y2: y + 6, "marker-end": `url(#sa-${state === "bug" ? "bug" : how})` }, g);
+        const mid = Math.min(x1, x2) + 10;
+        const t = el("text", { class: "lab", x: mid, y: y - 2 }, g);
+        t.textContent = label;
+        if (state === "gap" || state === "bug") t.textContent = (state === "bug" ? "✕ " : "… ") + label;
+      }
+    });
+    renderJourneyState();
+  }
+
+  function renderJourneyState() {
+    const j = JOURNEYS[jState.j], cur = jState.step;
+    seqSvg.querySelectorAll(".msg").forEach(g => {
+      const i = Number(g.dataset.step);
+      g.classList.toggle("is-cur", i === cur);
+      g.classList.toggle("is-dim", cur !== null && i !== cur);
+    });
+    document.getElementById("jpos").textContent = cur === null ? `all ${j.steps.length} steps` : `step ${cur + 1} of ${j.steps.length}`;
+    const det = document.getElementById("jdetail");
+    const list = `<ol class="jsteps">${j.steps.map((st, i) => `<li><button type="button" data-jstep="${i}" ${i === cur ? 'aria-current="step"' : ""}><span>${i + 1}</span><span>${esc(st[2])}</span><span class="state ${st[4]}">${st[4]}</span></button></li>`).join("")}</ol>`;
+    if (cur === null) {
+      const counts = ["ok", "local", "gap", "bug"].map(k => [k, j.steps.filter(s => s[4] === k).length]).filter(([, n]) => n);
+      det.innerHTML = `<p class="eyebrow">${esc(j.name)}</p><h3>${j.steps.length} steps across ${j.actors.length} participants</h3><p>${counts.map(([k, n]) => `${n} ${STATE_TEXT[k]}`).join(" · ")}</p><p class="why">Step through with Next, the arrow keys, or pick a step below.</p>${list}`;
+      return;
+    }
+    const [from, to, label, how, state, transport, detail, cite] = j.steps[cur];
+    det.innerHTML = `<p class="eyebrow">step ${cur + 1} · ${esc(from)}${from === to ? "" : " to " + esc(to)}</p><h3><code>${esc(label)}</code></h3><span class="state ${state}">${STATE_TEXT[state]}</span><p><b>Transport.</b> ${esc(transport)}</p>${detail ? `<p>${esc(detail)}</p>` : ""}<p class="cite">${esc(cite)}</p>${list}`;
+  }
+  const jGo = d => {
+    const n = JOURNEYS[jState.j].steps.length;
+    jState.step = jState.step === null ? (d > 0 ? 0 : n - 1) : Math.max(0, Math.min(n - 1, jState.step + d));
+    renderJourneyState();
+  };
+  jPick.addEventListener("change", ev => { jState.j = Number(ev.target.value); jState.step = null; drawJourney(); });
+  document.getElementById("jprev").addEventListener("click", () => jGo(-1));
+  document.getElementById("jnext").addEventListener("click", () => jGo(1));
+  document.getElementById("jall").addEventListener("click", () => { jState.step = null; renderJourneyState(); });
+  document.getElementById("seq").addEventListener("keydown", ev => {
+    if (ev.key === "ArrowRight") { ev.preventDefault(); jGo(1); }
+    if (ev.key === "ArrowLeft") { ev.preventDefault(); jGo(-1); }
+  });
+  seqSvg.addEventListener("click", ev => { const g = ev.target.closest(".msg"); if (g) { jState.step = Number(g.dataset.step); renderJourneyState(); } });
+  document.getElementById("jdetail").addEventListener("click", ev => { const b = ev.target.closest("[data-jstep]"); if (b) { jState.step = Number(b.dataset.jstep); renderJourneyState(); } });
+  drawJourney();
+
+  // deployment
+  const ROUTES_GW = [
+    ["/v1/k", "8091", "knowledge", "routed"], ["/v1/gh", "8092", "github", "bound"], ["/v1/vault", "8093", "vault", "routed"],
+    ["/v1/social", "8094", "no owner", "unresolved"], ["/v1/ai", "8095", "no owner", "unresolved"],
+    ["/v1/chatgpt", "8096", "chatgpt receipt", "routed"], ["/v1/claude", "8097", "claude receipt", "routed"],
+  ];
+  document.getElementById("routes").innerHTML = `<div class="box">${ROUTES_GW.map(([path, port, who, st]) =>
+    `<div class="route"><code>${path}</code><span>:${port} ${who}</span><span class="st ${st}">${st}</span></div>`).join("")}</div>`;
+  const PORTS = [
+    ["8080", "127.0.0.1", "ratatoskr-edge", "platform", "public", "installed", "Public API and Edge gateway"],
+    ["8181", "127.0.0.1", "ratatoskr-ingest", "platform", "public", "installed", "Webhook adapter"],
+    ["8182", "127.0.0.1", "ratatoskr-telegram-webhook", "telegram", "public", "unit", "Telegram Bot API webhook"],
+    ["8091", "127.0.0.1", "/v1/k", "knowledge", "loopback", "routed", "Knowledge binds only its admin listener, 9081"],
+    ["8092", "127.0.0.1", "/v1/gh, GitHub catalog API", "github", "loopback", "bound", ""],
+    ["8093", "127.0.0.1", "/v1/vault", "vault", "loopback", "routed", "Vault serves no public listener at this milestone"],
+    ["8094", "127.0.0.1", "/v1/social", "none", "loopback", "unresolved", "Instagram's API defaults to 9083 instead"],
+    ["8095", "127.0.0.1", "/v1/ai", "none", "loopback", "unresolved", ""],
+    ["8096", "127.0.0.1", "/v1/chatgpt, archive receipt", "chatgpt", "loopback", "routed", "chatgpt-archive serves /v1/ai-archives/receipt on its default 9084"],
+    ["8097", "127.0.0.1", "/v1/claude, archive receipt", "claude", "loopback", "routed", "claude-archive serves the same path on its default 9084"],
+    ["8098", "127.0.0.1", "ratatoskr-channel-digests-api", "channel-digests", "loopback", "bound", "Owner-scoped read API that Knowledge reads recaps through"],
+    ["9083", "127.0.0.1", "instagram API, /v1/captures", "instagram", "loopback", "bound", ""],
+    ["9464", "0.0.0.0", "edge operator", "platform", "operator", "installed", ""],
+    ["9465", "0.0.0.0", "ingest operator", "platform", "operator", "installed", ""],
+    ["9466", "0.0.0.0", "scheduler operator", "platform", "operator", "installed", "The scheduler refuses a public listener"],
+    ["9467", "0.0.0.0", "telegram-webhook operator; extractor admin", "telegram, extractor", "operator", "conflict", "Both example configs bind it"],
+    ["9468", "0.0.0.0", "telegram-dispatcher operator", "telegram", "operator", "unit", ""],
+    ["9469 / 9470", "", "channel-digests api / worker operator", "channel-digests", "operator", "bound", ""],
+    ["9081", "127.0.0.1", "knowledge admin", "knowledge", "operator", "bound", ""],
+    ["9082", "127.0.0.1", "instagram admin", "instagram", "operator", "bound", ""],
+    ["9084", "127.0.0.1", "threads admin; chatgpt and claude listeners", "threads, chatgpt, claude", "operator", "conflict", "Three services default to the same port"],
+    ["9095", "127.0.0.1", "github admin", "github", "operator", "bound", ""],
+    ["9570", "127.0.0.1", "vault admin", "vault", "operator", "bound", ""],
+    ["4222", "127.0.0.1", "NATS, container ratatoskr-nats", "platform deploy", "host", "installed", "Monitoring on 8222"],
+    ["5432", "127.0.0.1", "PostgreSQL, container shared-postgres", "host", "host", "installed", "Database ratatoskr"],
+  ];
+  document.getElementById("ports").innerHTML = PORTS.map(([port, bind, owner, repo, plane, st, note]) =>
+    `<tr><td class="n"><code>${port}</code></td><td><code>${bind}</code></td><td>${esc(owner)}</td><td>${esc(repo)}</td><td>${plane}</td><td><span class="st ${st}">${st}</span></td><td>${esc(note)}</td></tr>`).join("");
+
+  const bsvg = document.getElementById("backup-svg");
+  const hx = h => 40 + (h / 24) * 880;
+  el("line", { class: "axis", x1: hx(0), x2: hx(24), y1: 40, y2: 40 }, bsvg);
+  for (let h = 0; h <= 24; h += 3) {
+    el("line", { class: "axis", x1: hx(h), x2: hx(h), y1: 34, y2: 46 }, bsvg);
+    el("text", { class: "tick", x: hx(h), y: 24, "text-anchor": "middle" }, bsvg).textContent = `${String(h).padStart(2, "0")}:00`;
+  }
+  [[2.5, 70, "02:30 database dump", "pg_dump to /mnt/nvme/backups/ratatoskr, 14 kept"],
+   [3, 100, "03:00 borgmatic", "/mnt/nvme to /mnt/backup, the SATA SSD in the same machine"],
+   [4, 130, "04:00 off-host copy", "dump, Borg export and config, age-encrypted to S3, 90 days"],
+   [8, 70, "Sundays 08:00 restore drill", "on a separate verifier machine"]].forEach(([h, y, a, b]) => {
+    el("line", { class: "axis", x1: hx(h), x2: hx(h), y1: 40, y2: y - 4, "stroke-dasharray": "2 3" }, bsvg);
+    el("circle", { class: "ev", cx: hx(h), cy: 40, r: 5 }, bsvg);
+    el("text", { class: "lbl", x: hx(h) + 10, y }, bsvg).textContent = a;
+    el("text", { class: "sub", x: hx(h) + 10, y: y + 14 }, bsvg).textContent = b;
+  });
+
+  // contracts matrix
+  const CONTRACTS = [["core.event_envelope","core","payload","","platform",["extractor","knowledge","platform","x"],["platform","knowledge"],"Common envelope for every asynchronous domain event.","proposed"],["core.command_envelope","core","payload","","platform",["platform"],["instagram","threads","x"],"Canonical envelope for a user-initiated Platform command.","proposed"],["identity.account_erasure_requested","commands","command","identity.account.erasure_requested.v1","platform",["platform"],["chatgpt","claude","extractor","github","instagram","knowledge","telegram","threads","vault","x"],"Command: Platform requests one owner erase its Ratatoskr-held account data.","proposed"],["identity.account_erasure_acknowledged","events","event","identity.account.erasure_acknowledged.v1","platform",["chatgpt","claude","extractor","github","instagram","knowledge","telegram","threads","vault","x"],["platform"],"Fact: one owner verified local account erasure or reports incomplete provider grant revocation.","proposed"],["core.blob_ref","core","payload","","extractor",["extractor","github","knowledge","vault"],["extractor","knowledge","vault"],"Content-addressed reference to bytes owned by one service.","proposed"],["core.error_envelope","core","payload","","platform",["platform","extractor","knowledge"],["platform"],"Machine-actionable error with a stable code, a user-safe message and explicit retryability.","proposed"],["content.document","content","payload","","extractor",["extractor"],["knowledge"],"Canonical ordered document blocks and extraction provenance.","proposed"],["platform.operation_snapshot","platform","payload","","platform",["platform"],["platform"],"Point-in-time public view of a long-running operation.","proposed"],["platform.operation_progressed","events","event","platform.operation.progressed.v1","platform",["platform"],["knowledge"],"Fact: an operation reached the status carried in the payload.","proposed"],["platform.operation_reported","events","event","platform.operation.reported.v1","platform",["extractor","github","knowledge","vault","x"],["platform"],"Producer report of operation progress facts known outside Platform.","proposed"],["social.capture_requested","commands","command","social.capture.requested.v1","platform",["platform"],["instagram","threads","x"],"Explicit browser social-permalink capture request routed by source provenance.","proposed"],["social.social_source_snapshot","social","payload","","x",["instagram","threads","x"],["knowledge"],"Normalized social source plus the facts of one capture of it.","proposed"],["knowledge.social_source_analysis_completed","events","event","knowledge.analysis.completed.v1","knowledge",["knowledge"],["instagram"],"Fact: Knowledge completed analysis of one normalized social-source revision.","proposed"],["github.repository_preview_request","github","payload","","github",["telegram"],["github"],"Read-only request for bounded metadata about one canonical GitHub repository URL.","proposed"],["github.repository_preview_response","github","payload","","github",["github"],["telegram"],"Stable repository identity, bounded display metadata, and available explicit actions.","proposed"],["github.repository_action_request","github","payload","","github",["telegram"],["github"],"Confirmed idempotent request for metadata, tracking, or provider-star behavior.","proposed"],["github.repository_action_result","github","payload","","github",["github"],["telegram"],"Truthful aggregate plus metadata, provider-star, and desired-backup component outcomes.","proposed"],["operational.public_status_document","operational","payload","","platform",["platform"],["web"],"Anonymous sanitized status of four stable Ratatoskr component groups.","accepted"],["operational.operation_inspection_page","operational","payload","","platform",["platform"],["web"],"Bounded redacted deployment-wide operation summaries for an authorized owner.","accepted"],["operational.schedule_inspection_page","operational","payload","","platform",["platform"],["web"],"Bounded schedule status projections without command payloads or configuration.","accepted"],["operational.audit_event_page","operational","payload","","platform",["platform"],["web"],"Bounded redacted audit history with nullable actor attribution.","accepted"],["knowledge.repository_analysis_requested","events","event","knowledge.repository_analysis.requested.v1","github",["github"],["knowledge"],"Command: GitHub Catalog requests Knowledge analysis of one immutable repository revision.","proposed"],["knowledge.repository_analysis_completed","events","event","knowledge.repository_analysis.completed.v1","knowledge",["knowledge"],["github"],"Fact: Knowledge completed analysis of one immutable GitHub repository revision.","proposed"],["knowledge.repository_analysis_failed","events","event","knowledge.repository_analysis.failed.v1","knowledge",["knowledge"],["github"],"Fact: Knowledge reached a terminal, safe-coded failure for one immutable repository analysis request.","proposed"],["social.source_captured","events","event","social.source.captured.v1","x",["instagram","threads","x"],["knowledge"],"Fact: a social source became part of a user's library.","proposed"],["social.source_updated","events","event","social.source.updated.v1","x",["instagram","threads","x"],["knowledge"],"Fact: an existing social source's normalized record changed.","proposed"],["social.source_removed","events","event","social.source.removed.v1","x",["instagram","threads","x"],["knowledge"],"Fact: a user's library stopped holding a social source.","proposed"],["ai_archive.archive_snapshot","ai_archive","payload","","chatgpt",["chatgpt","claude"],["knowledge"],"The whole normalized graph of one provider export import.","proposed"],["ai_archive.project","ai_archive","payload","","chatgpt",["chatgpt","claude"],["knowledge"],"One normalized AI project node with its parser stamp.","proposed"],["ai_archive.conversation","ai_archive","payload","","chatgpt",["chatgpt","claude"],["knowledge"],"One normalized AI conversation graph with parser stamp and content digest.","proposed"],["ai_archive.message","ai_archive","payload","","chatgpt",["chatgpt","claude"],["knowledge"],"One normalized AI message node with content parts and parser stamp.","proposed"],["ai_archive.archive_imported","events","event","ai_archive.archive.imported.v1","chatgpt",["chatgpt","claude"],["knowledge"],"Fact: one provider export finished importing as immutable evidence.","proposed"],["ai_archive.conversation_added","events","event","ai_archive.conversation.added.v1","chatgpt",["chatgpt","claude"],["knowledge"],"Fact: a conversation entered a user's AI-archive index.","proposed"],["ai_archive.conversation_updated","events","event","ai_archive.conversation.updated.v1","chatgpt",["chatgpt","claude"],["knowledge"],"Fact: an existing conversation's normalized record changed.","proposed"],["ai_archive.subject_tombstoned","events","event","ai_archive.subject.tombstoned.v1","chatgpt",["chatgpt","claude"],["knowledge"],"Fact: authoritative deletion evidence made an AI archive subject unavailable.","proposed"],["ai_archive.project_added","events","event","ai_archive.project.added.v1","chatgpt",["chatgpt","claude"],["knowledge"],"Fact: a normalized AI project entered the search index with immutable import provenance.","proposed"],["ai_archive.project_updated","events","event","ai_archive.project.updated.v1","chatgpt",["chatgpt","claude"],["knowledge"],"Fact: a normalized AI project changed with immutable import provenance.","proposed"],["ai_archive.artifact_added","events","event","ai_archive.artifact.added.v1","claude",["chatgpt","claude"],["knowledge"],"Fact: a first-class AI Artifact entered the search index with immutable import provenance.","proposed"],["ai_archive.artifact_updated","events","event","ai_archive.artifact.updated.v1","claude",["chatgpt","claude"],["knowledge"],"Fact: a first-class AI Artifact changed with immutable import provenance.","proposed"],["knowledge.ai_archive_analysis_completed","events","event","knowledge.ai_archive_analysis.completed.v1","knowledge",["knowledge"],["chatgpt","claude"],"Fact: Knowledge accepted analysis of one immutable AI archive subject revision.","proposed"],["backup.desired_backup_policy","backup","payload","","github",["github"],["vault"],"Versioned statement of which repositories must be preserved and at what depth.","proposed"],["vault.backup_policy_acknowledged","events","event","vault.backup_policy.acknowledged.v1","vault",["vault"],["github"],"Fact: Vault answered one desired-backup-policy version with accepted or rejected.","proposed"],["platform.notification_raised","events","event","platform.notification.raised.v1","platform",["knowledge","github","vault","x"],["telegram"],"Fact: a producer judged that one of its users should be told something.","proposed"],["transfer.upload_session_request","transfer","payload","","platform",["mobile","export-agent"],["extractor","chatgpt","claude"],"Digest-first upload declaration a client sends before any payload byte moves.","proposed"],["transfer.upload_finalize_request","transfer","payload","","platform",["mobile","export-agent"],["extractor","chatgpt","claude"],"Client request to verify and seal a fully recorded upload session.","proposed"],["transfer.upload_session_opened","transfer","payload","","platform",["extractor","chatgpt","claude"],["mobile","export-agent"],"Receiver answer opening an upload session: opaque token, chunking, expiry.","proposed"],["transfer.upload_chunk_receipt","transfer","payload","","platform",["extractor","chatgpt","claude"],["mobile","export-agent"],"Per-chunk acknowledgement; answers idempotently for replayed identical bytes.","proposed"],["transfer.upload_status_response","transfer","payload","","platform",["extractor","chatgpt","claude"],["mobile","export-agent"],"Resume view naming exactly which derived chunk indices are recorded.","proposed"],["transfer.upload_completion_outcome","transfer","payload","","platform",["extractor","chatgpt","claude"],["mobile","export-agent"],"Terminal finalize answer: stored under a BlobRef, or explicit digest mismatch.","proposed"],["channel_digest.subscription_set_requested","commands","command","channel_digest.subscription.set_requested.v1","channel-digests",["platform"],["channel-digests"],"Command: Platform sets one owner's desired public-channel subscription state.","proposed"],["channel_digest.run_requested","commands","command","channel_digest.run.requested.v1","channel-digests",["platform"],["channel-digests"],"Command: Platform requests one bounded on-demand or scheduled channel-digest run.","proposed"],["channel_digest.schedule_occurrence_requested","commands","command","channel_digest.schedule.occurrence_requested.v1","channel-digests",["platform"],["channel-digests"],"Command: Platform emits one deployment schedule occurrence for digest-service fan-out.","proposed"],["knowledge.channel_digest_recap_requested","commands","command","knowledge.channel_digest_recap.requested.v1","knowledge",["channel-digests"],["knowledge"],"Command: the digest service asks Knowledge to recap one verified immutable manifest.","proposed"],["knowledge.channel_digest_recap_completed","events","event","knowledge.channel_digest_recap.completed.v1","knowledge",["knowledge"],["channel-digests"],"Fact: Knowledge durably stored one grounded channel recap result.","proposed"],["knowledge.channel_digest_recap_failed","events","event","knowledge.channel_digest_recap.failed.v1","knowledge",["knowledge"],["channel-digests"],"Fact: Knowledge terminally failed one channel recap with a safe closed reason.","proposed"]];
+  const svcs = order.filter(id => CONTRACTS.some(c => c[5].includes(id) || c[6].includes(id)));
+  const ckState = { kind: "all", svc: null };
+  const ckBox = document.getElementById("ckind");
+  [["all", "All 55"], ["event", "Events"], ["command", "Commands"], ["payload", "Payloads"]].forEach(([v, t]) => {
+    const n = v === "all" ? "" : ` ${CONTRACTS.filter(c => c[2] === v).length}`;
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="radio" name="ckind" value="${v}" ${v === "all" ? "checked" : ""}><span>${v === "all" ? t : t + n}</span>`;
+    ckBox.appendChild(lab);
+  });
+  document.getElementById("cm-head").innerHTML = `<tr><th>Contract</th>${svcs.map(id => `<th class="svc" scope="col" tabindex="0" data-svc="${id}">${id}</th>`).join("")}</tr>`;
+  // Group by bounded context: payloads by registry family, events and commands by their type's context prefix.
+  const GROUPS = [["core", "core envelopes and identifiers"], ["identity", "account erasure"], ["platform", "operations and notifications"], ["operational", "operator inspection (web)"], ["content", "document IR"], ["social", "social sources"], ["knowledge", "knowledge analysis and recaps"], ["github", "github"], ["backup", "backup policy"], ["vault", "vault"], ["ai_archive", "AI archive"], ["channel_digest", "channel digests"], ["transfer", "blob transfer"]];
+  const groupOf = c => (c[2] === "payload" ? c[1] : c[3].split(".")[0]);
+  const rank = Object.fromEntries(GROUPS.map(([g], i) => [g, i]));
+  const famName = Object.fromEntries(GROUPS);
+  CONTRACTS.sort((a, b) => (rank[groupOf(a)] ?? 99) - (rank[groupOf(b)] ?? 99));
+  function renderCM() {
+    const rows = [];
+    let fam = null;
+    for (const c of CONTRACTS) {
+      if (ckState.kind !== "all" && c[2] !== ckState.kind) continue;
+      if (groupOf(c) !== fam) { fam = groupOf(c); rows.push(`<tr class="fam"><td colspan="${svcs.length + 1}">${famName[fam] ?? fam}</td></tr>`); }
+      const involved = ckState.svc && (c[5].includes(ckState.svc) || c[6].includes(ckState.svc));
+      const cls = ckState.svc && !involved ? "dim-row" : "";
+      rows.push(`<tr class="${cls}"><td class="name"><code>${esc(c[3] || c[0])}</code><span class="k-tag">${c[2]}</span><span class="why">${esc(c[7])}</span></td>${svcs.map(id => {
+        const p = c[5].includes(id), q = c[6].includes(id);
+        const mark = (p ? `<span class="pc p" title="${id} produces">P</span>` : "") + (q ? `<span class="pc c" title="${id} consumes">C</span>` : "");
+        return `<td class="c${ckState.svc === id ? " on" : ""}">${mark}</td>`;
+      }).join("")}</tr>`);
+    }
+    document.getElementById("cm-body").innerHTML = rows.join("");
+    document.querySelectorAll("th.svc").forEach(th => th.classList.toggle("on", th.dataset.svc === ckState.svc));
+  }
+  ckBox.addEventListener("change", ev => { ckState.kind = ev.target.value; renderCM(); });
+  const cmHead = document.getElementById("cm-head");
+  const pickSvc = th => { ckState.svc = ckState.svc === th.dataset.svc ? null : th.dataset.svc; renderCM(); };
+  cmHead.addEventListener("click", ev => { const th = ev.target.closest("th.svc"); if (th) pickSvc(th); });
+  cmHead.addEventListener("keydown", ev => { const th = ev.target.closest("th.svc"); if (th && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); pickSvc(th); } });
+  renderCM();
+
+  // public API
+  const API = [["GET","/v1/admin/audit-events","Inspect the audit trail"],["GET","/v1/admin/operations","Inspect recent operations"],["GET","/v1/admin/operations/{operation_id}","Inspect one operation"],["GET","/v1/admin/schedules","Inspect schedule status"],["POST","/v1/ai-archives/{provider}","Prepare an AI archive import"],["POST","/v1/ai-archives/{provider}/{operation_id}/uploads","Open an AI archive transfer"],["PUT","/v1/ai-archives/{provider}/{operation_id}/uploads/{token}/chunks/{index}","Store one AI archive chunk"],["POST","/v1/ai-archives/{provider}/{operation_id}/uploads/{token}/finalize","Finalize an AI archive transfer"],["GET","/v1/ai-archives/{provider}/{operation_id}/uploads/{token}/status","Read AI archive transfer status"],["GET","/v1/capabilities","What this deployment can do for you"],["POST","/v1/captures","Submit an address for capture"],["GET","/v1/devices","List your active devices"],["POST","/v1/devices/pair","Exchange a pairing code for device credentials"],["POST","/v1/devices/pairing-codes","Mint a single-use pairing code for a new device"],["DELETE","/v1/devices/{device_id}","Delete one of your devices"],["POST","/v1/ingest/webhooks/{source_id}","Push a signal from a registered source"],["PUT","/v1/library/items/{analysis_id}/read-state","Replace one library item's read state"],["GET","/v1/library/search","Search or browse the caller's library"],["POST","/v1/oauth/relays/{relay_id}","Claim a relayed callback"],["GET","/v1/oauth/{provider}/callback","Receive a provider's OAuth redirect"],["GET","/v1/operations","List your operations"],["GET","/v1/operations/{operation_id}","The current state of one operation"],["POST","/v1/operations/{operation_id}/cancel","Ask for an operation to stop"],["GET","/v1/operations/{operation_id}/events","Follow one operation's progress"],["GET","/v1/sessions","List your active sessions"],["POST","/v1/sessions/device","Open a session from a device's root secret"],["POST","/v1/sessions/refresh","Rotate a device session's credentials"],["POST","/v1/sessions/revoke-all","Revoke every one of your sessions"],["POST","/v1/sessions/telegram","Exchange a Telegram identity assertion for a session"],["DELETE","/v1/sessions/{session_id}","Revoke one of your sessions"],["GET","/v1/status","Read public status"]];
+  const apiGroups = {};
+  for (const [m, path, why] of API) {
+    const seg = path.split("/")[2];
+    const g = { sessions: "Sessions", devices: "Devices and pairing", captures: "Capture", operations: "Operations", "ai-archives": "AI archive upload", library: "Library", admin: "Operator inspection", oauth: "Provider OAuth", ingest: "Webhook ingest", capabilities: "Deployment", status: "Deployment" }[seg] || seg;
+    (apiGroups[g] ||= []).push([m, path, why]);
+  }
+  document.getElementById("api").innerHTML = Object.entries(apiGroups).map(([g, ops]) =>
+    `<div class="card"><h3>${g}</h3>${ops.map(([m, path, why]) => `<div class="op"><span class="m">${m}</span><code>${esc(path)}</code><span class="why">${esc(why)}</span></div>`).join("")}</div>`).join("");
+
   // interaction
   const svg = document.getElementById("map");
   svg.addEventListener("click", ev => {
@@ -644,7 +1220,7 @@ td.n { font-variant-numeric: tabular-nums; }
     const b = ev.target.closest("[data-select]");
     if (b) {
       state.selected = b.dataset.select; render();
-      if (b.closest("table")) document.getElementById("stage").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      if (!b.closest("#panel")) document.getElementById("stage").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
       nodeEls.get(b.dataset.select)?.focus({ preventScroll: true });
     }
     if (ev.target.closest("[data-clear]")) { state.selected = null; render(); }
