@@ -52,6 +52,17 @@ cd ..
 
 Fixture tests prove diagnostics and non-mutation; the committed-snapshot test proves the exact 16
 IDs, paths, audited gitlink SHAs, nonempty pinned-object evidence, clean baselines, and lock freshness.
+Two further tests in `harness/crates/workspace-core/tests/` read the pinned submodules, so they stay
+red between the first child merge and the pin advance, by design. `port_allocation.rs` fails when the
+`## Ports` table of `docs/DEPLOYMENT_TARGET.md` lists a port twice or omits a documented listener, and
+when a repository's `deploy/**/*.example` or `.env.example` binds a port that is not in the table or
+that another listener already holds. `bus_acl.rs` fails when `ratatoskr-platform`'s
+`deploy/nats/ratatoskr.conf` does not hold exactly the thirteen identities, when a service-carried
+copy of its stanza differs from the reviewed one (comments, whitespace and the nkey token ignored),
+when the extractor's old permission file returns, or when a non-Edge identity can create topology or
+read the bus wholesale. Both fail loudly for a repository that is not checked out instead of skipping
+it. Neither contacts a broker: the real-broker permission matrix lives in `ratatoskr-platform`.
+
 This gate does not rerun child CI, deploy the fleet, contact a provider, or establish runtime
 end-to-end health.
 
