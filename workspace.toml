@@ -254,6 +254,7 @@ profiles = ["core", "export"]
 digest_inputs = ["Cargo.lock", "openspec/config.yaml"]
 dependencies = [
   { repository = "contracts", kind = "contract", purpose = "backup and blob transfer contracts" },
+  { repository = "github", kind = "event", purpose = "desired backup policy command lane and policy acknowledgement" },
   { repository = "platform", kind = "api", purpose = "authenticated backup orchestration" },
 ]
 

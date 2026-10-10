@@ -260,3 +260,54 @@ fn no_two_deploy_examples_bind_the_same_port_and_every_bind_is_allocated() {
 
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
+
+#[test]
+fn the_bind_matcher_accepts_documented_forms_and_rejects_the_rest() {
+    assert_eq!(
+        bind_of("RATATOSKR__ADMIN__BIND=127.0.0.1:9088"),
+        Some(("RATATOSKR__ADMIN__BIND".to_owned(), 9088))
+    );
+    assert_eq!(
+        bind_of("#RATATOSKR__WEBHOOK__BIND=127.0.0.1:8182"),
+        Some(("RATATOSKR__WEBHOOK__BIND".to_owned(), 8182))
+    );
+    assert_eq!(
+        bind_of("# RATATOSKR__ADMIN__LISTEN_ADDRESS=\"0.0.0.0:9085\""),
+        Some(("RATATOSKR__ADMIN__LISTEN_ADDRESS".to_owned(), 9085))
+    );
+    assert_eq!(bind_of("# Default 127.0.0.1:9464 (edge)"), None);
+    assert_eq!(
+        bind_of("RATATOSKR__BUS__ENDPOINT=nats://127.0.0.1:4222"),
+        None
+    );
+    assert_eq!(bind_of("RATATOSKR__ADMIN__BIND="), None);
+    assert_eq!(bind_of("RATATOSKR__ADMIN__BIND=:9000"), None);
+}
+
+#[test]
+fn claims_conflict_across_repositories_keys_and_roles_but_not_within_one_role() {
+    let claim = |repository: &str, key: &str, role: Option<&str>| Claim {
+        repository: repository.to_owned(),
+        key: key.to_owned(),
+        role: role.map(str::to_owned),
+        port: 9000,
+        file: PathBuf::new(),
+    };
+
+    assert!(conflicts(
+        &claim("extractor", "RATATOSKR__ADMIN__BIND", Some("extractor")),
+        &claim("telegram", "RATATOSKR__ADMIN__BIND", Some("webhook")),
+    ));
+    assert!(conflicts(
+        &claim("telegram", "RATATOSKR__ADMIN__BIND", None),
+        &claim("telegram", "RATATOSKR__WEBHOOK__BIND", None),
+    ));
+    assert!(conflicts(
+        &claim("platform", "RATATOSKR__ADMIN__BIND", Some("edge")),
+        &claim("platform", "RATATOSKR__ADMIN__BIND", Some("ingest")),
+    ));
+    assert!(!conflicts(
+        &claim("telegram", "RATATOSKR__ADMIN__BIND", None),
+        &claim("telegram", "RATATOSKR__ADMIN__BIND", Some("webhook")),
+    ));
+}

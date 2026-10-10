@@ -1,0 +1,419 @@
+id: XR-021
+state: pending-publication
+goal: Fix the cross-repository defects of the Ratatoskr fleet at the boundaries between repositories (bus subjects and envelopes, outbox relays, NATS permissions, port collisions, the AI archive upload binding, the channel-digest chain, explicit social captures, the content capture command and Telegram blob captures, privacy deletion), record the resulting behaviour in the workspace spec store, and pin a compatible snapshot.
+non_goals:
+  - "Production host provisioning: nkeys, the ratatoskr-telegram-blobs group, external provider credentials (listed under rollout for the operator)."
+  - "Per-producer operation-report subjects, a GitHub re-queue sweep for dropped repository analysis requests, and extractor handling of a document above the 1 MiB NATS message limit (follow-ups, recorded under residual_risks)."
+  - "Image capture in Telegram: refused truthfully and tracked as a refusal-only issue."
+  - "Converting docs/REQUIREMENTS.md or its siblings into specs; release tags; any edit under repos/."
+repositories:
+  - id: ratatoskr-web
+    role: unchanged
+    branch: main@3c30f15f8d78d116aaf726e4ae085e8d2f317ea5
+    writes: none
+  - id: ratatoskr-mobile
+    role: unchanged
+    branch: main@67646d3ec6f50a458b59ec50ccea0cec29981e98
+    writes: none
+  - id: ratatoskr-contracts
+    role: "wave-1 additive message contracts: operation report validation, receipt binding constants, channel-digest manifest and views, schedule registration, content capture and extracted document, backup policy command, social capture reports"
+    branch: main@ad16855c4e7f3d52cd118274faa3b8f3ab4da576
+    base: cac6c8d5aea25fa0f9ad96b08b8db992a44b4b29
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "a2985e1331d80393d5488100f9070efe5eff6bf7 docs: open the xr-021-fleet-message-contracts change"
+      - "bdbdc389c75893882dfe6ffe85f6a7a720c5767f feat(operation-contracts): validate reports against status invariants"
+      - "9e1f38b9ad890ae9561031bb6a770f21a22997d7 feat(ai-archive-contracts): add the loopback archive receipt binding"
+      - "4ec02fe98dd1cc069540eb48d78246f4ad11fa59 feat(ai-archive-contracts): verify conversation content digests"
+      - "f4e53c72617f311108c0069e3f618a3cd5f20085 feat(channel-digest-contracts): add the digest manifest contract"
+      - "4e20e74689c3b36b869b2b8317202795529af617 feat(channel-digest-contracts): add the owner read-API views"
+      - "cfb00fff280b5287831dbea63422fc713f361cf1 feat(operation-contracts): add the schedule registration command"
+      - "d4195fb84e0dd679521dfad3dbf361f335af5679 feat(document-contracts): add the content capture command"
+      - "c09a8376881734c298b21bc53f375f0bedc7e254 feat(document-contracts): add the document extracted event"
+      - "b84d12ae581b9e1405240b6a993150eea0d330ef feat(backup-contracts): add the Vault policy apply command"
+      - "245e56b152b39db104b8916fcfea82b1b5195e06 feat(social-contracts): add the capture report builders"
+      - "1d152cbb3ab9731a7824d15588a93476495243ea test(social-contracts): pin the canonical captured_at spelling"
+      - "498048faf2b0a62e1b64d687a4c1bcc17d43aeac fix(contracts): correct operation report producers and a summary"
+      - "ad16855c4e7f3d52cd118274faa3b8f3ab4da576 chore: bless the public API baselines for the XR-021 contracts"
+  - id: ratatoskr-platform
+    role: "single reviewed NATS file with thirteen identities, Edge-provisioned durables, typed capture and channel-digest envelopes, blob capture route, archive upload binding, channel-digest public routes"
+    branch: main@f13a78587009f2a6bd5369e413e5f56b83141c0d
+    base: c3d0d3979106b690ae2b0d8450b42e37264d857a
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "5e6a169014df7399c96424dbf3d1074cb2217b7b chore(deps): update install-action to v2.87.27 (#13)"
+      - "7ff31b70d74feb5e0fd38c10f9769089cc6689a8 feat(bus): provision the fleet topology and ship the 13-identity ACL"
+      - "7043c7265542a7111c904e59fce938cb62342201 fix(archives): accept contract-sized chunks, forward as POST, report truthfully"
+      - "74cadc97c7945530b8bc0f1d70a95aed83bc2899 feat(captures): emit the typed capture command and add the blob route"
+      - "b8111ac443f08eac2063fc30f7302c242c8cec1d feat(digests): add the channel-digest routes, reads and typed scheduling"
+      - "a894f78b404121494073f6c1f23e1721a379010d docs(platform): regenerate OpenAPI and document the new routes and keys"
+      - "3fab580045fb7005d6c51e36c839cc677d496e28 fix(digests): store the subscription ledger route without its path template"
+      - "617e2f9906237163b735557b8bcbb82da95c009e test(edge): count the extractor's eight grants, not seven"
+      - "f13a78587009f2a6bd5369e413e5f56b83141c0d chore(openspec): archive the four XR-021 changes"
+  - id: ratatoskr-extractor
+    role: "typed capture decoder, Telegram blob reads, narrow NATS identities, wrapped document event, operator listener moved to 9088"
+    branch: main@da1247ae3f842ee9ad1550fc0afc8780b5a16026
+    base: 68afae406b0e5fc624feb57ee460b59600fb4207
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "5ab74e779e87919da36f78cf1b2504ffe748bf41 chore(deps): update install-action to v2.87.27 (#13)"
+      - "6564509dc2444a99707160bda220d11b5ef92106 docs(openspec): propose xr-021 extractor capture and bus identity"
+      - "92528104242abc8407b6836e02fb8ad452c07fbc chore(deps): pin ratatoskr contracts to the XR-021 revision"
+      - "8782553846299c65797a6987db930e4f372241b9 feat(core)!: add telegram_root, provision_topology and port 9088"
+      - "b5440954f525614f98c55b9e81c924bfb5993a99 feat(eventing)!: typed capture, blob runs and a narrow bus identity"
+      - "c58601a0f7e7148a3add83704d05dc3c1db09663 ci: give the authorized-broker tests a nats-server binary"
+      - "519637b40c1cf5d487e4693c9a613d02539f31e2 docs: describe typed captures, blob captures and the bus identity"
+      - "2ea24a0375a87b4de392f11581b6a93fe679440e docs(openspec): tick the XR-021 extractor tasks and record the design"
+      - "800965ecb70555747643600016e66515de602ef9 test(eventing): flush the stub subscription before the render request"
+      - "50b481e05db657ceb4bc39f44bf308e6a45e137c ci: copy nats-server from its real path in the alpine image"
+      - "89773a6be17bd77643be62d692c0db094e0f0e3a chore(deps): sort nkeys among the workspace dependencies"
+      - "df593a836de550a8a29d99c2f145c2470aebe94c docs: name the blob test file and the render concurrency limit"
+      - "09306afeaf10b44a2e2eee992e77bf0d2f1695ed test(eventing): require the fixed telegram host on every blob source"
+      - "e856bde98ece077b97b5a61da604c8bf2c11b644 fix(eventing): bind the fixed telegram host on every blob source"
+      - "3a550dc699713d24fae9c95e9b16ac830010945e test(extractor): cover unreadable and oversize peer blobs"
+      - "da1247ae3f842ee9ad1550fc0afc8780b5a16026 refactor(extractor): pass finish_pdf one input struct"
+  - id: ratatoskr-knowledge
+    role: "supervised ingest consumers, completion outbox, channel-digest manifest read and recap composition, blob erasure queue"
+    branch: main@3833d489d444270d854afa31e38dc87247d7e477
+    base: 269c269465c49b4112eb0846dfa5088c760c990c
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "d3eb3c3e3896d9febd9855b6dd24557063e5bfaf docs: open OpenSpec change for XR-021 ingest, recap and deletion"
+      - "1deb4edf40f834107237f7cb8089db8d93085d59 feat(knowledge): ingest worker, resumable recap and scoped deletion"
+      - "c98269c173a7c811f6051dc920eceeace7ed4a61 docs(knowledge): document ingest worker, recap contract and deletion queue"
+      - "39985fd4e4066949b0d01c8e054c02cebc5d0369 docs(openspec): tick the XR-021 knowledge tasks and record the gate"
+      - "c929c821f3b41a70b0c8a7389ec88e6c24cf7806 test(knowledge): split the long ingest schema scenario"
+      - "647e16426711ef8865a7a7c83bafcd2d654a35b4 fix(knowledge): default the ingest fetch batch to one"
+      - "e6aa335386953553e493ce131ecc32efb08f951a test(knowledge): cover every ingest consumer and tenant binding"
+      - "ec62d90130acfcef6b571c1f0a7c7850fc2bd510 docs(knowledge): record the review fixes and what was proven"
+      - "e13bd8baace87501ac7ef07a24488be56dfd1608 chore(openspec): archive the XR-021 knowledge change"
+      - "0a3745d946a2ad29f973db0e7e34bf23fa04bc14 fix(knowledge): redeliver transient repository intake and settlement failures"
+      - "afb96544c7c00c382a654f28ae5683717cae082a fix(ci): take nats-server from the path the pinned image uses"
+      - "0ff3f54b342ecb73be7971d0ae0e591b665819d1 fix(knowledge): resume analysis runs from durable state on redelivery"
+      - "604a66beb222c8e8456c7ab36861defb23102763 fix(knowledge): resume a run killed between its answer and its state change"
+      - "373d23a28858c2e31d3c51df653a3583e1a6bb24 fix(knowledge): redeliver a failed repository settlement past the budget"
+      - "3833d489d444270d854afa31e38dc87247d7e477 docs(knowledge): specify run resumption and record the review decisions"
+  - id: ratatoskr-channel-digests
+    role: "manifest and read API, typed operation reports, schedule registration, authorized worker bus"
+    branch: main@a476079ec0115c38ab8c76e9280bf23a1ea89539
+    base: 44768fc91d6fd3058d5237a0042b06d9153b3944
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "dc4beaa5e3c154d1d44210a38d34c3363e73eb68 chore: bump taiki-e/install-action (#6)"
+      - "c3a7a0174fde15ca8a3e54e683340c1150baa9cb chore: pin the XR-021 contracts commit and open the repair change"
+      - "a632969ed3895fab4b9cec2b21920dc18dec21aa feat: repair the channel digest chain onto the canonical contracts"
+      - "b72a3345b95580e31f986797aa2cd7af2e46edfb test: prove the channel-digests NATS identity on an authorization-enabled broker"
+      - "a476079ec0115c38ab8c76e9280bf23a1ea89539 docs: document the repaired chain and archive the XR-021 change"
+  - id: ratatoskr-github
+    role: "owner-keyed erasure and catalog collection, replay-safe acknowledgement, backup policy lane to Vault, README byte endpoint"
+    branch: main@dfb5a88090e9f84f1d9e48b27c47a8b7a1085c56
+    base: 17487140690bb162478378a117b6b62609b5f9c6
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "f5891b877dfa6eea01a2244327dc15cde54e0690 chore(deps): update install-action to v2.87.27 (#13)"
+      - "7f602247ac33bef2e5fe42f60ebc6a30363d8e17 chore(deps): pin ratatoskr contracts to ad16855 for XR-021"
+      - "abf1bae216cbdc8f307fc30e6fc7d271e91fd8b7 docs(openspec): open XR-021 bus and erasure changes"
+      - "0f90da49480c97dcece4e3b0d8cae7a13c5d88f7 feat(catalog): store complete class-prefixed envelopes in the outbox"
+      - "7d11544211681dfdd69c01a7307f862a8957d21d feat(service): anonymous capability probe and authorized README bytes"
+      - "852dbb627f3afda578bbba67bc90e9d10430b964 feat(service): relay outbox, consume results and wire the bus"
+      - "a9e1901b31cba9b9212ef16b3ceae797df134386 feat(deploy): add the GITHUB NATS identity fragment and broker test"
+      - "deecd76b0526cb385e5797556ee7aef04c921125 feat(catalog): erase real event shapes, collect orphans, ack replay-safely"
+      - "835a63381c1caf5174a7f88a4e50e83e1bf1c01b docs: document the bus, README route and erasure ledger"
+      - "dfb5a88090e9f84f1d9e48b27c47a8b7a1085c56 fix(test): inject fixed instants instead of reading the wall clock"
+  - id: ratatoskr-vault
+    role: "backup policy command consumer and acknowledgement"
+    branch: main@0a6c8d4700f7202633b5671e59341cb7d3f8bbc0
+    base: c4ee86c5ca5589871c0e6cf1da87c7f70f8f830d
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "cf26c9802664278e1885a312c8ab25ff14b860aa chore(deps): update install-action to v2.87.27 (#14)"
+      - "82960edcb562660b5a13b1224f88f406297c4d10 docs(openspec): propose the Vault policy lane for XR-021"
+      - "d793f2116246e2058b05190ac71ac375d795b551 chore(deps): pin the fleet contracts at the XR-021 commit"
+      - "887baf7ce725c1aff10a3a8cf4f46d529da21340 chore(deps): add the NATS client, nkeys and the uuid v5 feature"
+      - "7f881d17756fa88e7b7eceae4a3a22e9f7b8571c feat(core): map the desired backup policy to desired-state deliveries"
+      - "a6e10ad07b4218c23f45b79abbec30e8345e9ae9 feat(persistence): add the policy ledger and outbox relay queries"
+      - "c858aef0201ace5ea933ad4028ec3773d03f31e9 feat(core): validate the bus configuration"
+      - "292fb675668094ea1ad8f9982860eb49cdf6c8a6 feat(http): report the bus and stop the process when a task ends"
+      - "489a34cf0c547dc632c757a31ab280204bbbde9f feat(vault): consume the backup policy and relay its acknowledgement"
+      - "056cc1a1deb1de19f54abae3d5b9706c5bef3f49 feat(vault): add the Vault NATS identity and prove it on a real broker"
+      - "e4075ea8babed394d26e1ee6e57c330d182eb600 docs: document the policy lane, bus identity and NATS test setup"
+      - "62699add9178578352f810cd199541b6a28a051f fix(vault): make a redelivered policy command converge"
+      - "b8b27aa5eceb67e7f7750730aaacaf28c59bd0c0 test(vault): run the shipped lane under the Vault bus identity"
+      - "e9467ec455ba09e454b05ae0d3d00104e2f7f540 test(vault): fix the acknowledgement timestamp in the authorized-bus test"
+      - "0a6c8d4700f7202633b5671e59341cb7d3f8bbc0 fix(ci): copy nats-server from its real path in the pinned image"
+  - id: ratatoskr-x
+    role: "explicit capture resolver with tenant isolation, closed relay, operator listener moved to 9087"
+    branch: main@f1810d5078eb688aa3715c2edb95e87e2d742e16
+    base: b1bb58186e786e80ed539f9552b067bc4dd2a2fa
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "5d8e3082ad7ae966749a181b794fa8263f01a052 chore(deps): update install-action to v2.87.27 (#14)"
+      - "fb59b7b28d0604eff184fd664567e4eb78fb5132 docs: plan the explicit capture and relay change"
+      - "11f740c29207d5c704e49b5a7f643a4053aa7f1d chore: pin the XR-021 contracts commit"
+      - "6ec9655bb0b95afde68c9a5157040ec81b4ba41c feat(x-core): move the operator listener to 9087 and add public_capture config"
+      - "026acbfb021c32a77c953232092bdc1043e68bb6 feat(x): owner-scoped explicit capture lane, envelope outbox and JetStream relay"
+      - "df4034dcaf1b0a5f80f1ed5b047e9ade0e3516ff docs: describe the explicit capture lane, the relay and the new credential"
+      - "bd069973844a83b89c34bbfd9ecc633617e058fc fix(x-sync): end a capture whose post the contract rejects as unavailable"
+      - "3f52c5e5cbc45c3d646708db3b754058de2905f4 fix(x): terminate poison commands, log relay and resolver failures"
+      - "d5058991518cddfaccb742d1dd90994dba3da42d docs: record the review fixes and the CD6 deviation"
+      - "f1810d5078eb688aa3715c2edb95e87e2d742e16 test(x-capture): serialize the two JetStream consumer scenarios"
+  - id: ratatoskr-instagram
+    role: "explicit capture resolver and bookkeeping, NATS transport replacing the logging transport"
+    branch: main@956f0cb66c8357297db68140715f8413cd3f7adc
+    base: 9f134c5075eab65eb432aa3922bf2256c4c8de02
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "f115002b2426e36752ba7f91dd45f7983ee6ce36 chore(deps): update install-action to v2.87.27 (#13)"
+      - "0adf3a8ecbe68ad6672895e925e5104b1a15be8c chore: pin contracts ad16855 and open the XR-021 capture change"
+      - "7d47b1577f44a196ec311f25903787d92ddc0fb5 feat(capture): record the Platform operation at intake and queue a report"
+      - "957e33ecb941a34eef46895d97125361fbb6866e feat(resolution): add the Meta oEmbed public surface and fail-closed config"
+      - "f56e2c818dca3f19da89924fd45d73623a10297f feat(resolution): resolve captures with bounded retry and one terminal report"
+      - "a74492120d60b056048532eca50c958b29a4206b feat(publishing): relay outbox rows through JetStream and honour backoff"
+      - "8d5aca0f7104b021921026c24a1f270d513c8f7e test(e2e): drive one Instagram permalink from command to broker events"
+      - "72bab9270517f7349915963f051e24b4c40c5754 docs: describe the capture lifecycle, the relay and the new refusals"
+      - "8ab7ffe0870e14741865390dfb8a58bc954159bd test(config): use a placeholder password in the userinfo endpoint case"
+      - "956f0cb66c8357297db68140715f8413cd3f7adc test: mark the two wall-clock reads the database clock requires"
+  - id: ratatoskr-threads
+    role: "explicit capture resolver and bookkeeping, removal fact publication"
+    branch: main@51b0fdd968ab4817b6bf2bf63a5f0174dd78855c
+    base: 9ece8690760bd7c1815b307cd813620c6deafdd7
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "5b489251f81e1ce0ec37f66f9b01ee03cb335b3f chore: bump taiki-e/install-action (#12)"
+      - "ed525b697342e856c2dd70d910640ad2a937e992 chore(deps): update install-action to v2.87.27 (#13)"
+      - "29b0c8339d5be1ed012382d02e4f9ab9464637db chore(deps): pin every ratatoskr contracts dependency to one full SHA"
+      - "593007190b48a7845d6412b145df085d23e8f5c0 feat(threads-archive): resolve accepted captures and report each operation once"
+      - "19b6b8649a53fafd2ae92157d3dbca70f6fa013e fix(service): stopped workers make the process not ready and exit non-zero"
+      - "c713dbe11b5f0f8258de5f6d415ff5b9c91c962a docs: document capture resolution and open the XR-021 OpenSpec change"
+      - "d3be8b35b78d5455ce0d0e42bc5865fe655ca48a test(threads-archive): pin refused-command reports and message dispositions"
+      - "f43681a91f9b693a2f5c438f3be8b79686310208 fix(threads-archive): answer refused commands and settle messages per S02"
+      - "ea4a0fde4cdf7a0b6278574cc060be199bb1bc2e test(threads-archive): drive capture resolution from a fixed anchor instant"
+      - "51b0fdd968ab4817b6bf2bf63a5f0174dd78855c test(threads-archive): wait for the relay to mark rows published"
+  - id: ratatoskr-chatgpt
+    role: "receipt binding, archive fact emission, tombstones, deletion order, operator listener moved to 9085"
+    branch: main@c72a1faddb713afb43a95f44bb3f275c67789ac3
+    base: be32839a4ec48a71cc2d9db1d1c9e3629ec1e795
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "0895e05598194e3758516f307bff854fd2ceb2ad chore: bump taiki-e/install-action (#12)"
+      - "253bad0cc173f9af30279cee7668e81320c4945c chore(deps): update install-action to v2.87.27 (#13)"
+      - "b7eec712ffd13e4fa4cb22a35f3b5f7414ee6b40 docs(openspec): open the XR-021 receipt, facts and deletion change"
+      - "fb03ecff8c6df5b00dbb2f85d070bc3a02bd2372 chore(deps): pin ratatoskr contracts to the XR-021 revision"
+      - "5ed7b044091f6c80a1bc5ef747f10329ae0fdef5 fix(config): move the operator listener default to 9085"
+      - "7a4bb98443a13215f662307b2dd6f6e579577ff4 feat(receipt): serve the capability document and envelope every 405"
+      - "2be3e8967d832627a8e22f2e1da2079fec89c202 refactor(receipt): use the shared platform_receipt constants"
+      - "36950fd42805d734792a9ea16ccac19d82c69095 fix(receipt): report an incomplete import with the contract warning"
+      - "5f7dcf1ef142a32def8dcfa20f90e528924af61b test(events): recompute the conversation fixture digest the pin verifies"
+      - "dd4df30fe16847737fe1ea4c5fd81267f04ca3c3 feat(outbox): store complete envelopes and publish every archive event type"
+      - "0b19d4f46e2c0a066c0c3c0f275a26c8104d2a21 feat(facts): project the persisted import into ai_archive facts"
+      - "7592531729468b90c0114339f1d0ad3c141c5535 fix(deletion): remove rows before bytes and emit contract tombstones"
+      - "052683b56159ebad8431f07862972d75cf26ff54 docs: describe the archive facts, event delivery and deletion order"
+      - "38331b441b6d9279fecf688d525b503ca2a492bb docs(openspec): tick the verified XR-021 tasks"
+      - "c72a1faddb713afb43a95f44bb3f275c67789ac3 docs(openspec): archive xr-021-chatgpt-receipt-facts-deletion"
+  - id: ratatoskr-claude
+    role: "receipt binding, archive fact emission, tombstones, deletion order, operator listener moved to 9086"
+    branch: main@f3194364cac2a1bbf8f4483670c08195415c47ce
+    base: 3d5d2020ce3e14d429c4fd491913ec37bcab3b4d
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "0497d5fd755cee4e5cf6ff7d3919f12b52fe43d4 chore: bump taiki-e/install-action (#12)"
+      - "09126179b83b0ea0b5e6680d78b0fbf566ce44cc chore(deps): update install-action to v2.87.27 (#13)"
+      - "b255e25926caf557cb27b4a40fcb8b4e7f093bc7 docs(openspec): open the XR-021 receipt, facts and deletion change"
+      - "7fe90e60c751f162e1ad529d7d998f263f901444 chore(deps): pin the contracts to the XR-021 commit"
+      - "06436a60a3bac64f253dc9ee9804a2aefcb2dc9f feat(config): move the operator listener default to 9086"
+      - "c1e820a9a4ddf326c50bfb9252a0798ef49720ca feat(receipt): serve the capability probe and refuse with error envelopes"
+      - "aa4183d8d52b4defaa4c0ec38403066ab1b80b77 refactor(receipt): spell the receipt contract with its published constants"
+      - "9f6cd0c7584d9c2434bdce8028bbd85ca399a7b5 feat(report): report an incomplete import with the contract warning"
+      - "c6fd1ed8fca6b46aa111c3f5ebd6312358d8b1e8 feat(outbox): publish every archive event type through one ack-gated pump"
+      - "128742482f4863dd381a584e3f3d923dc6194a2d feat(projection): project the persisted import into ai_archive facts"
+      - "21ea3c0aa803d1f503d048c13eae0e6e11904f05 feat(privacy): delete rows first, close the dependents and tombstone by contract"
+      - "a3a85069da5aa8326722e2965f4a043c7a89eb33 docs: record the receipt, fact and deletion behaviour and close XR-021 tasks"
+      - "c21181c9e0a15ebe5ed4d82e84ec038cc8afb13f fix(runtime): serve the receipt on its own loopback listener"
+      - "a993d6e438573650e6ac0b1c7ed9e0795f9cee0f test(outbox): prove a refused publish backs off without starving later rows"
+      - "b5adedc7f661c51340bc9dbe865fca9018f7ecdf fix(projection): keep the reparse head honest and name unprojected subjects"
+      - "eae1cb91343395f2785a711eca79b4d14a0c0f07 fix(artifacts): identify an Artifact by account, scope and provider id"
+      - "bdcb8ecc1111376678b8cf3f5ed939a9e155335d docs: record the listeners, gaps, identity and deletion refusal for XR-021"
+      - "e4c752d59e4920b469d8dfbb000652acaba730ee fix(projection): decide added or updated per tenant and Artifact scope"
+      - "b5a419acf7c11a72c8ab192c32c9bed079473009 fix(privacy): tombstone every deleted conversation and project"
+      - "85e436cc503edf5303043e13aac2e3464093053e docs: record tenant-scoped fact decisions and the tombstone subjects"
+      - "f881bf263a738130889fe810dd8b64fb852b1ec3 test: split the long fixtures and prove tenant isolation of unscoped Artifacts"
+      - "71e692c945817dfa820b79b59438a34db696b406 fix(privacy): announce retained subjects again and drop deleted import heads"
+      - "d0bfc2acaf1f0d1cf09fda0e2d8bd416b95df727 perf(schema): index the latest-fact lookup of the outbox"
+      - "6627ac0b2d20384992ca73f33c587d5ac902f4d2 docs(openspec): record the retained-subject re-announcement and the third review fixes"
+      - "c1a96201f7934bec7b3f2e1c2a37f54dbb6e135e fix(privacy): scope analysis links and Artifact facts to the deleted archives"
+      - "702085a2c40d69639e08c35d801acc6cd9e37988 fix(config): refuse a Platform account mapping that is not one to one"
+      - "49f6f6b4b68b6c7f682e8429f5f2bfa1c08fc589 fix(reparse): persist the messages of a conversation it adds"
+      - "389cc6db10c4ce494de09b57e5d08cfa4141f5c5 test(outbox): prove publication order through the real pump"
+      - "f3194364cac2a1bbf8f4483670c08195415c47ce docs(openspec): align the deletion spec with the code and record the fourth review"
+  - id: ratatoskr-telegram
+    role: "PDF blob capture path, truthful failure replies, identity binding, deployment values"
+    branch: main@b43c62554b61cd70f89f581887d5903d74cdff5e
+    base: 8394d7ded7fc7feba0cb46d68c0e0f4df70a6c08
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "4a1c286bbdd01539a46b2e371e58954972b0ee44 chore(deps): update install-action to v2.87.27 (#15)"
+      - "9f56508ee24d27eb10559ab0a7fb0b92e8f92bef docs: propose xr-021 telegram pdf capture and identity binding"
+      - "382463fca1a86418026bf42674b06e7a9e642b85 feat(deploy): target the allocated Edge and a durable group-readable blob root"
+      - "65af18b5a0419253a2923383dfc83e7a5c018366 feat(webhook): PDF blob captures, failure replies, and identity binding"
+      - "3f638fb7607a073de8cf7aea04b31e88a505ed0f docs(openspec): archive xr-021-telegram-pdf-capture-and-identity"
+      - "a6636f34469dfb6d286f01614f09529d5df673fe refactor(webhook): bind each failed-capture class to its own reply"
+      - "b43c62554b61cd70f89f581887d5903d74cdff5e test(dispatcher): cover a failing identity binding write for real"
+  - id: ratatoskr-browser-extension
+    role: "canonical captured_at at the single wire edge"
+    branch: main@ff8bdd8e8816a499e34ba3aaefcfdd3879dea282
+    base: c0853285b2201b500e03b7d2ed9ffdfe3154cb27
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "724f03d1345ef9a92d840fcf8b0f9b7c375fa81d chore(deps-dev): bump fast-uri from 3.1.6 to 3.1.8 (#8)"
+      - "eb5c73abd8f666c4306c0bbb3d9c6075c6fa21ff chore(deps-dev): bump undici from 7.29.0 to 7.30.0 (#9)"
+      - "5b94c08dd29a8f3abc65041190430dbe40ed3be1 chore(deps-dev): bump brace-expansion from 1.1.18 to 1.1.21 (#10)"
+      - "6f277e3a3bffecb156daa298c2b01056376f63db chore(deps-dev): bump adm-zip from 0.6.0 to 0.6.1 (#11)"
+      - "6a94af65d786636cdd61e512da068e22e02cc0b4 chore(deps): update setup-node to v7.1.0 (#12)"
+      - "80f9c8f5a9e2c5859b978dddab9b051f4fd6fc77 chore(deps): bump source-map-js from 1.2.1 to 1.2.2 (#13)"
+      - "60e02c4363e7540eda81b1249ad92f35cc9779f3 docs(openspec): plan canonical wire timestamps for social captures"
+      - "ffe9e1aca320fa95d77797cfe6cb68f35816565a fix(capture): stamp social drafts with a canonical wire timestamp"
+      - "6952984009ed0db3b4b3f73e8a668627ac842d33 fix(protocol): reject trailing-zero fractions in draft captured_at"
+      - "4a7877fcf641468e407d3d31e1d10f2c244643e6 fix(capture): canonicalize captured_at at the Platform wire edge"
+      - "ff8bdd8e8816a499e34ba3aaefcfdd3879dea282 docs(openspec): archive xr-021-canonical-wire-timestamps"
+  - id: ratatoskr-export-agent
+    role: "HTTP 413 mapped to a permanent upload failure"
+    branch: main@da1acd41f20ce972b7530aad9c231ba7bd9b4a6c
+    base: 38102df0987bfb6557b647c3a11ad904161e4628
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    commits:
+      - "838b6c27c1b12d2b42c0de486f61bc3bc5248d70 test: add failing 413 permanent-failure tests for archive upload"
+      - "5f74e663307e4c35a9450d00c0164bc667db7c17 fix: treat Platform 413 as a permanent archive upload failure"
+      - "da1acd41f20ce972b7530aad9c231ba7bd9b4a6c docs: state the 2 GiB archive ceiling and the 413 retry rule"
+  - id: ratatoskr-workspace
+    role: cross-repository-specs-port-and-acl-checks-changeset-and-compatible-snapshot
+    branch: main
+    base: d3d37460cb0b73468aedda696a5ac471f5610934
+    commits: "git log d3d3746..HEAD on main (this record cannot contain the SHA of the commit that adds it)"
+dependency_order:
+  - ratatoskr-contracts
+  - [ratatoskr-platform, ratatoskr-extractor, ratatoskr-knowledge, ratatoskr-channel-digests, ratatoskr-github, ratatoskr-vault, ratatoskr-x, ratatoskr-instagram, ratatoskr-threads, ratatoskr-chatgpt, ratatoskr-claude, ratatoskr-telegram, ratatoskr-browser-extension, ratatoskr-export-agent]
+  - ratatoskr-workspace
+contracts:
+  contracts_sha: ad16855c4e7f3d52cd118274faa3b8f3ab4da576
+  change: additive only; no existing wire shape changes
+  new_or_extended:
+    - "OperationReported::validate"
+    - "ai_archive_contracts::platform_receipt"
+    - "AiConversation::compute_content_digest and verify_content_digest"
+    - "channel_digest.manifest"
+    - "channel_digest.subscription_view"
+    - "channel_digest.result_view"
+    - "platform.schedule_registration_requested"
+    - "content.capture_requested"
+    - "content.document_extracted"
+    - "backup.policy_apply_requested"
+    - "social_contracts::capture_report"
+    - "canonical captured_at fixtures"
+    - "operation_reported producers list and a summary text correction"
+  binding: every ratatoskr-* git dependency of every wave-2 repository names this one SHA
+  not_pinned: contracts origin/main is one commit ahead (a1f43aaf52e86b5af3400e56950aa43563bfa872, a CI action version bump); the snapshot pins the SHA every child builds against
+compatibility:
+  strategy: Expand in contracts first; every wave-2 repository depends only on that SHA and on local fakes; the workspace pins the verified set last. Development status applies, so there is one version, no negotiation and no migration.
+  hard_breaks:
+    - content.capture.requested.v1 moves from Platform's flat command document to the typed CommandEnvelope in Platform, the extractor and X together; interleaved old and new binaries terminate capture commands on decode, so they merge and deploy together
+    - "operator listener defaults move: extractor 9467 to 9088, X 8080 to 9087, ChatGPT 9084 to 9085, Claude 9084 to 9086"
+    - ChatGPT and Claude FinalizationFault, PrivacyDeletionService and Claude PrivacyDeletionExecutor::finalize signatures change
+    - Knowledge DeletionReceipt.orphan_digests_removed is renamed recovered_digests_removed and the job output orphan_blobs= becomes recovered_blobs=
+    - X ExplicitCaptureService is deleted; Instagram stops publishing to a log
+    - X, Instagram, Threads and Knowledge ingest refuse to start with a bus configured and no resolution surface or credentials
+    - the extractor's wide NATS permission file is deleted in favour of narrow stanzas in one reviewed file
+database:
+  strategy: Edit each current schema.sql in place (platform, extractor, knowledge, channel-digests, github, x, instagram, threads, chatgpt, claude) and recreate development databases from them.
+  migration_artifacts: none
+api:
+  version: 1
+  negotiation: none
+  generated_surface: ratatoskr-platform/openapi/openapi.json (new channel-digest routes and POST /v1/captures/blobs; POST /v1/captures unchanged so generated clients do not drift)
+runtime:
+  ports: docs/DEPLOYMENT_TARGET.md is the complete table; port_allocation.rs enforces it
+  bus: thirteen nkey identities in platform/deploy/nats/ratatoskr.conf; bus_acl.rs enforces the copies
+  telegram_blob_root: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, read group ratatoskr-telegram-blobs, read-only for the extractor
+workspace_changes:
+  openspec: openspec/changes/xr-021-fleet-cross-repo-fixes (five new capability specs and an added blob-references requirement; not archived until the workspace commits are published)
+  docs: docs/DEPLOYMENT_TARGET.md
+  harness_tests:
+    - "harness/crates/workspace-core/tests/port_allocation.rs"
+    - "harness/crates/workspace-core/tests/bus_acl.rs"
+  manifest: workspace.toml gains the vault to github event edge
+  manifest_edges_not_added:
+    - "knowledge to channel-digests"
+    - "platform to channel-digests"
+    - "platform to knowledge"
+    - "github to knowledge"
+  manifest_edges_not_added_reason: each closes a dependency cycle with an existing reverse edge and ws manifest check reports manifest.dependency.cycle for the full set (run on a copy); the runtime couplings are covered by the specs instead
+rollout:
+  - Install the thirteen public nkeys in ratatoskr.conf (generate the seeds as platform/deploy/nats/README.md says, replace every UREPLACE_ME_* placeholder) and reload NATS; the extractor's old key is replaced by its narrow stanza in the same reload.
+  - Restart Edge. It provisions every fixed durable and the browser_worker_completions bucket and refuses to start on a durable that differs from its specification.
+  - Start the extractor, the browser worker, Knowledge, channel-digests, GitHub and Vault, then the social services and the AI archive receivers. Deploy Platform Edge last relative to the importers because its receipt forward depends on their envelope and capability behaviour.
+  - Create the Telegram blob root and the ratatoskr-telegram-blobs group (install -d -o ratatoskr-telegram-webhook -g ratatoskr-telegram-blobs -m 2750).
+  - Set RATATOSKR__SCHEDULE__OWNER_USER_ID for channel-digests to a real user in identity.users so the daily schedule registers.
+  - "Provision the external credentials: an X developer app bearer token and a Meta app token. Without them X, Instagram and Threads refuse to start with a bus configured, by design."
+  - Merge and deploy Platform, the extractor and X together because of the capture command break.
+  - Recreate development databases from the edited schema.sql files.
+rollback:
+  - Stop the services (reverse of the start order), restore the previous NATS configuration, reload NATS, then restart Edge.
+  - "Never delete provisioned durables: their cursors are the only record of what was consumed."
+  - Revert the workspace pin commit to return to the previous snapshot. Nothing has shipped from this snapshot and the host is frozen (docs/DEPLOYMENT_TARGET.md), so there is no live deployment to roll back.
+required_checks:
+  - ./ws manifest check, ./ws lock check, ./ws status, ./ws doctor
+  - cd harness and cargo fmt --all -- --check, cargo clippy --workspace --all-targets --all-features --locked -- -D warnings, cargo test --workspace --all-features --locked
+  - openspec validate --all --strict and openspec validate --archived
+  - each child's own gate before its push
+  - integration profile contract tests under integration/tests
+issues:
+  refusal_only_telegram_images: https://github.com/po4yka/ratatoskr-telegram/issues/16
+residual_risks:
+  - evt.platform.operation.reported.v1 is one shared subject trusted by the envelope producer field; the extractor, X, Instagram, Threads and channel-digests can forge reports for one another and X can read every tenant's report metadata through its durable (per-producer subjects need a contract change).
+  - The events stream drops its oldest messages when full (1 GiB or 7 days), and evt.knowledge.repository_analysis.requested.v1 is an event, so a very deep backlog could drop a request GitHub already marked published (a GitHub re-queue sweep is the recommended follow-up).
+  - NATS caps a message at 1 MiB by default, so an oversized extracted document dead-letters in the extractor outbox.
+  - GitHub's REST reference documents only 204 and 422 for DELETE /applications/{client_id}/grant; treating 404 as already revoked is undocumented provider behaviour taken from the contract (recorded in the GitHub commit).
+  - Instagram's response classification is a starting point to correct against recorded live fixtures; X and Meta credentials are external dependencies the owner provisions.
+  - The Telegram blob store is content-addressed and deduplicated across users; the guard on POST /v1/captures/blobs is the Telegram session kind, the owner allow-list and the unguessable digest.
+  - integration/compose/export-agent-product.yaml is run by a script that writes its own narrow NATS file in which the ChatGPT and Claude identities may publish only their operation-report subject, while the XR-021 importers also publish eight ai_archive.* fact subjects; if that profile is run it will deny those publishes. It was not changed because it could not be run to show a failure (see composed_integration).
+  - The host group ratatoskr-telegram-blobs and the thirteen nkeys do not exist yet; until they do, extractor blob runs fail with blob_unreadable and no identity can authenticate.
+verification:
+  hosted_ci_of_pinned_heads: every check run on every pinned child commit concluded success when read through the GitHub API on 2026-10-11 (contracts 9, platform 7, extractor 6, knowledge 5, channel-digests 6, github 5, vault 5, x 5, instagram 5, threads 5, chatgpt 6, claude 5, telegram 5, browser-extension 4, export-agent 4)
+  red_before_green:
+    port_allocation_table: failed against the previous table with the missing listeners [8098, 8222, 9081, 9082, 9083, 9084, 9085, 9086, 9087, 9088, 9095, 9469, 9470, 9570]; passes after the table rewrite
+    port_allocation_examples: failed against the previous pins with port 9467 claimed by extractor and telegram, and 9469 and 9570 unallocated; passes after the pin advance
+    bus_acl: all four tests failed against the previous pins (seven identities, six service copies missing, extractor-permissions.conf present, eighteen durables without their permission); all pass after the pin advance
+  workspace_checks: ws manifest check valid, ws lock check current, ws status clean, ws doctor healthy; harness cargo fmt --check, clippy -D warnings and cargo test (51 tests across the workspace crates, including the new port_allocation and bus_acl files) all green; openspec validate --all --strict green
+  profile_contract_tests: web_operational, export_agent_product and telegram_deployment (against telegram b43c62554b61cd70f89f581887d5903d74cdff5e) PASS; telegram_notification and telegram_library contract tests could not run because they call the Docker API
+composed_integration:
+  status: not run
+  reason: "The Docker API was not reachable from the session that wrote this record. /var/run/docker.sock does not exist; the default colima context socket (/Users/po4yka/.colima/default/docker.sock) exists but refuses connections, and colima status fails with \"error retrieving current runtime: empty value\". No compose project was started and no composed assertion was made."
+  profiles:
+    export-agent-product: not run (needs Docker, swift, go and a keychain; covers the AI archive path; XPA-020 already records its composed run as pending)
+    telegram-notification: not run (needs Docker; Platform, Telegram and the article flow)
+    telegram-library: not run (needs Docker; Knowledge, Platform and Telegram)
+    web-operational: not run (needs Docker; Platform and Web)
+  flows_without_a_profile:
+    - "channel digest (PUT subscription, POST run, read result)"
+    - "ingestion (capture a URL, find it in library search with Knowledge in fixture mode)"
+    - "social (extension to Platform to NATS to each service to GET /v1/operations/{id})"
+    - "Telegram PDF path"
+  claim: none; the specs and the child repositories' own broker and database tests are the evidence for each hop, and no end-to-end composed claim is made
+pinned_snapshot:
+  contracts: ad16855c4e7f3d52cd118274faa3b8f3ab4da576
+  platform: f13a78587009f2a6bd5369e413e5f56b83141c0d
+  extractor: da1247ae3f842ee9ad1550fc0afc8780b5a16026
+  knowledge: 3833d489d444270d854afa31e38dc87247d7e477
+  channel-digests: a476079ec0115c38ab8c76e9280bf23a1ea89539
+  github: dfb5a88090e9f84f1d9e48b27c47a8b7a1085c56
+  vault: 0a6c8d4700f7202633b5671e59341cb7d3f8bbc0
+  x: f1810d5078eb688aa3715c2edb95e87e2d742e16
+  instagram: 956f0cb66c8357297db68140715f8413cd3f7adc
+  threads: 51b0fdd968ab4817b6bf2bf63a5f0174dd78855c
+  chatgpt: c72a1faddb713afb43a95f44bb3f275c67789ac3
+  claude: f3194364cac2a1bbf8f4483670c08195415c47ce
+  telegram: b43c62554b61cd70f89f581887d5903d74cdff5e
+  browser-extension: ff8bdd8e8816a499e34ba3aaefcfdd3879dea282
+  export-agent: da1acd41f20ce972b7530aad9c231ba7bd9b4a6c
+  mobile: 67646d3ec6f50a458b59ec50ccea0cec29981e98
+  web: 3c30f15f8d78d116aaf726e4ae085e8d2f317ea5
+  workspace_lock_sha256: d2a9c7cf7791c5bfe0524bf8a0b823120634c95a197190353ae2ddc48f94d85f

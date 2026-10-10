@@ -488,3 +488,62 @@ fn non_edge_stanzas_obey_the_permission_invariants() {
 
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
+
+const FIXTURE_STANZA: &str = r#"
+# comment with "quotes" and { braces
+{
+    nkey: UREPLACE_ME_WITH_THE_PUBLIC_NKEY_OF_RATATOSKR_VAULT_XXXXXXXX
+    permissions: {
+        publish: { allow: ["evt.vault.backup_policy.acknowledged.v1"] }
+        subscribe: { allow: ["_INBOX.>"] }
+    }
+}
+"#;
+
+#[test]
+fn comparison_ignores_comments_whitespace_and_the_nkey_token() {
+    let reformatted = FIXTURE_STANZA
+        .replace('\n', " ")
+        .replace("# comment with \"quotes\" and { braces", "")
+        .replace("XXXXXXXX", "XXXX");
+    let other = stanzas(&reformatted);
+    let original = stanzas(FIXTURE_STANZA);
+
+    assert_eq!(original.len(), 1);
+    assert_eq!(
+        original.first().map(|stanza| stanza.name.as_str()),
+        Some("VAULT")
+    );
+    assert_eq!(other.len(), 1);
+    assert_eq!(
+        original.first().map(Stanza::normalized),
+        other.first().map(Stanza::normalized)
+    );
+}
+
+#[test]
+fn comparison_detects_a_changed_subject() {
+    let widened = FIXTURE_STANZA.replace("acknowledged.v1", "acknowledged.v2");
+    let original = stanzas(FIXTURE_STANZA);
+    let changed = stanzas(&widened);
+
+    assert_ne!(
+        original.first().map(Stanza::normalized),
+        changed.first().map(Stanza::normalized)
+    );
+}
+
+#[test]
+fn wildcard_rule_accepts_only_ack_kv_direct_get_and_kv_subjects() {
+    for allowed in [
+        "evt.vault.backup_policy.acknowledged.v1",
+        "$JS.ACK.ratatoskr_commands.ratatoskr_vault_backup_policy.>",
+        "$JS.API.DIRECT.GET.KV_browser_worker_completions.>",
+        "$KV.browser_worker_completions.>",
+    ] {
+        assert!(is_allowed_wildcard(allowed), "{allowed} should be allowed");
+    }
+    for refused in ["evt.>", "cmd.>", "$JS.API.>", "$JS.ACK.>", "evt.*.v1"] {
+        assert!(!is_allowed_wildcard(refused), "{refused} should be refused");
+    }
+}

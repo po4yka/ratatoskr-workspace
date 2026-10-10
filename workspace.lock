@@ -1,5 +1,5 @@
 format_version = 1
-manifest_sha256 = "dc5bf9fc43994ee299e11501cff819e67bc2d8cf2916513361d355134d2e5e31"
+manifest_sha256 = "e4bed2c2044ce5aaf3ed8f8b57253b1aed0adab47fefa47c77bd21f96534ce22"
 gitmodules_sha256 = "e699febd0ff2a6a614af4018c6cbdcc593bd6a2b98195489bbdec182f4fcd128"
 
 [[repositories]]
@@ -7,10 +7,10 @@ id = "browser-extension"
 path = "repos/clients/browser-extension"
 remote = "https://github.com/po4yka/ratatoskr-browser-extension.git"
 default_branch = "main"
-commit = "c0853285b2201b500e03b7d2ed9ffdfe3154cb27"
+commit = "ff8bdd8e8816a499e34ba3aaefcfdd3879dea282"
 digests = [
   { path = "openspec/config.yaml", kind = "file", sha256 = "1b16530a25a6253ff24642649b512415c2ca413f8ac81a6740337fc3b0fd8dc0" },
-  { path = "package-lock.json", kind = "file", sha256 = "9f6a12c41312b604ed56b19a42c789da7321ae7eadd9ce59246ea6b964a498aa" },
+  { path = "package-lock.json", kind = "file", sha256 = "693d23b0d9fc292e78aea2277d5dbc2971af7d2ef74c8880bfa62ad7ec73d4e9" },
 ]
 
 [[repositories]]
@@ -18,9 +18,9 @@ id = "channel-digests"
 path = "repos/integrations/channel-digests"
 remote = "https://github.com/po4yka/ratatoskr-channel-digests.git"
 default_branch = "main"
-commit = "44768fc91d6fd3058d5237a0042b06d9153b3944"
+commit = "a476079ec0115c38ab8c76e9280bf23a1ea89539"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "6525ca3d3ebbc0c6e762a38b4dec6d0e3580c49afec5721c642bd9e3c1ee5735" },
+  { path = "Cargo.lock", kind = "file", sha256 = "15421737f59792c0cb8da8d4e1955b3023303987a8768aa128e8f4d451bb4062" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "0c7443340bf5effe32168c64be6414c22df6ea2bad236e9f59809b50f62db7b5" },
 ]
 
@@ -29,9 +29,9 @@ id = "chatgpt"
 path = "repos/ai-archive/chatgpt"
 remote = "https://github.com/po4yka/ratatoskr-chatgpt.git"
 default_branch = "main"
-commit = "be32839a4ec48a71cc2d9db1d1c9e3629ec1e795"
+commit = "c72a1faddb713afb43a95f44bb3f275c67789ac3"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "9d9d9b74ebbbac7f7c93e9fd0d2204fc364d9facc48e962f64097a180e8075b6" },
+  { path = "Cargo.lock", kind = "file", sha256 = "ee7338f4b2c2ecb43d99be860ba3a7f8b7f825d59966d804d7adc90358dc225e" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "12a659560bd47d1ba137e16e9427d68cdb2d2b8c4a149e85e4ae23186542170e" },
 ]
 
@@ -40,9 +40,9 @@ id = "claude"
 path = "repos/ai-archive/claude"
 remote = "https://github.com/po4yka/ratatoskr-claude.git"
 default_branch = "main"
-commit = "3d5d2020ce3e14d429c4fd491913ec37bcab3b4d"
+commit = "f3194364cac2a1bbf8f4483670c08195415c47ce"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "ca75d7cfdcfd4a5b116f200436a4f5a053b3d78405925b8a05dafbd3df07687b" },
+  { path = "Cargo.lock", kind = "file", sha256 = "d2ab32ec9e8e498819edaa859712780c7e66cfe4001d94a88aa0c33457f8fa98" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "80144579822a96857231e66b65af7881fa1f50c529cf7fe490661af9588acabb" },
 ]
 
@@ -51,10 +51,10 @@ id = "contracts"
 path = "repos/contracts"
 remote = "https://github.com/po4yka/ratatoskr-contracts.git"
 default_branch = "main"
-commit = "cac6c8d5aea25fa0f9ad96b08b8db992a44b4b29"
+commit = "ad16855c4e7f3d52cd118274faa3b8f3ab4da576"
 digests = [
-  { path = "contracts.toml", kind = "file", sha256 = "9faa6a42445a34cc9a6d2565e644b941f68b16ae63051bc2df564e8e6784d33b" },
-  { path = "schemas", kind = "tree", sha256 = "bab331a767cf2f47fcc73d95787dd62596e0c101a79a630666dc4f61ff5b8b9f" },
+  { path = "contracts.toml", kind = "file", sha256 = "ff2cbf1094b7ef7c000420c96df7e80074829d839a7bfbda1add0a111b1eb063" },
+  { path = "schemas", kind = "tree", sha256 = "1b8d612780d608e9d7368e07e7f8aac48af7f46c78d7ecdb1b5bfb4fe539b23a" },
 ]
 
 [[repositories]]
@@ -62,7 +62,7 @@ id = "export-agent"
 path = "repos/clients/export-agent"
 remote = "https://github.com/po4yka/ratatoskr-export-agent.git"
 default_branch = "main"
-commit = "38102df0987bfb6557b647c3a11ad904161e4628"
+commit = "da1acd41f20ce972b7530aad9c231ba7bd9b4a6c"
 digests = [
   { path = "Package.swift", kind = "file", sha256 = "2a8a15eb9fc615a94b848417c11ab1ba32898af7b50b06668d6ea52b590b26d1" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "7e49ade6ca44cfcba854132d3083ec0c993ba78989b9c81af767f8b0fbfbd253" },
@@ -73,9 +73,9 @@ id = "extractor"
 path = "repos/extractor"
 remote = "https://github.com/po4yka/ratatoskr-extractor.git"
 default_branch = "main"
-commit = "68afae406b0e5fc624feb57ee460b59600fb4207"
+commit = "da1247ae3f842ee9ad1550fc0afc8780b5a16026"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "1722284e3818ec511793d0ef25fb047c9435228907c526921e454e2388e9c4af" },
+  { path = "Cargo.lock", kind = "file", sha256 = "d5dd30dc3cc719badd8f769240d071f0d90c2437a2241c1d73c556a48ed8582f" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "ed487bde93ea6cc5d7fb26abe62db0498b67ebb9dd0c6d54d7d9902696c79bd5" },
 ]
 
@@ -84,9 +84,9 @@ id = "github"
 path = "repos/github"
 remote = "https://github.com/po4yka/ratatoskr-github.git"
 default_branch = "main"
-commit = "17487140690bb162478378a117b6b62609b5f9c6"
+commit = "dfb5a88090e9f84f1d9e48b27c47a8b7a1085c56"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "a9c2cd8c6e226fcb824951e5f1f66eea76049fa3dd10b658fe576a638858a156" },
+  { path = "Cargo.lock", kind = "file", sha256 = "8960fc0c673bdee495cb1643046b9526b217ea6d3838e0e73673ff6b9ce96d1d" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "8acb859c5279564da43399a9065dae1e8e1c5391f03c04e2d13e1a0755daa27b" },
 ]
 
@@ -95,9 +95,9 @@ id = "instagram"
 path = "repos/social/instagram"
 remote = "https://github.com/po4yka/ratatoskr-instagram.git"
 default_branch = "main"
-commit = "9f134c5075eab65eb432aa3922bf2256c4c8de02"
+commit = "956f0cb66c8357297db68140715f8413cd3f7adc"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "81f4c570e4592855a8e8276f9b2719b523053d2a095ac2148bcdd9d317c62b4a" },
+  { path = "Cargo.lock", kind = "file", sha256 = "e1cc8c027f9b0138638cb6eb6a03c81d1e9ad41551b3a7162a2267a6408e580e" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "0ecf413adef6195fc6f405e01d696e3b77eaf008f355a3b1199c5ee4a2ba030d" },
 ]
 
@@ -106,7 +106,7 @@ id = "knowledge"
 path = "repos/knowledge"
 remote = "https://github.com/po4yka/ratatoskr-knowledge.git"
 default_branch = "main"
-commit = "269c269465c49b4112eb0846dfa5088c760c990c"
+commit = "3833d489d444270d854afa31e38dc87247d7e477"
 digests = [
   { path = "openspec/config.yaml", kind = "file", sha256 = "17d40af640a0876042a9ec0a050de01c14bff0c75547e5ba49d00044e69d46d3" },
   { path = "schemas/article-analysis.v1.schema.json", kind = "file", sha256 = "503d5e81bdd331dba3429372462165e7fc8c34482959f252638da99b5bc43233" },
@@ -129,9 +129,9 @@ id = "platform"
 path = "repos/platform"
 remote = "https://github.com/po4yka/ratatoskr-platform.git"
 default_branch = "main"
-commit = "c3d0d3979106b690ae2b0d8450b42e37264d857a"
+commit = "f13a78587009f2a6bd5369e413e5f56b83141c0d"
 digests = [
-  { path = "openapi/openapi.json", kind = "file", sha256 = "d72139f036d313e5e82f46c6280c66c9e4cb24683b95d8f44fec61982f045220" },
+  { path = "openapi/openapi.json", kind = "file", sha256 = "96183469fc399a7c04dee26b0e0240c4af1fa29fa2079a8a80d16c80ed17c798" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "eb76e54cf5e2ba9fbfb17af3019cddd85d3354274d38a24dcf9c998473224b05" },
 ]
 
@@ -140,9 +140,9 @@ id = "telegram"
 path = "repos/integrations/telegram"
 remote = "https://github.com/po4yka/ratatoskr-telegram.git"
 default_branch = "main"
-commit = "8394d7ded7fc7feba0cb46d68c0e0f4df70a6c08"
+commit = "b43c62554b61cd70f89f581887d5903d74cdff5e"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "aea09647e5acbb83b0611860f01486d8e6146b0aa1b463539b669f1771c51000" },
+  { path = "Cargo.lock", kind = "file", sha256 = "90365e0c075322b9d9d989ca37a92c4718aac8dfde858e62bd14843351a919b9" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "93b2ed4dab096988e788d20547f3fd84f7a074779075cde2340e115e3655ae4e" },
 ]
 
@@ -151,9 +151,9 @@ id = "threads"
 path = "repos/social/threads"
 remote = "https://github.com/po4yka/ratatoskr-threads.git"
 default_branch = "main"
-commit = "9ece8690760bd7c1815b307cd813620c6deafdd7"
+commit = "51b0fdd968ab4817b6bf2bf63a5f0174dd78855c"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "22ec2e277006e6e4b8ab7ed58f1ba8978ce0cb08e61eef0335054f08c0ee9be4" },
+  { path = "Cargo.lock", kind = "file", sha256 = "773e78e2a92ffc12623054a3532affb00f6c2872c825be74d1c6bb0c4a84f88e" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "bdca335689d6a5206a4579864fad0ff12798f2d4fb8fdfe9f368a1678dc499d1" },
 ]
 
@@ -162,9 +162,9 @@ id = "vault"
 path = "repos/vault"
 remote = "https://github.com/po4yka/ratatoskr-vault.git"
 default_branch = "main"
-commit = "c4ee86c5ca5589871c0e6cf1da87c7f70f8f830d"
+commit = "0a6c8d4700f7202633b5671e59341cb7d3f8bbc0"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "c5d48dd13145c4e329053b308c1c2f3fa7804a98dc75ee8be04f011c5fa18bea" },
+  { path = "Cargo.lock", kind = "file", sha256 = "43bf7cda68879ac4788c21c6540073148594f87aff6f2d12a4eefcbdc508b409" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "85877dff9fcad62f9d015e40c633c1fa07e32ec97f0f42a04a5570d39a06e3aa" },
 ]
 
@@ -185,8 +185,8 @@ id = "x"
 path = "repos/social/x"
 remote = "https://github.com/po4yka/ratatoskr-x.git"
 default_branch = "main"
-commit = "b1bb58186e786e80ed539f9552b067bc4dd2a2fa"
+commit = "f1810d5078eb688aa3715c2edb95e87e2d742e16"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "36bb2f0049d9c5f8d6b6053cb534fb404f2b8d6a3b4804c819823db114fd738f" },
+  { path = "Cargo.lock", kind = "file", sha256 = "d0c8e5cc676872ece6a817694104328b5e66341e7a312ed80a942390c7e2daa2" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "8d41fd46cfcb9df9c69763f767012fc3a4224adfa543e475df8aa4f1740cb55f" },
 ]

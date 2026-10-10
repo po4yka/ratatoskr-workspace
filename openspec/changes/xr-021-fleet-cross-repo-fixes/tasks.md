@@ -31,22 +31,22 @@ Dependency order. Every child repository pushed its commits directly to `main` u
 ## 4. No two listeners claim one port
 
 - [x] 4.1 Add `port_allocation.rs::no_two_deploy_examples_bind_the_same_port_and_every_bind_is_allocated`, with the matcher checked against the real example files and the matches recorded in the file's header comment. Run against the previous pins it failed with `port 9467 is claimed by extractor ... and by telegram ...` and with the unallocated `9469` and `9570`.
-- [ ] 4.2 The test passes against the advanced pins (task 7.1). No production code: the test is the deliverable, and the manifest-path resolution it needs is `workspace-core`'s manifest loader.
+- [x] 4.2 The test passes against the advanced pins (task 7.1); the extractor example now binds 9088 and the Telegram webhook keeps 9467. No production code: the test is the deliverable, and the manifest-path resolution it needs is `workspace-core`'s manifest loader.
 
 ## 5. The bus permissions cannot drift
 
 - [x] 5.1 Add `harness/crates/workspace-core/tests/bus_acl.rs` with `platform_conf_has_exactly_the_thirteen_identities`, `every_service_fragment_equals_its_platform_stanza`, `extractor_permissions_conf_is_gone` and `non_edge_stanzas_obey_the_permission_invariants`. Run against the previous pins all four failed: seven identities found, six service copies missing, `extractor-permissions.conf` present, and eighteen fixed durables without their consumer-info permission.
-- [ ] 5.2 The four tests pass against the advanced pins (task 7.1). No production code: a plain-text splitter in the test file.
+- [x] 5.2 The four tests pass against the advanced pins (task 7.1). No production code: a plain-text splitter in the test file.
 
 ## 6. The changeset is recorded
 
-- [ ] 6.1 Write `changesets/XR-021-fleet-cross-repo-fixes.yaml` with every child commit, the rollout, the rollback and the verification actually run. No test: documentation.
+- [x] 6.1 Write `changesets/XR-021-fleet-cross-repo-fixes.yaml` with every child commit, the rollout, the rollback and the verification actually run. No test: documentation.
 
 ## 7. The pins advance
 
-- [ ] 7.1 Move fifteen gitlinks to the pushed heads, add the `vault` to `github` edge to `workspace.toml`, update `EXPECTED_PINS` in `harness/crates/workspace-cli/tests/committed_snapshot.rs`, and regenerate `workspace.lock` with `./ws lock generate --output workspace.lock`. No new test: generated and configuration files; the gates are `committed_workspace_is_complete_and_current`, tasks 4.2 and 5.2, `./ws manifest check`, `./ws lock check`, `./ws status` and `./ws doctor`.
+- [x] 7.1 Move fifteen gitlinks to the pushed heads, add the `vault` to `github` edge to `workspace.toml`, update `EXPECTED_PINS` in `harness/crates/workspace-cli/tests/committed_snapshot.rs`, and regenerate `workspace.lock` with `./ws lock generate --output workspace.lock`. No new test: generated and configuration files; the gates are `committed_workspace_is_complete_and_current`, tasks 4.2 and 5.2, `./ws manifest check`, `./ws lock check`, `./ws status` and `./ws doctor`.
 
 ## 8. Composed integration and verification
 
-- [ ] 8.1 Run the profile contract tests under `integration/tests/` and attempt the composed profiles under `integration/`; record in the changeset what ran and, for each profile that could not start, exactly why. A profile that did not run is recorded as not run and never as passed.
-- [ ] 8.2 Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` and `cargo test --workspace --all-features --locked` in `harness/`, `openspec validate --all --strict`, `openspec validate --archived` and `git diff --check`.
+- [x] 8.1 Run the profile contract tests under `integration/tests/` and attempt the composed profiles under `integration/`; record in the changeset what ran and, for each profile that could not start, exactly why. A profile that did not run is recorded as not run and never as passed.
+- [x] 8.2 Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` and `cargo test --workspace --all-features --locked` in `harness/`, `openspec validate --all --strict`, `openspec validate --archived` and `git diff --check`.
