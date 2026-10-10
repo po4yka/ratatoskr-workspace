@@ -2,7 +2,7 @@
 
 > Status: Accepted  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-08-20 (revised from the development-status decision; no host fact re-verified)
+> Last reviewed: 2026-10-11 (port table and Telegram blob root revised for XR-021; no host fact re-verified)
 
 > **The host is frozen as of 2026-08-21.** Nothing is deployed to it, nothing on it is changed, and
 > the drift between it and `main` is not tracked. The machine remains in scope for exactly one
@@ -57,11 +57,21 @@ keeps durable state off it either way.
 | Service logs | `/mnt/nvme/ratatoskr/logs` | NVMe |
 | Database dumps | `/mnt/nvme/backups/ratatoskr` | NVMe |
 | Off-host copies | `/mnt/backup/borg` | SATA SSD, 954 GB |
+| Telegram blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-telegram` | NVMe |
 
 Two rules follow, and both are contracts rather than advice:
 
 - **An absolute path, never a named volume.** A named Docker volume lands wherever `DockerRootDir`
   points, which is host state no repository owns and which a reflash resets to the boot device.
+- **A service that reads another service's blobs does it through a group, read-only.** The Telegram
+  webhook writes documents under `/mnt/nvme/ratatoskr/blobs/ratatoskr-telegram`, and the extractor
+  reads them. The directory is created `install -d -o ratatoskr-telegram-webhook -g
+  ratatoskr-telegram-blobs -m 2750 /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram` (setgid, so new
+  files inherit the group); the webhook unit has the path in `ReadWritePaths`, `UMask=0027` and
+  `SupplementaryGroups=ratatoskr-telegram-blobs`; the extractor unit has
+  `SupplementaryGroups=ratatoskr-telegram-blobs` and the path in `ReadOnlyPaths`. The extractor never
+  writes there. If the group does not exist, extractor runs fail with `blob_unreadable`, which is host
+  state no repository can repair. The group is a host prerequisite, not something a unit file creates.
 - **`/mnt/backup` is a second volume on the same machine.** It survives a disk failure and does not
   survive losing the Pi. Nothing may treat it as an off-host replica — `vault`'s policy of blocking
   `healthy` until a verified remote copy exists is not satisfied by it.
@@ -166,6 +176,11 @@ on the host side of that boundary, and nobody re-checked. At milestone 10 the co
 reach any of the three until the rule above existed. A verification is only evidence for the
 arrangement it was performed on.
 
+`9464:9468` are the only operator ports opened to the monitoring bridge. Every other operator port in
+the table, including the new `9081` to `9088`, `9095`, `9469`, `9470` and `9570`, is host only until
+someone deliberately opens it, and opening one means widening the rule above and this sentence
+together.
+
 One detail the rule depends on: `host-gateway` resolves to the address of the DEFAULT bridge,
 172.17.0.1, not to the gateway of the network the collector is on. ufw matches on SOURCE, so the
 rule names the subnet the collector lives on and not the address it dials — a rule written the other
@@ -235,21 +250,41 @@ bind to `0.0.0.0`.
 
 | Port | Owner | Reachability |
 |---|---|---|
-| 8080 | `ratatoskr-edge` public API | `cloudflared` tunnel |
+| 8080 | `ratatoskr-edge` public API; also the base URL Telegram's Platform client targets | `cloudflared` tunnel |
 | 8181 | `ratatoskr-ingest` webhook adapter | `cloudflared` tunnel |
 | 8182 | `ratatoskr-telegram-webhook` public listener | `cloudflared` tunnel |
 | 8091 | `ratatoskr-knowledge` domain API (`/v1/k`) | loopback; reached only through Edge |
-| 8092 | `ratatoskr-github` domain API (`/v1/gh`) | loopback; reached only through Edge |
-| 8093 | `ratatoskr-vault` domain API (`/v1/vault`) | loopback; reached only through Edge |
-| 8094 | `ratatoskr-social` domain API (`/v1/social`) | loopback; reached only through Edge |
-| 8095 | `ratatoskr-ai-archive` domain API (`/v1/ai`) | loopback; reached only through Edge |
-| 8096 | ChatGPT archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
-| 8097 | Claude archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
+| 8092 | `ratatoskr-github` domain API (`/v1/gh`), plus its internal reader routes, which Edge never exposes | loopback; reached only through Edge |
+| 8093 | `ratatoskr-vault` domain API (`/v1/vault`); no listener yet, so Edge reports its capability as stale, which is truthful | loopback; reached only through Edge |
+| 8094 | `ratatoskr-social` domain API (`/v1/social`); no listener yet, same as `8093` | loopback; reached only through Edge |
+| 8095 | `ratatoskr-ai-archive` domain API (`/v1/ai`); no listener yet, same as `8093` | loopback; reached only through Edge |
+| 8096 | `ratatoskr-chatgpt` archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
+| 8097 | `ratatoskr-claude` archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
+| 8098 | `ratatoskr-channel-digests` API (`/v1/manifests`, `/v1/subscriptions`, `/v1/results`, `/ready`) | loopback; Platform and Knowledge only |
+| 9081 | `ratatoskr-knowledge` operator listener | host only |
+| 9082 | `ratatoskr-instagram` operator listener | host only |
+| 9083 | `ratatoskr-instagram` product API (`POST /v1/captures`, data exports) | host only |
+| 9084 | `ratatoskr-threads` operator listener | host only |
+| 9085 | `ratatoskr-chatgpt` operator listener (moved from 9084) | host only |
+| 9086 | `ratatoskr-claude` operator listener (moved from 9084) | host only |
+| 9087 | `ratatoskr-x` operator listener (moved from 8080) | host only |
+| 9088 | `ratatoskr-extractor` operator listener (moved from 9467) | host only |
+| 9095 | `ratatoskr-github` operator listener | host only |
 | 9464 / 9465 / 9466 | edge / ingest / scheduler operator listener | host only |
 | 9467 | `ratatoskr-telegram-webhook` operator listener | host and monitoring bridge only |
 | 9468 | `ratatoskr-telegram-dispatcher` operator listener | host and monitoring bridge only |
-| 4222 | NATS — a container, `ratatoskr-nats`, config in `platform/deploy/nats/` | host only |
+| 9469 | `ratatoskr-channel-digests` API operator listener | host only |
+| 9470 | `ratatoskr-channel-digests` worker operator listener | host only |
+| 9570 | `ratatoskr-vault` operator listener | host only |
+| 4222 | NATS client, a container, `ratatoskr-nats`, config in `platform/deploy/nats/`; the server binds `0.0.0.0` inside the container and the port is published on `127.0.0.1` only, and it requires an nkey | host only |
+| 8222 | NATS monitoring, the same container; bound inside the container as above and published on `127.0.0.1` only | host only |
 | 5432 | PostgreSQL | host only |
+
+Four compiled defaults moved in XR-021, because two services cannot bind one port: ChatGPT 9084 to
+9085, Claude 9084 to 9086, X 8080 to 9087 (8080 is Edge's) and the extractor 9467 to 9088 (9467 is
+the Telegram webhook's). The harness test `port_allocation.rs` in this repository fails when this
+table lists a port twice or omits a documented listener, and when a repository's deploy examples bind
+a port that is not in the table or that another listener already holds.
 
 Already held by other software at the time of writing, and not available: 22, 3001, 3003, 4318,
 6060, 6333, 6334, **8081**, 8090, 8428, 9093, 20241. `8081` is why `ratatoskr-ingest` does not use it:
