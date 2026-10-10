@@ -194,14 +194,13 @@ fn no_two_deploy_examples_bind_the_same_port_and_every_bind_is_allocated() {
 
     for repository in manifest.repositories() {
         let root = repository_root(repository);
-        if !is_checked_out(&root) {
-            eprintln!(
-                "skipping `{}`: not checked out at {}",
-                repository.id,
-                root.display()
-            );
-            continue;
-        }
+        assert!(
+            is_checked_out(&root),
+            "repository `{}` is not checked out at {}; run `git submodule update --init {}`",
+            repository.id,
+            root.display(),
+            repository.path
+        );
         for file in example_files(&root) {
             let text = fs::read_to_string(&file).unwrap_or_default();
             for line in text.lines() {
@@ -226,7 +225,7 @@ fn no_two_deploy_examples_bind_the_same_port_and_every_bind_is_allocated() {
 
     assert!(
         !claims.is_empty(),
-        "the matcher found no bind in any checked-out repository; it is broken or nothing is checked out"
+        "the matcher found no bind in any repository; it is broken"
     );
 
     let mut problems = Vec::new();
