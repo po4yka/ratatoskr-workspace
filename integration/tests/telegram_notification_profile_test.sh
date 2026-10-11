@@ -73,6 +73,13 @@ if rg --quiet 'permissions:' "$runner"; then
   fail "runner writes a hand-made NATS permission set"
 fi
 
+# R3-12: the assertion key comes from the Telegram webhook's own command, never from openssl and xxd.
+assert_contains "$runner" 'assertion-key generate' "runner does not generate the assertion key with the webhook command"
+assert_contains "$runner" 'assertion-key public' "runner does not derive the public key with the webhook command"
+if rg --quiet 'genpkey|xxd' "$runner"; then
+  fail "runner still derives the assertion key with openssl and xxd"
+fi
+
 for evidence_field in \
   'Contracts revision' 'Platform revision' 'Telegram revision' 'Workspace revision' \
   'Compose SHA-256' 'Platform image ID' 'Telegram image ID' \

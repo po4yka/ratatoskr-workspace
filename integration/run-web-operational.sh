@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 workspace_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 profile="$workspace_root/integration/compose/web-operational.yaml"
@@ -40,6 +41,17 @@ require_revision Platform "${RATATOSKR_PLATFORM_CONTEXT:?set RATATOSKR_PLATFORM_
 require_revision Web "${RATATOSKR_WEB_CONTEXT:?set RATATOSKR_WEB_CONTEXT}" \
   "${RATATOSKR_WEB_REVISION:?set RATATOSKR_WEB_REVISION}"
 
+# R3-18: the broker runs under the NATS authorization Platform deploys, at the Platform revision
+# under test, with a fresh key for the Edge identity and throwaway keys for the rest. No permission
+# set is written by hand, and the broker is never started without it.
+# shellcheck source=lib/nats-conf.sh
+source "$workspace_root/integration/lib/nats-conf.sh"
+runtime_root=${RATATOSKR_WEB012_RUNTIME_DIR:-${TMPDIR:-/tmp}}
+task_runtime=$(mktemp -d "${runtime_root%/}/ratatoskr-${namespace}.XXXXXX")
+export RATATOSKR_WEB012_RUNTIME_DIR=$task_runtime
+mkdir -p "$task_runtime/nats"
+render_nats_conf "$RATATOSKR_PLATFORM_CONTEXT/deploy/nats/ratatoskr.conf" "$task_runtime/nats" EDGE
+
 compose() {
   docker compose --project-name "$project" --file "$profile" "$@"
 }
@@ -52,6 +64,9 @@ cleanup() {
   docker compose --project-name "$project" --file "$profile" down --volumes --remove-orphans \
     >"$evidence_dir/teardown.log" 2>&1
   docker ps --format '{{.ID}} {{.Names}} {{.Ports}}' >"$evidence_dir/docker-after.txt"
+  if [[ -n "$task_runtime" && -d "$task_runtime" && "$task_runtime" == "${runtime_root%/}"/ratatoskr-* ]]; then
+    rm -rf -- "$task_runtime"
+  fi
   exit "$status"
 }
 trap cleanup EXIT INT TERM

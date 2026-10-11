@@ -69,4 +69,25 @@ assert_contains "$runner" ": >\"\$evidence_dir/timeline.txt\"" \
   "runner does not reset phase evidence before a repeated smoke"
 assert_file "$browser_smoke"
 
+# R3-18: the broker runs under the NATS authorization Platform deploys, rendered by the library for
+# the Edge identity, never unauthenticated and never under a hand-made permission set.
+assert_contains "$runner" 'integration/lib/nats-conf.sh' "runner does not source the NATS rendering library"
+if ! rg --quiet 'render_nats_conf .*deploy/nats/ratatoskr\.conf.* EDGE$' "$runner"; then
+  fail "runner does not render Platform's deployed NATS file for the EDGE identity"
+fi
+if rg --quiet 'permissions:' "$runner"; then
+  fail "runner writes a hand-made NATS permission set"
+fi
+assert_contains "$profile" 'command: [-c, /etc/nats/ratatoskr.conf]' \
+  "the broker does not start from the rendered configuration"
+assert_contains "$profile" '/nats/ratatoskr.conf:/etc/nats/ratatoskr.conf:ro' \
+  "the rendered NATS configuration is not mounted into the broker"
+assert_contains "$profile" 'RATATOSKR__BUS__NKEY_SEED_PATH: /run/web012/nats/edge.nkey' \
+  "Edge does not authenticate to the broker with its nkey seed"
+assert_contains "$profile" '/nats/edge.nkey:/run/web012/nats/edge.nkey:ro' \
+  "the Edge seed is not mounted read-only"
+if rg --quiet -e '--jetstream' "$profile"; then
+  fail "the broker still starts with command-line flags and no authorization"
+fi
+
 printf 'web operational profile contract: PASS\n'

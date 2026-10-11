@@ -145,6 +145,14 @@ do
   assert_contains "$evidence_summary" "$field" "evidence omits $field"
 done
 
+# R3-18: the evidence file names no revision of its own. It is superseded by the changeset record, so
+# a reader cannot take stale revisions for the current snapshot.
+assert_contains "$evidence_summary" 'Status: superseded' "evidence is not marked superseded"
+assert_contains "$evidence_summary" 'round_3' "evidence does not point at the changeset round 3 record"
+if rg --quiet '[0-9a-f]{40}' "$evidence_summary"; then
+  fail "evidence still names a full revision"
+fi
+
 if rg --quiet --hidden -g '!export_agent_product_profile_test.sh' \
   '(BEGIN [A-Z ]*PRIVATE KEY|\bSU[A-Z2-7]{20,}|Bearer [A-Za-z0-9._-]+)' \
   "$profile" "$runner" "$fixture_builder" "$database_seed" "$evidence_summary" \

@@ -82,21 +82,27 @@ source "$workspace_root/integration/lib/nats-conf.sh"
 render_nats_conf "$platform/deploy/nats/ratatoskr.conf" "$runtime_dir" EDGE TELEGRAM
 mv "$runtime_dir/ratatoskr.conf" "$runtime_dir/nats.conf"
 
-openssl genpkey -algorithm Ed25519 -out "$runtime_dir/assertion.pem" 2>/dev/null
-key_text=$(openssl pkey -in "$runtime_dir/assertion.pem" -text -noout)
-assertion_seed=$(printf '%s\n' "$key_text" | awk '/^priv:/{copy=1; next} /^pub:/{copy=0} copy' | tr -d ' :\n')
-assertion_public_hex=$(printf '%s\n' "$key_text" | awk '/^pub:/{copy=1; next} copy' | tr -d ' :\n')
-RATATOSKR_TG011_ASSERTION_PUBLIC_KEY=$(printf '%s' "$assertion_public_hex" | xxd -r -p | openssl base64 -A)
+# R3-12: the signing key and its public half come from the Telegram webhook's own command, built
+# from the Telegram checkout under test, so the profile exercises the procedure the deploy README
+# gives and the host needs no hex or key-format tooling. The build directory is removed as
+# soon as the key exists.
+webhook_target="$runtime_dir/webhook-target"
+CARGO_TARGET_DIR="$webhook_target" cargo build --release --locked \
+  --manifest-path "$telegram/Cargo.toml" -p ratatoskr-telegram-webhook \
+  >"$evidence_dir/webhook-build.log" 2>&1
+webhook_bin="$webhook_target/release/ratatoskr-telegram-webhook"
+RATATOSKR_TG011_ASSERTION_PUBLIC_KEY=$("$webhook_bin" assertion-key generate "$runtime_dir/assertion-seed")
 export RATATOSKR_TG011_ASSERTION_PUBLIC_KEY
-[[ ${#assertion_seed} == 64 && ${#assertion_public_hex} == 64 ]] || {
-  printf 'could not derive the synthetic Ed25519 pair\n' >&2
+derived_public_key=$("$webhook_bin" assertion-key public "$runtime_dir/assertion-seed")
+rm -rf -- "$webhook_target"
+[[ "$derived_public_key" == "$RATATOSKR_TG011_ASSERTION_PUBLIC_KEY" && ${#derived_public_key} == 44 ]] || {
+  printf 'the webhook assertion-key commands disagree about the public key\n' >&2
   exit 1
 }
-printf '%s\n' "$assertion_seed" >"$runtime_dir/assertion-seed"
 printf 'tg011-%s\n' "$(openssl rand -hex 24)" >"$runtime_dir/bot-token"
 openssl rand -hex 24 >"$runtime_dir/webhook-secret"
 chmod 0600 "$runtime_dir"/*.nkey "$runtime_dir"/assertion-seed \
-  "$runtime_dir"/assertion.pem "$runtime_dir"/bot-token "$runtime_dir"/webhook-secret
+  "$runtime_dir"/bot-token "$runtime_dir"/webhook-secret
 
 compose() {
   docker compose --project-name "$project" --file "$profile" "$@"

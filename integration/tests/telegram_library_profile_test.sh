@@ -77,6 +77,13 @@ assert_contains "$runner" 'EDGE TELEGRAM' "runner does not key the Edge and Tele
 if rg --quiet 'permissions:' "$runner"; then
   fail "runner writes a hand-made NATS permission set"
 fi
+
+# R3-12: the assertion key comes from the Telegram webhook's own command, never from openssl and xxd.
+assert_contains "$runner" 'assertion-key generate' "runner does not generate the assertion key with the webhook command"
+assert_contains "$runner" 'assertion-key public' "runner does not derive the public key with the webhook command"
+if rg --quiet 'genpkey|xxd' "$runner"; then
+  fail "runner still derives the assertion key with openssl and xxd"
+fi
 assert_contains "$profile" 'RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__PREFIX: /v1/k' \
   "Platform lacks the canonical Knowledge prefix"
 assert_contains "$profile" 'RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__LISTENER: 127.0.0.1:8091' \
