@@ -64,23 +64,17 @@ fi
 runtime_dir=$RATATOSKR_TG010_RUNTIME_DIR
 mkdir -p "$runtime_dir/state"
 
-nats_box='natsio/nats-box@sha256:9d5f35d286c3dcfca18bb2339b51345f9f89b580b237ab16ddfe609bdca9c72d'
-generate_nkey() {
-  local name=$1 pair seed public
-  pair=$(docker run --rm "$nats_box" nk -gen user -pubout)
-  seed=$(printf '%s\n' "$pair" | sed -n '1p')
-  public=$(printf '%s\n' "$pair" | sed -n '2p')
-  [[ "$seed" == SU* && "$public" == U* ]] || {
-    printf 'could not generate the %s NKey pair\n' "$name" >&2
-    exit 1
-  }
-  printf '%s\n' "$seed" >"$runtime_dir/$name.nkey"
-  printf '%s\n' "$public"
-}
+# R2-12: the NATS authorization is the file Platform deploys, at the Platform revision under test,
+# keyed for the identities this profile runs. No permission set is written by hand.
+# shellcheck source=lib/nats-conf.sh
+source "$workspace_root/integration/lib/nats-conf.sh"
+render_nats_conf "$platform/deploy/nats/ratatoskr.conf" "$runtime_dir" EDGE TELEGRAM
+# The test driver publishes as the extractor and as the domain services would; it is a new stanza
+# beside the service identities and never changes one of them.
+append_nats_test_user "$runtime_dir" driver \
+  evt.platform.operation.reported.v1 evt.platform.notification.raised.v1
+mv "$runtime_dir/ratatoskr.conf" "$runtime_dir/nats.conf"
 
-edge_public=$(generate_nkey edge)
-telegram_public=$(generate_nkey telegram)
-driver_public=$(generate_nkey driver)
 openssl genpkey -algorithm Ed25519 -out "$runtime_dir/assertion.pem" 2>/dev/null
 key_text=$(openssl pkey -in "$runtime_dir/assertion.pem" -text -noout)
 assertion_seed=$(printf '%s\n' "$key_text" | awk '/^priv:/{copy=1; next} /^pub:/{copy=0} copy' | tr -d ' :\n')
@@ -96,42 +90,6 @@ printf 'tg010-%s\n' "$(openssl rand -hex 24)" >"$runtime_dir/bot-token"
 openssl rand -hex 24 >"$runtime_dir/webhook-secret"
 chmod 0600 "$runtime_dir"/*.nkey "$runtime_dir"/assertion-seed \
   "$runtime_dir"/assertion.pem "$runtime_dir"/bot-token "$runtime_dir"/webhook-secret
-
-cat >"$runtime_dir/nats.conf" <<EOF
-port: 4222
-host: 0.0.0.0
-http_port: 8222
-jetstream { store_dir: /data }
-authorization {
-  users: [
-    {
-      nkey: $edge_public
-      permissions: {
-        publish: { allow: ["cmd.>", "\$JS.API.>", "\$JS.ACK.>"], deny: ["\$JS.API.STREAM.DELETE.>", "\$JS.API.STREAM.PURGE.>"] }
-        subscribe: { allow: ["_INBOX.>"] }
-      }
-    },
-    {
-      nkey: $telegram_public
-      permissions: {
-        publish: { allow: [
-          "\$JS.API.CONSUMER.INFO.ratatoskr_events.ratatoskr_telegram_notifications",
-          "\$JS.API.CONSUMER.MSG.NEXT.ratatoskr_events.ratatoskr_telegram_notifications",
-          "\$JS.ACK.ratatoskr_events.ratatoskr_telegram_notifications.>"
-        ] }
-        subscribe: { allow: ["_INBOX.>"] }
-      }
-    },
-    {
-      nkey: $driver_public
-      permissions: {
-        publish: { allow: ["evt.platform.operation.reported.v1", "evt.platform.notification.raised.v1"] }
-        subscribe: { allow: ["_INBOX.>"] }
-      }
-    }
-  ]
-}
-EOF
 
 compose() {
   docker compose --project-name "$project" --file "$profile" "$@"
@@ -288,12 +246,15 @@ article_flow_reaches_final_projection() {
   psql_query telegram \
     "update telegram.identities set internal_user_id = '$platform_user_id'::uuid where telegram_user_id = 900700601" >/dev/null
   occurred_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  # R2-02: Platform applies a report only from a producer allowed for the operation kind and for
+  # the operation's own tenant. A capture operation accepts ratatoskr-extractor, so the driver
+  # reports as the extractor it stands in for, with the owner's tenant.
   event=$(jq -nc --arg operation "$operation_id" --arg user "$platform_user_id" \
     --arg occurred "$occurred_at" '{
       event_id: "018f0000-0000-7000-8000-00000000a001",
       event_type: "platform.operation.reported.v1",
       occurred_at: $occurred,
-      producer: "tg010-domain-driver",
+      producer: "ratatoskr-extractor",
       aggregate_id: ("operation:" + $operation),
       correlation_id: ("operation:" + $operation),
       tenant_id: ("user:" + $user),

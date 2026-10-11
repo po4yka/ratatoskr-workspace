@@ -118,9 +118,10 @@ services:
         ENTRYPOINT ["ratatoskr-chatgpt-archive-service"]
     network_mode: service:network
     environment:
-      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:8096
+      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:9085
       RATATOSKR__RECEIPT__EVENT_BUS_NKEY_SEED_PATH: /run/xpa020/nats/chatgpt.nkey
       RATATOSKR__RECEIPT__EVENT_BUS_URL: nats://nats:4222
+      RATATOSKR__RECEIPT__LISTEN_ADDRESS: 127.0.0.1:8096
       RATATOSKR__RECEIPT__PLATFORM_ACCOUNTS: 01980000-0000-7000-8000-000000000001=xpa020-chatgpt
       RATATOSKR__STORAGE__BLOB_ROOT: /tmp/xpa020-chatgpt/blobs
       RATATOSKR__STORAGE__DATABASE_URL: postgres://chatgpt@postgres:5432/chatgpt
@@ -134,7 +135,7 @@ services:
       network:
         condition: service_started
     healthcheck:
-      test: [CMD-SHELL, "grep -qi ':1FA0 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      test: [CMD-SHELL, "grep -qi ':1FA0 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null && grep -qi ':237D ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
       interval: 1s
       timeout: 5s
       retries: 90
@@ -161,9 +162,10 @@ services:
         ENTRYPOINT ["ratatoskr-claude-archive-service"]
     network_mode: service:network
     environment:
-      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:8097
+      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:9086
       RATATOSKR__RECEIPT__EVENT_BUS_NKEY_SEED_PATH: /run/xpa020/nats/claude.nkey
       RATATOSKR__RECEIPT__EVENT_BUS_URL: nats://nats:4222
+      RATATOSKR__RECEIPT__LISTEN_ADDRESS: 127.0.0.1:8097
       RATATOSKR__RECEIPT__PLATFORM_ACCOUNTS: 01980000-0000-7000-8000-000000000001=01980000-0000-7000-8000-000000000003
       RATATOSKR__STORAGE__BLOB_ROOT: /tmp/xpa020-claude/blobs
       RATATOSKR__STORAGE__DATABASE_URL: postgres://claude@postgres:5432/claude
@@ -176,7 +178,7 @@ services:
       network:
         condition: service_started
     healthcheck:
-      test: [CMD-SHELL, "grep -qi ':1FA1 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      test: [CMD-SHELL, "grep -qi ':1FA1 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null && grep -qi ':237E ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
       interval: 1s
       timeout: 5s
       retries: 90

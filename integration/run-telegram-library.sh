@@ -75,22 +75,13 @@ fi
 runtime_dir=$RATATOSKR_TG011_RUNTIME_DIR
 mkdir -p "$runtime_dir/state"
 
-nats_box='natsio/nats-box@sha256:9d5f35d286c3dcfca18bb2339b51345f9f89b580b237ab16ddfe609bdca9c72d'
-generate_nkey() {
-  local name=$1 pair seed public
-  pair=$(docker run --rm "$nats_box" nk -gen user -pubout)
-  seed=$(printf '%s\n' "$pair" | sed -n '1p')
-  public=$(printf '%s\n' "$pair" | sed -n '2p')
-  [[ "$seed" == SU* && "$public" == U* ]] || {
-    printf 'could not generate the %s NKey pair\n' "$name" >&2
-    exit 1
-  }
-  printf '%s\n' "$seed" >"$runtime_dir/$name.nkey"
-  printf '%s\n' "$public"
-}
+# R2-12: the NATS authorization is the file Platform deploys, at the Platform revision under test,
+# keyed for the identities this profile runs. No permission set is written by hand.
+# shellcheck source=lib/nats-conf.sh
+source "$workspace_root/integration/lib/nats-conf.sh"
+render_nats_conf "$platform/deploy/nats/ratatoskr.conf" "$runtime_dir" EDGE TELEGRAM
+mv "$runtime_dir/ratatoskr.conf" "$runtime_dir/nats.conf"
 
-edge_public=$(generate_nkey edge)
-telegram_public=$(generate_nkey telegram)
 openssl genpkey -algorithm Ed25519 -out "$runtime_dir/assertion.pem" 2>/dev/null
 key_text=$(openssl pkey -in "$runtime_dir/assertion.pem" -text -noout)
 assertion_seed=$(printf '%s\n' "$key_text" | awk '/^priv:/{copy=1; next} /^pub:/{copy=0} copy' | tr -d ' :\n')
@@ -106,35 +97,6 @@ printf 'tg011-%s\n' "$(openssl rand -hex 24)" >"$runtime_dir/bot-token"
 openssl rand -hex 24 >"$runtime_dir/webhook-secret"
 chmod 0600 "$runtime_dir"/*.nkey "$runtime_dir"/assertion-seed \
   "$runtime_dir"/assertion.pem "$runtime_dir"/bot-token "$runtime_dir"/webhook-secret
-
-cat >"$runtime_dir/nats.conf" <<EOF
-port: 4222
-host: 0.0.0.0
-http_port: 8222
-jetstream { store_dir: /data }
-authorization {
-  users: [
-    {
-      nkey: $edge_public
-      permissions: {
-        publish: { allow: ["cmd.>", "\$JS.API.>", "\$JS.ACK.>"], deny: ["\$JS.API.STREAM.DELETE.>", "\$JS.API.STREAM.PURGE.>"] }
-        subscribe: { allow: ["_INBOX.>"] }
-      }
-    },
-    {
-      nkey: $telegram_public
-      permissions: {
-        publish: { allow: [
-          "\$JS.API.CONSUMER.INFO.ratatoskr_events.ratatoskr_telegram_notifications",
-          "\$JS.API.CONSUMER.MSG.NEXT.ratatoskr_events.ratatoskr_telegram_notifications",
-          "\$JS.ACK.ratatoskr_events.ratatoskr_telegram_notifications.>"
-        ] }
-        subscribe: { allow: ["_INBOX.>"] }
-      }
-    }
-  ]
-}
-EOF
 
 compose() {
   docker compose --project-name "$project" --file "$profile" "$@"

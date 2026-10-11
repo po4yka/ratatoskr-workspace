@@ -63,8 +63,20 @@ do
 done
 
 assert_contains "$profile" 'pgvector/pgvector:pg17' "profile does not use PostgreSQL 17 with pgvector"
-assert_contains "$profile" 'RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:8091' \
-  "Knowledge does not use its allocated loopback listener"
+assert_service_has knowledge 'RATATOSKR__API__LISTEN_ADDRESS: 127.0.0.1:8091' \
+  "Knowledge does not bind its API listener on the allocated loopback port"
+assert_service_has knowledge 'RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:9081' \
+  "Knowledge does not keep its operator listener next to the API listener"
+if rg --quiet 'ADMIN__LISTEN_ADDRESS: 127\.0\.0\.1:8091' "$profile"; then
+  fail "Knowledge's operator listener overloads the API port"
+fi
+assert_contains "$runner" 'integration/lib/nats-conf.sh' "runner does not source the NATS rendering library"
+assert_contains "$runner" 'render_nats_conf' "runner does not render the deployed NATS configuration"
+assert_contains "$runner" 'deploy/nats/ratatoskr.conf' "runner does not render from Platform's deployed file"
+assert_contains "$runner" 'EDGE TELEGRAM' "runner does not key the Edge and Telegram identities"
+if rg --quiet 'permissions:' "$runner"; then
+  fail "runner writes a hand-made NATS permission set"
+fi
 assert_contains "$profile" 'RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__PREFIX: /v1/k' \
   "Platform lacks the canonical Knowledge prefix"
 assert_contains "$profile" 'RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__LISTENER: 127.0.0.1:8091' \

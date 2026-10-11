@@ -99,11 +99,12 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:8091
+      RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:9081
+      RATATOSKR__API__LISTEN_ADDRESS: 127.0.0.1:8091
       RATATOSKR__STORAGE__BLOB_ROOT: /tmp/tg011-knowledge-blobs
       RATATOSKR__STORAGE__DATABASE_URL: postgres://platform@127.0.0.1:5432/knowledge
     healthcheck:
-      test: [CMD-SHELL, "grep -qi ':1F9B ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
+      test: [CMD-SHELL, "grep -qi ':1F9B ' /proc/net/tcp /proc/net/tcp6 2>/dev/null && grep -qi ':2379 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null"]
       interval: 1s
       timeout: 3s
       retries: 90

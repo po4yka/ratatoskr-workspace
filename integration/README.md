@@ -41,6 +41,21 @@ The smoke checks healthy status, member refusal, owner operational reads, real-p
 results, NATS degradation, recovery, and namespaced teardown. Fixture credentials are fixed,
 non-secret values used only by the disposable database and are never printed.
 
+## NATS authorization
+
+Every profile that starts a broker renders its NATS file from Platform's deployed
+`deploy/nats/ratatoskr.conf` with `integration/lib/nats-conf.sh` (`render_nats_conf`), at the Platform
+revision under test, so a profile runs under the same ACL as production. The library needs `go` once
+for the nkeys module. Check it with:
+
+```sh
+bash integration/tests/nats_conf_test.sh
+```
+
+The profile contract tests (`export_agent_product_profile_test.sh`, `telegram_library_profile_test.sh`,
+`telegram_notification_profile_test.sh`) end with a step that starts a sentinel container, so they need
+a reachable Docker daemon; without one only their static assertions can be exercised.
+
 ## Telegram notification profile (TG-010)
 
 Validate the port/deployment and Compose contracts against an exact Telegram checkout:

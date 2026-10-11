@@ -118,55 +118,15 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# R2-12: the profile runs under the NATS authorization Platform deploys, at the Platform revision
+# under test, with fresh keys for the Edge, ChatGPT and Claude identities and throwaway keys for the
+# rest. No permission set is written by hand.
+# shellcheck source=lib/nats-conf.sh
+source "$workspace_root/integration/lib/nats-conf.sh"
 generate_nkeys() {
-  local generator="$task_runtime/nkey-generator"
-  mkdir -p "$generator" "$task_runtime/nats"
-  cp "$workspace_root/integration/fixtures/export-agent-product-nkeys.go" "$generator/main.go"
-  cat >"$generator/go.mod" <<'EOF'
-module ratatoskr.local/xpa020-nkeys
-
-go 1.25
-
-require github.com/nats-io/nkeys v0.4.10
-EOF
-  (cd "$generator" && GOWORK=off go mod tidy && GOWORK=off go run . "$task_runtime/nats")
-  local edge chatgpt claude
-  edge=$(tr -d '\r\n' <"$task_runtime/nats/edge.public")
-  chatgpt=$(tr -d '\r\n' <"$task_runtime/nats/chatgpt.public")
-  claude=$(tr -d '\r\n' <"$task_runtime/nats/claude.public")
-  cat >"$task_runtime/nats/ratatoskr.conf" <<EOF
-port: 4222
-http_port: 8222
-jetstream { store_dir: "/data" }
-authorization {
-  users: [
-    {
-      nkey: $edge
-      permissions: {
-        publish: {
-          allow: ["cmd.>", "\$JS.API.>", "\$JS.ACK.>"]
-          deny: ["\$JS.API.STREAM.DELETE.>", "\$JS.API.STREAM.PURGE.>"]
-        }
-        subscribe: { allow: ["_INBOX.>"] }
-      }
-    },
-    {
-      nkey: $chatgpt
-      permissions: {
-        publish: { allow: ["evt.ai-archive.chatgpt.operation.reported.v1"] }
-        subscribe: { allow: ["_INBOX.>"] }
-      }
-    },
-    {
-      nkey: $claude
-      permissions: {
-        publish: { allow: ["evt.ai-archive.claude.operation.reported.v1"] }
-        subscribe: { allow: ["_INBOX.>"] }
-      }
-    }
-  ]
-}
-EOF
+  mkdir -p "$task_runtime/nats"
+  render_nats_conf "$RATATOSKR_PLATFORM_CONTEXT/deploy/nats/ratatoskr.conf" \
+    "$task_runtime/nats" EDGE CHATGPT CLAUDE
 }
 
 generate_tls() {

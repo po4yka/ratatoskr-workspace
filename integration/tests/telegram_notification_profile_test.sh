@@ -64,6 +64,14 @@ assert_contains "$runner" 'duplicate_notification_is_not_sent_twice' "runner lac
 assert_contains "$runner" 'dispatcher_refuses_missing_or_mismatched_platform_durable' \
   "runner lacks durable failure assertion"
 assert_contains "$runner" 'workspace_revision' "runner does not record the workspace source revision"
+assert_contains "$runner" 'integration/lib/nats-conf.sh' "runner does not source the NATS rendering library"
+assert_contains "$runner" 'render_nats_conf' "runner does not render the deployed NATS configuration"
+assert_contains "$runner" 'deploy/nats/ratatoskr.conf' "runner does not render from Platform's deployed file"
+assert_contains "$runner" 'EDGE TELEGRAM' "runner does not key the Edge and Telegram identities"
+assert_contains "$runner" 'append_nats_test_user' "runner does not append the test driver as an extra stanza"
+if rg --quiet 'permissions:' "$runner"; then
+  fail "runner writes a hand-made NATS permission set"
+fi
 
 for evidence_field in \
   'Contracts revision' 'Platform revision' 'Telegram revision' 'Workspace revision' \

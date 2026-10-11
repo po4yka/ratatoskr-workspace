@@ -9,17 +9,24 @@ database_seed="$workspace_root/integration/fixtures/export-agent-product-init.sq
 evidence_summary="$workspace_root/integration/evidence/XPA-020.md"
 tls_proxy="$workspace_root/integration/nginx/export-agent-product.conf"
 system_host="$workspace_root/integration/fixtures/ExportAgentProductSystemHost.swift"
-nkey_generator="$workspace_root/integration/fixtures/export-agent-product-nkeys.go"
+nkey_generator="$workspace_root/integration/fixtures/nkeys.go"
+nats_library="$workspace_root/integration/lib/nats-conf.sh"
 
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 assert_file() { [[ -f "$1" ]] || fail "missing $1"; }
 assert_contains() {
   rg --quiet --fixed-strings -- "$2" "$1" || fail "$3"
 }
+assert_service_has() {
+  local service=$1 value=$2
+  sed -n "/^  ${service}:/,/^  [a-z][a-z-]*:/p" "$profile" \
+    | rg --quiet --fixed-strings -- "$value" \
+    || fail "profile service $service lacks $value"
+}
 
 for file in \
   "$profile" "$runner" "$fixture_builder" "$database_seed" "$evidence_summary" \
-  "$tls_proxy" "$system_host" "$nkey_generator"
+  "$tls_proxy" "$system_host" "$nkey_generator" "$nats_library"
 do
   assert_file "$file"
 done
@@ -66,12 +73,23 @@ assert_contains "$tls_proxy" 'ssl_protocols TLSv1.3' "TLS edge does not require 
 assert_contains "$tls_proxy" 'proxy_pass http://127.0.0.1:8080' \
   "TLS edge does not terminate into the loopback Platform listener"
 
-for subject in \
-  'evt.ai-archive.chatgpt.operation.reported.v1' \
-  'evt.ai-archive.claude.operation.reported.v1'
-do
-  assert_contains "$runner" "$subject" "runner does not generate secured permission for $subject"
-done
+# R2-12: the profile runs under the NATS authorization Platform deploys, rendered by the library,
+# never under a hand-made one.
+assert_contains "$runner" 'integration/lib/nats-conf.sh' "runner does not source the NATS rendering library"
+assert_contains "$runner" 'render_nats_conf' "runner does not render the deployed NATS configuration"
+assert_contains "$runner" 'deploy/nats/ratatoskr.conf' "runner does not render from Platform's deployed file"
+assert_contains "$runner" 'EDGE CHATGPT CLAUDE' "runner does not key the Edge, ChatGPT and Claude identities"
+if rg --quiet 'permissions:' "$runner"; then
+  fail "runner writes a hand-made NATS permission set"
+fi
+# Round 2 dedicated listeners: the receipt next to the host-only operator listener.
+assert_service_has chatgpt 'RATATOSKR__RECEIPT__LISTEN_ADDRESS: 127.0.0.1:8096'
+assert_service_has chatgpt 'RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:9085'
+assert_service_has claude 'RATATOSKR__RECEIPT__LISTEN_ADDRESS: 127.0.0.1:8097'
+assert_service_has claude 'RATATOSKR__ADMIN__LISTEN_ADDRESS: 127.0.0.1:9086'
+if rg --quiet 'ADMIN__LISTEN_ADDRESS: 127\.0\.0\.1:809[67]' "$profile"; then
+  fail "an importer's operator listener overloads its receipt port"
+fi
 assert_contains "$runner" 'merge-base --is-ancestor' "runner does not require published revisions"
 assert_contains "$runner" '^[0-9a-f]{40}$' "runner does not require full SHA inputs"
 assert_contains "$runner" 'status --porcelain' "runner does not refuse dirty source checkouts"
@@ -96,8 +114,8 @@ assert_contains "$system_host" 'import AgentCore' "system host does not use the 
 assert_contains "$system_host" 'OperationalAgentRuntime' \
   "system host does not compose the production operational runtime"
 assert_contains "$nkey_generator" 'nkeys.CreateUser' "runtime NKey generator does not create user seeds"
-assert_contains "$runner" 'go mod tidy' \
-  "runner does not materialize checksums for its pinned NKey generator dependency"
+assert_contains "$nats_library" 'go mod tidy' \
+  "NATS library does not materialize checksums for its pinned NKey generator dependency"
 
 validate_exit_line=$(grep -nF "if [[ \"\$mode\" == --validate ]]" "$runner" | cut -d: -f1)
 keychain_setup_line=$(grep -n '^setup_keychain$' "$runner" | cut -d: -f1)
@@ -130,7 +148,7 @@ done
 if rg --quiet --hidden -g '!export_agent_product_profile_test.sh' \
   '(BEGIN [A-Z ]*PRIVATE KEY|\bSU[A-Z2-7]{20,}|Bearer [A-Za-z0-9._-]+)' \
   "$profile" "$runner" "$fixture_builder" "$database_seed" "$evidence_summary" \
-  "$tls_proxy" "$system_host" "$nkey_generator"; then
+  "$tls_proxy" "$system_host" "$nkey_generator" "$nats_library"; then
   fail "profile assets contain credential material"
 fi
 
