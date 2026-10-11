@@ -1,9 +1,9 @@
 id: XR-021
-state: pending-publication
+state: pins-landed-integration-incomplete
 goal: Fix the cross-repository defects of the Ratatoskr fleet at the boundaries between repositories (bus subjects and envelopes, outbox relays, NATS permissions, port collisions, the AI archive upload binding, the channel-digest chain, explicit social captures, the content capture command and Telegram blob captures, privacy deletion), record the resulting behaviour in the workspace spec store, and pin a compatible snapshot.
 non_goals:
   - "Production host provisioning: nkeys, the ratatoskr-telegram-blobs group, external provider credentials (listed under rollout for the operator)."
-  - "Per-producer operation-report subjects, a GitHub re-queue sweep for dropped repository analysis requests, and extractor handling of a document above the 1 MiB NATS message limit (follow-ups, recorded under residual_risks)."
+  - "Per-producer operation-report subjects and a GitHub re-queue sweep for dropped repository analysis requests (follow-ups, recorded under residual_risks). Oversized documents and archive facts were a follow-up in round 1 and are handled in round 2 by the 8 MiB broker limit and the enqueue-time size guards."
   - "Image capture in Telegram: refused truthfully and tracked as a refusal-only issue."
   - "Converting docs/REQUIREMENTS.md or its siblings into specs; release tags; any edit under repos/."
 repositories:
@@ -368,14 +368,15 @@ required_checks:
 issues:
   refusal_only_telegram_images: https://github.com/po4yka/ratatoskr-telegram/issues/16
 residual_risks:
-  - evt.platform.operation.reported.v1 is one shared subject trusted by the envelope producer field; the extractor, X, Instagram, Threads and channel-digests can forge reports for one another and X can read every tenant's report metadata through its durable (per-producer subjects need a contract change).
+  - "evt.platform.operation.reported.v1 is one shared subject. Round 2 (R2-02) narrows it: Platform applies a report only when its tenant is the operation's owner and its producer is in the allow-list for the operation kind. The extractor, X, Instagram and Threads can still report for each other's capture operations, because a capture operation does not record which service it was dispatched to, and X can still read every tenant's report metadata through its durable (per-producer subjects need a contract change)."
   - The events stream drops its oldest messages when full (1 GiB or 7 days), and evt.knowledge.repository_analysis.requested.v1 is an event, so a very deep backlog could drop a request GitHub already marked published (a GitHub re-queue sweep is the recommended follow-up).
-  - NATS caps a message at 1 MiB by default, so an oversized extracted document dead-letters in the extractor outbox.
-  - GitHub's REST reference documents only 204 and 422 for DELETE /applications/{client_id}/grant; treating 404 as already revoked is undocumented provider behaviour taken from the contract (recorded in the GitHub commit).
+  - "GitHub's REST reference documents only 204 and 422 for DELETE /applications/{client_id}/grant. Round 2 (R2-08) accepts a 404 as already revoked only after a probe of GET /user with the same token answers 401; any other outcome is reported by account erasure as incomplete_external_grant_revocation. The probe, not the undocumented 404, is what makes the revocation verified."
   - Instagram's response classification is a starting point to correct against recorded live fixtures; X and Meta credentials are external dependencies the owner provisions.
   - The Telegram blob store is content-addressed and deduplicated across users; the guard on POST /v1/captures/blobs is the Telegram session kind, the owner allow-list and the unguessable digest.
-  - integration/compose/export-agent-product.yaml is run by a script that writes its own narrow NATS file in which the ChatGPT and Claude identities may publish only their operation-report subject, while the XR-021 importers also publish eight ai_archive.* fact subjects; if that profile is run it will deny those publishes. It was not changed because it could not be run to show a failure (see composed_integration).
   - The host group ratatoskr-telegram-blobs and the thirteen nkeys do not exist yet; until they do, extractor blob runs fail with blob_unreadable and no identity can authenticate.
+  - "Platform's Edge validates its gateway route listeners against the production ports (crates/core/src/config/validate.rs) and the channel-digests listener against 8098, so no stack on other ports, and no second stack on one machine, can start Edge with routes. The native smoke could not exercise any Edge-to-service hop for that reason. Reported by the smoke, not fixed here (no edit under repos/)."
+  - "ChatGPT can never reach a succeeded import with the code at the pinned head: the only registered parser refuses assets.json and clears every asset, so the assets_not_observed gap is always present and the best case is partially_succeeded with ai_archive.import.incomplete; an archive that carries assets.json ends failed with chatgpt.archive.invalid. Reported by the smoke."
+  - "ratatoskr-chatgpt and ratatoskr-claude build against contracts 5426cf3 while the other Rust repositories build against ad16855. 5426cf3 differs from ad16855 only in a test of tools/contractsc, a CI file and an OpenSpec change, so the crate sources are identical; each repository still names exactly one revision for all of its ratatoskr-* dependencies."
 verification:
   hosted_ci_of_pinned_heads: every check run on every pinned child commit concluded success when read through the GitHub API on 2026-10-11 (contracts 9, platform 7, extractor 6, knowledge 5, channel-digests 6, github 5, vault 5, x 5, instagram 5, threads 5, chatgpt 6, claude 5, telegram 5, browser-extension 4, export-agent 4)
   red_before_green:
@@ -385,7 +386,8 @@ verification:
   workspace_checks: ws manifest check valid, ws lock check current, ws status clean, ws doctor healthy; harness cargo fmt --check, clippy -D warnings and cargo test (51 tests across the workspace crates, including the new port_allocation and bus_acl files) all green; openspec validate --all --strict green
   profile_contract_tests: web_operational, export_agent_product and telegram_deployment (against telegram b43c62554b61cd70f89f581887d5903d74cdff5e) PASS; telegram_notification and telegram_library contract tests could not run because they call the Docker API
 composed_integration:
-  status: not run
+  status: native smoke only
+  native_smoke: see round_2.native_smoke; the Docker profiles below were not run in either round
   reason: "The Docker API was not reachable from the session that wrote this record. /var/run/docker.sock does not exist; the default colima context socket (/Users/po4yka/.colima/default/docker.sock) exists but refuses connections, and colima status fails with \"error retrieving current runtime: empty value\". No compose project was started and no composed assertion was made."
   profiles:
     export-agent-product: not run (needs Docker, swift, go and a keychain; covers the AI archive path; XPA-020 already records its composed run as pending)
@@ -397,23 +399,298 @@ composed_integration:
     - "ingestion (capture a URL, find it in library search with Knowledge in fixture mode)"
     - "social (extension to Platform to NATS to each service to GET /v1/operations/{id})"
     - "Telegram PDF path"
-  claim: none; the specs and the child repositories' own broker and database tests are the evidence for each hop, and no end-to-end composed claim is made
+  claim: none; the specs and the child repositories' own broker and database tests are the evidence for each hop, and no end-to-end composed claim is made. Round 2 adds a native, Docker-free run of two flows whose results and unexercised hops are under round_2.native_smoke; neither upgrades this claim.
 pinned_snapshot:
-  contracts: ad16855c4e7f3d52cd118274faa3b8f3ab4da576
-  platform: f13a78587009f2a6bd5369e413e5f56b83141c0d
-  extractor: da1247ae3f842ee9ad1550fc0afc8780b5a16026
-  knowledge: 3833d489d444270d854afa31e38dc87247d7e477
-  channel-digests: a476079ec0115c38ab8c76e9280bf23a1ea89539
-  github: dfb5a88090e9f84f1d9e48b27c47a8b7a1085c56
-  vault: 0a6c8d4700f7202633b5671e59341cb7d3f8bbc0
-  x: f1810d5078eb688aa3715c2edb95e87e2d742e16
-  instagram: 956f0cb66c8357297db68140715f8413cd3f7adc
-  threads: 51b0fdd968ab4817b6bf2bf63a5f0174dd78855c
-  chatgpt: c72a1faddb713afb43a95f44bb3f275c67789ac3
-  claude: f3194364cac2a1bbf8f4483670c08195415c47ce
-  telegram: b43c62554b61cd70f89f581887d5903d74cdff5e
-  browser-extension: ff8bdd8e8816a499e34ba3aaefcfdd3879dea282
+  contracts: 5426cf3096733d714c59b02ec41e946fdedcd94d
+  platform: 8f8a8d8318f3c4ad44a508f8124cf923bc5552e8
+  extractor: cf64d84cb6f41c929fd9b836fd47bb3f57bd23dc
+  knowledge: 14326b4b1a5f83b83d601c3df17dd9726aae1248
+  channel-digests: 30d6cd74b429f85f2a59f754b755cf800a1c8520
+  github: 7891aea45541192a0201e8ec61d430253dbabcee
+  vault: 24adc4cd782fdcc17a33890488cfc8376979186d
+  x: da4ab3d8e9674f4b2e126266a6179702a01e0254
+  instagram: b4d13176e3b728ae69f55148f34f84da5e0f87f7
+  threads: 9cf3707cdb26f6782392e102d8fd65d03724d9b8
+  chatgpt: bd852e8483603423cd08f1a79c452b7946974c48
+  claude: c242ac567c0ac7278f1a43b99ca39875847ac2dc
+  telegram: 869333b8d78395526096f183b219afba71ca8573
+  browser-extension: 70011f9e9c57877caf2f75ae0ba436456845ad5f
   export-agent: da1acd41f20ce972b7530aad9c231ba7bd9b4a6c
   mobile: 67646d3ec6f50a458b59ec50ccea0cec29981e98
   web: 3c30f15f8d78d116aaf726e4ae085e8d2f317ea5
-  workspace_lock_sha256: d2a9c7cf7791c5bfe0524bf8a0b823120634c95a197190353ae2ddc48f94d85f
+  workspace_lock_sha256: cc7c445feab6305df630a7e3e4150b64adc2c3c9352ddd2a4a8392c8a8a34be5
+round_2:
+  goal: Fix the defects that independent verifiers found by tracing each flow through the round 1 code (Edge upstream listeners, operation report authority, publisher health and outbox failure classes, channel-digest terminal states, tenant deletion of recap state, the blob registration and erasure race, GitHub origination, X provider deletion, operator examples, permalink hosts, profile ACLs), record the behaviour as an OpenSpec change, add the harness checks that stop the first and last kind of drift, and advance the pins.
+  contract_source: .omc/plans/XR-021/CONTRACTS.md sections R2-01 to R2-19 (a local planning file, not committed). CONTRACTS_SHA stays ad16855c4e7f3d52cd118274faa3b8f3ab4da576 for every repository except chatgpt and claude, which pin 5426cf3096733d714c59b02ec41e946fdedcd94d, a contracts commit that adds a test and no crate source (see residual_risks).
+  contracts_origin_main: 460057a61542320805167116eca556b26df312f3 is one commit ahead of the pinned 5426cf3 (a CI action bump); the snapshot pins the round 2 head every child built against.
+  openspec: "openspec/changes/xr-021-fleet-round-2 (not archived: task 7.1, the native smoke harness, is not done, and the change must be archived after xr-021-fleet-cross-repo-fixes)"
+  hosted_ci_of_pinned_heads: every check run on every round 2 head concluded success when read through the GitHub API on 2026-10-11 (contracts 8, platform 6, extractor 6, knowledge 5, channel-digests 5, github 5, vault 5, x 5, instagram 5, threads 5, chatgpt 5, claude 5, telegram 5, browser-extension 4)
+  repositories:
+    - id: ratatoskr-contracts
+      head: 5426cf3096733d714c59b02ec41e946fdedcd94d
+      previous_head: ad16855c4e7f3d52cd118274faa3b8f3ab4da576
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "a1f43aaf52e86b5af3400e56950aa43563bfa872 chore(deps): update install-action to v2.87.27 (#17) [no R2 id: test, docs, openspec or bookkeeping]"
+        - "5426cf3096733d714c59b02ec41e946fdedcd94d test(contractsc): pin registry audiences that nothing wires [R2-19]"
+    - id: ratatoskr-platform
+      head: 8f8a8d8318f3c4ad44a508f8124cf923bc5552e8
+      previous_head: f13a78587009f2a6bd5369e413e5f56b83141c0d
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "ca8e64751ae8c5b8190e1e3d6c888533a4777ddb fix(operations): apply a report only for its owner and producer [R2-02]"
+        - "9924c9b443093acc33833768f729ac85ad3ee265 fix(nats): raise the deployed broker max_payload to 8 MiB [R2-04]"
+        - "cee12e1097628fb066876a0e29e9bb44a42afe12 fix(scheduling): reject a schedule registration for a non-user owner [R2-14]"
+        - "9a6034dbc8bfaa1bf0ecdbf8a16cb1a5be0bd690 fix(public-api): accept threads.com permalinks for the Threads provider [R2-11]"
+        - "ba479571011cd2303ca4a40ca7d0693295e9d856 fix(public-api): document the chunk route's 413 in OpenAPI [R2-18]"
+        - "8bec540a870f23e9eda6eecdd5b9429938dccef6 docs(deploy): name the real NATS seed variables and Edge upstream owners [R2-10]"
+        - "6f6eb1b83f80a4285791871579bf3881fefd2831 chore(openspec): archive the XR-021 round 2 report authority change [no R2 id: test, docs, openspec or bookkeeping]"
+        - "8f8a8d8318f3c4ad44a508f8124cf923bc5552e8 fix(operations): bind AI archive reports to their owner by acceptance [R2-02]"
+    - id: ratatoskr-extractor
+      head: cf64d84cb6f41c929fd9b836fd47bb3f57bd23dc
+      previous_head: da1247ae3f842ee9ad1550fc0afc8780b5a16026
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "5af038aec1a096c8bb387fa19448f1cdb97179d3 fix(eventing): retry transient publishes forever and class oversize rows [R2-04]"
+        - "01d75fa968766dbb589d9b802a1ae66d37c5ee29 feat(extractor): withdraw readiness while the outbox publisher is refused [R2-03]"
+        - "b9d8b4f383301a29ee4b2c271feafef325a17868 test(extractor): express the readiness test deadlines in minutes [no R2 id: test, docs, openspec or bookkeeping]"
+        - "5a9d35f50c6e219890b5ca499ffb03954454d180 feat(eventing): report an oversize document as not ingested [R2-04]"
+        - "6424f390afe30270e2b39ab0679604f0523ec349 docs(extractor): state the outbox outcomes and the readiness rule [R2-03,R2-04]"
+        - "cf64d84cb6f41c929fd9b836fd47bb3f57bd23dc chore(openspec): tick the verification task of the outbox change [no R2 id: test, docs, openspec or bookkeeping]"
+    - id: ratatoskr-knowledge
+      head: 14326b4b1a5f83b83d601c3df17dd9726aae1248
+      previous_head: 3833d489d444270d854afa31e38dc87247d7e477
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "87989ef60ed74ddfc436f83323910330c9c51026 docs: open the XR-021 round 2 change for the API listener, recap and erasure [no R2 id: test, docs, openspec or bookkeeping]"
+        - "33fd3235f1ac616efafa7275e12eb66e9c197c86 feat(knowledge): serve the library API on its own listener [R2-01]"
+        - "14bd105403860d8b847bbd8638560ecf22d1a497 fix(knowledge): default the channel recap to the openrouter provider [R2-13]"
+        - "292eb5999cfa92e3df152c6796f424915c61be5e fix(knowledge): bound recap redelivery and acknowledge progress [R2-05]"
+        - "0a83a8acfe62407a63c9e9ee0bbc31bcd0819b11 fix(knowledge): delete a tenant's channel recap state with its data [R2-06]"
+        - "656bcc118c286965b5e76399628b08264b4e9a61 fix(knowledge): lock blob registration and erasure on the digest [R2-07]"
+        - "c76a313a3de8023bef7324d9c72fd156d0d7c2f9 docs(knowledge): ship an operator example and refresh the README [R2-10]"
+        - "b69fa86d351539e3a2b09c15324111c1c56e99fd fix(knowledge): put the staged round 2 hunks back where they belong [no R2 id: test, docs, openspec or bookkeeping]"
+        - "14326b4b1a5f83b83d601c3df17dd9726aae1248 chore(openspec): archive the XR-021 round 2 API listener change [no R2 id: test, docs, openspec or bookkeeping]"
+    - id: ratatoskr-channel-digests
+      head: 30d6cd74b429f85f2a59f754b755cf800a1c8520
+      previous_head: a476079ec0115c38ab8c76e9280bf23a1ea89539
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "af73a9707a698348cbab9f8d89ff3586d1177daa chore: open the XR-021 round 2 terminal states change [no R2 id: test, docs, openspec or bookkeeping]"
+        - "d108650085502af778a4a70a4e0184b6aed8f44f feat: fail runs that outlive their deadline and report them [R2-05]"
+        - "dbd4b3612141ffa2577118b4a388bb7ae7232714 feat: report attributable invalid commands instead of terminating them [R2-05]"
+        - "c51b655ad634b3173d89d3859b618d0938936520 fix: clamp list page_size to the configured ceiling [R2-05]"
+        - "4b8a8e2944535683964e6e593b5d7341d4e5bbef test: expect an extended subscription payload to be reported failed [R2-05]"
+        - "f350776cf72e5db329e2af3e2e7a1ea405ffaba5 feat: create scheduled runs in the configured output language [R2-05]"
+        - "3206b10d1512882e53e33e84b7118db25c445336 docs: ship operator examples and document the round 2 behaviour [R2-10]"
+        - "d61a03ce2143765b5daebfaf0580fb0c44f4f289 chore: archive the XR-021 round 2 terminal states change [no R2 id: test, docs, openspec or bookkeeping]"
+        - "30d6cd74b429f85f2a59f754b755cf800a1c8520 test: read a fixed clock in the run deadline tests [R2-05]"
+    - id: ratatoskr-github
+      head: 7891aea45541192a0201e8ec61d430253dbabcee
+      previous_head: dfb5a88090e9f84f1d9e48b27c47a8b7a1085c56
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "62dc594f7a633a6acb2670b97c9dd831049a4ccd docs(openspec): propose XR-021 round 2 origination and bounded calls [no R2 id: test, docs, openspec or bookkeeping]"
+        - "e8cde243c05cc35293f2614b92774601b16a7832 feat(catalog): originate the first analysis request from a track action [R2-08]"
+        - "8223706f09604450f3cedca2e2b018de1c240730 feat(service): observe watched repositories on an interval [R2-08]"
+        - "517deb9645d916634bcf190f71b9dd03036feb66 feat(catalog): bound every provider call with a timeout [R2-08]"
+        - "3868dd5ca5c15ab7d29c0b26b48e3605814c72ee fix(catalog): confirm an already-revoked grant with a token probe [R2-08]"
+        - "002460bb994a384ef07e387b94549b43e8f412a7 feat(service): report relay health through readiness [R2-03]"
+        - "9b2c5c380b0101c4b5a0c26523821e7b4bc815cd docs(deploy): ship the operator example and describe what exists [R2-10]"
+        - "2e1645ad7fcb4eb9011d800da1e5c833ea99cb72 fix(service): rotate the observer on attempt and start it after boot [R2-08]"
+        - "6de812e7a3bf64ee79d17ead056d7ed0108609ea fix(catalog): evaluate watches from stored state and gate the README call [R2-08]"
+        - "9285ca5937ee5b55a29c11964c236da1eaaf4fae refactor(catalog): drop apply_fresh_body, record every source with its README [R2-08]"
+        - "0ee095b77ff7f5194b635a66cb429fa47b02d50a docs(openspec): match the change to the code and record the readiness deviation [no R2 id: test, docs, openspec or bookkeeping]"
+        - "b448709ed3d00f91b17e85a487571f150fa7c3f8 test(catalog): inject a fixed clock into the observer tests [R2-08]"
+        - "7891aea45541192a0201e8ec61d430253dbabcee test(catalog): serialize authorized broker start so parallel tests get distinct ports [R2-08]"
+    - id: ratatoskr-vault
+      head: 24adc4cd782fdcc17a33890488cfc8376979186d
+      previous_head: 0a6c8d4700f7202633b5671e59341cb7d3f8bbc0
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "69c01763ad69dd9e44b0c163621736688d6c75c3 feat(vault): fail readiness when the relay cannot publish [R2-03]"
+        - "24adc4cd782fdcc17a33890488cfc8376979186d feat(vault): ship a loadable operator example for the bus keys [R2-10]"
+    - id: ratatoskr-x
+      head: da4ab3d8e9674f4b2e126266a6179702a01e0254
+      previous_head: f1810d5078eb688aa3715c2edb95e87e2d742e16
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "17d2a48512c37273900ec5866aacf7b55f872c1e fix(x-sync): remove the owner source when a recapture finds a deletion [R2-09]"
+        - "40a394034ba4cc362f28cf73d5f4bc329e2abc1e feat(x-capture): report relay health to readiness, park oversize bodies [R2-03,R2-04]"
+        - "ce28de845123806ff9dbc5ec68ba0f8fd74c224d docs(x): ship the operator example and say what runs [R2-10]"
+        - "da4ab3d8e9674f4b2e126266a6179702a01e0254 chore(openspec): tick the gate task of the round 2 change [no R2 id: test, docs, openspec or bookkeeping]"
+    - id: ratatoskr-instagram
+      head: b4d13176e3b728ae69f55148f34f84da5e0f87f7
+      previous_head: 956f0cb66c8357297db68140715f8413cd3f7adc
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "6e1752eb4232374fcc1f7aa5a168917366a14e30 docs(openspec): plan the relay health and operator example change [no R2 id: test, docs, openspec or bookkeeping]"
+        - "178391956047550016c4273a5ce17f67803868b0 refactor: move the publisher pass and relay loop out of their hosts [no R2 id: test, docs, openspec or bookkeeping]"
+        - "048e6b7647992d736543efb38d4e8fbb8523ed7d feat: surface a refused publish in readiness and class oversize rows [R2-03,R2-04]"
+        - "36211d84357a3202833721af41e5f4ab310accf4 feat: ship a loadable operator example for the service [R2-10]"
+        - "b4d13176e3b728ae69f55148f34f84da5e0f87f7 docs(openspec): tick the relay health and example gate task [no R2 id: test, docs, openspec or bookkeeping]"
+    - id: ratatoskr-threads
+      head: 9cf3707cdb26f6782392e102d8fd65d03724d9b8
+      previous_head: 51b0fdd968ab4817b6bf2bf63a5f0174dd78855c
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "9cf3707cdb26f6782392e102d8fd65d03724d9b8 feat(deploy): ship a loadable Threads operator example [R2-10]"
+    - id: ratatoskr-chatgpt
+      head: bd852e8483603423cd08f1a79c452b7946974c48
+      previous_head: c72a1faddb713afb43a95f44bb3f275c67789ac3
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "5cc80355b73bfb7d3846597c542983ed5b3532c7 chore(deps): pin ratatoskr-contracts to 5426cf3 and open the round 2 change [no R2 id: test, docs, openspec or bookkeeping]"
+        - "a10edef357e6e2a859bab07340ae4304cfddcc39 feat(receipt): serve the receipt on its own loopback listener [R2-01]"
+        - "8d3bc67058ee0d42ea453545956d9ae5e024158e fix(receipt): accept only application/zip on the Platform receipt [R2-15]"
+        - "a3472bf7ae222663012b7db80317b4af7683bdf6 feat(outbox): guard event size and never wedge on an undeliverable row [R2-04]"
+        - "d18b0fd2acca02d219e86aa9c98da788365c41bc fix(blobs): one lock protocol for blob registration and erasure [R2-07]"
+        - "812bf7aa21df65c769d3895a3a07fd0612e8bcf3 feat(deploy): ship a loadable operator example and list the variables [R2-10]"
+        - "46a4e10c6ea0e2a4db5b6e02803fd5d1136084e0 docs(openspec): tick the verified XR-021 round 2 tasks [no R2 id: test, docs, openspec or bookkeeping]"
+        - "bd852e8483603423cd08f1a79c452b7946974c48 docs(openspec): archive xr-021-r2-receipt-listener-size-and-erase-race [no R2 id: test, docs, openspec or bookkeeping]"
+    - id: ratatoskr-claude
+      head: c242ac567c0ac7278f1a43b99ca39875847ac2dc
+      previous_head: f3194364cac2a1bbf8f4483670c08195415c47ce
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "1db7d65658daaeb4322247ef58cb326a941b9a72 chore(deps): pin the contracts to the XR-021 round 2 head [no R2 id: test, docs, openspec or bookkeeping]"
+        - "b8567bb591de8800383114c6c6553ce965ef3b5d docs(openspec): open xr-021-r2-size-erase-race-and-example [no R2 id: test, docs, openspec or bookkeeping]"
+        - "4cd4d3db9bf4f295dee6751a6833be4dcd30e28d fix(privacy): re-check blob references under a digest lock before erasing [R2-07]"
+        - "578169d52c2300b658231218def14f4f2d894a17 feat(events): guard fact size and retire undeliverable outbox rows [R2-04]"
+        - "27a21c0978d94d8a1b7b09565ba865b168798e6c feat(deploy): ship a loadable operator example and document the flow keys [R2-10]"
+        - "c242ac567c0ac7278f1a43b99ca39875847ac2dc docs(openspec): tick the gate task of xr-021-r2-size-erase-race-and-example [no R2 id: test, docs, openspec or bookkeeping]"
+    - id: ratatoskr-telegram
+      head: 869333b8d78395526096f183b219afba71ca8573
+      previous_head: b43c62554b61cd70f89f581887d5903d74cdff5e
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "2d4d57a9ff88403ff17a3e237dede9f6fb3f2484 fix(webhook): send only the forward member as capture origin [R2-17]"
+        - "26239fa0946178d3fe5bce192539f1f046ebbc23 chore(deps): align the contracts pin with the fleet revision [R2-17]"
+        - "65e734e03e05616c193c027822429a201b2db9f2 fix(deploy): install the dispatcher NATS seed at the fleet path [R2-10]"
+        - "869333b8d78395526096f183b219afba71ca8573 docs(openspec): archive xr-021-r2-origin-privacy-pin-and-seed-path [no R2 id: test, docs, openspec or bookkeeping]"
+    - id: ratatoskr-browser-extension
+      head: 70011f9e9c57877caf2f75ae0ba436456845ad5f
+      previous_head: ff8bdd8e8816a499e34ba3aaefcfdd3879dea282
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      commits:
+        - "bc6d60d0da0f608a8d803850f62baf487ee374a8 fix(capture): route threads.com and twitter.com permalinks to provider lanes [R2-11]"
+        - "70011f9e9c57877caf2f75ae0ba436456845ad5f docs(openspec): archive xr-021-r2-provider-hosts [no R2 id: test, docs, openspec or bookkeeping]"
+  repositories_without_round_2_work:
+    - id: ratatoskr-export-agent
+      head: da1acd41f20ce972b7530aad9c231ba7bd9b4a6c
+      reason: R2-19. It keeps its 2 GiB archive default and the permanent-413 rule; the configured ceiling is the operator's, and a mismatch is a clean permanent failure with an attention state, not a retry loop.
+    - id: ratatoskr-mobile
+      head: 67646d3ec6f50a458b59ec50ccea0cec29981e98
+      reason: read only and unchanged; no round 2 contract touches it.
+    - id: ratatoskr-web
+      head: 3c30f15f8d78d116aaf726e4ae085e8d2f317ea5
+      reason: read only and unchanged; no round 2 contract touches it.
+  breaks:
+    - "Knowledge's operator routes (/v1/capabilities, /internal/search, /internal/user-content/*) moved from the operator listener to a new API listener, RATATOSKR__API__LISTEN_ADDRESS, default 127.0.0.1:8091; the operator listener keeps /live, /ready, /metrics and /version on 9081. channel-digests documents Knowledge at 8091."
+    - "The ChatGPT receipt and capability routes moved off the operator listener onto a dedicated one, RATATOSKR__RECEIPT__LISTEN_ADDRESS, default 127.0.0.1:8096; the operator listener stays on 9085. Configuration refuses equal addresses."
+    - "The extractor outbox no longer dead-letters transient publish failures: it retries forever with a capped backoff and marks only a row that can never be published (larger than the broker's max_payload) undeliverable."
+    - "The deployed NATS file sets max_payload: 8MB."
+    - "Platform applies an operation report only when the envelope tenant is the operation's owner and the producer is allowed for the operation kind; any publisher that relied on the old behaviour (the TG-010 driver) now reports as the producer it stands in for."
+    - Knowledge's channel recap provider mode defaults to openrouter instead of scripted.
+  exclusions:
+    - item: "Fleet-wide account erasure transport (identity.account.erasure_requested consumers and acknowledgements in every service, including GitHub's)"
+      reason: a separate feature of its own
+    - item: Image OCR in Telegram
+      reason: refusal-only by design, issue 16 filed
+    - item: "Live calls to real X, Meta, Threads, OpenRouter and Telegram MTProto services, including Instagram's classify_response calibration"
+      reason: they need credentials; the native smoke stops before them
+    - item: Domain listeners for vault (8093), social (8094) and ai-archive (8095)
+      reason: no implementing service exists; Edge reports their capability stale on purpose
+    - item: Wiring Knowledge's social and AI-archive completion facts to Instagram, Threads, ChatGPT and Claude (R2-19), and producing evt.platform.notification.raised.v1
+      reason: four more Edge durables and four ACL stanza edits for a feedback link no flow depends on; no producer of the notification exists and what raises one is a product decision
+    - item: The browser-extension lockfile registry URLs; the export agent's configurable archive ceiling; the hand-written fixture inside Platform's nats_permissions.rs; per-service authorized-broker tests for X, Instagram, Threads, ChatGPT, Claude and Telegram; the dormant X bookmark and compliance lane; the tombstone owner mapping for unmapped ChatGPT accounts
+      reason: CI is green for the first; a permanent-413 rule already makes a mismatch a clean failure for the second; deployed_nats_config.rs covers the third; the Platform matrix plus the NATS server log check cover the deployed ACL for the fourth; no service path syncs bookmarks for the fifth; an unmapped account never reached Knowledge, so the sixth is a configuration dependency
+  workspace_changes:
+    openspec: openspec/changes/xr-021-fleet-round-2
+    docs: docs/DEPLOYMENT_TARGET.md (the 8 MiB limit and the two dedicated listeners), docs/QUALITY_GATES.md, integration/README.md
+    harness_tests:
+      - harness/crates/workspace-core/tests/edge_upstreams.rs
+      - harness/crates/workspace-core/tests/bus_durables.rs
+      - harness/crates/workspace-core/tests/support/binds.rs (the bind matcher, moved out of port_allocation.rs)
+    integration:
+      - integration/lib/nats-conf.sh
+      - integration/fixtures/nkeys.go (was export-agent-product-nkeys.go; takes identity names as arguments)
+      - integration/tests/nats_conf_test.sh
+      - run-export-agent-product.sh, run-telegram-library.sh, run-telegram-notification.sh and compose/export-agent-product.yaml, compose/telegram-library.yaml now render the deployed ACL and use the dedicated listeners
+    not_done: integration/native/ and native_smoke_contract_test.sh (task 7.1 of the OpenSpec change). The smoke was run by hand with scripts that are not in this repository.
+    manifest: workspace.toml unchanged; the round 2 couplings follow edges that already exist in one direction
+  harness_results:
+    red_before_green:
+      edge_upstreams: every_implemented_edge_upstream_is_bound_by_its_owner failed against the previous pins with no deploy example read for knowledge, github, chatgpt or claude; passes after the pin advance. routes_without_a_service_are_exactly_vault_social_and_ai passed against the previous pins.
+      bus_durables: the first run failed on the Telegram row form (a defect in the test, fixed); against the previous pins the names and filters already agreed, so it passed. The mutation test, not a failing run against the pins, is what proves the scan.
+      nats_conf_test: failed with a missing library, then against the previous Platform pin with "the deployed max_payload of 8MB did not survive rendering"; passes against the round 2 pin.
+      profile_contract_tests: the three extended tests failed before the runners and compose files changed (runner does not source the NATS rendering library, twice; Knowledge lacks RATATOSKR__API__LISTEN_ADDRESS) and pass after.
+    final_gate: "cd harness: cargo fmt --all -- --check clean, cargo clippy --workspace --all-targets --all-features --locked -- -D warnings clean, cargo test --workspace --all-features --locked 61 tests in 14 binaries all passed, cargo deny check ok"
+    workspace_commands: ws manifest check valid, ws lock check current, ws status clean, ws doctor healthy
+    openspec: openspec validate --all --strict 27 passed; openspec validate --archived 14 passed
+    profile_contract_tests_run: web_operational, telegram_deployment (against telegram 869333b8d78395526096f183b219afba71ca8573) and nats_conf PASS as written; export_agent_product, telegram_library and telegram_notification PASS only with a stand-in docker command that exits 0, because their last step starts a sentinel container and the Docker daemon is not reachable; that step was not exercised
+    could_not_run: the three composed profiles under integration/ (they need Docker); no composed claim is made
+  native_smoke:
+    note: The smoke runs were performed by other agents before this record was written; their results are copied as reported to the workspace writer. Nothing is upgraded. Five of the seven planned flows have no result in what was reported (F2, F3, F5, F6, F7) and are recorded as not reported, not as run or passed. No smoke script is committed.
+    flows:
+      - flow: F1 AI-archive upload (export-agent style HTTP calls to Platform Edge, then the ChatGPT and Claude receipt, then the operation reported back)
+        ran: true
+        passed: false
+        blocker: "Edge's startup validation hard-codes the production ports for its upstreams, so with the ports remapped into 57900..57999 ratatoskr-edge refused to start with 8 configuration problems (7 gateway route listeners and the channel-digests listener, V22). Edge ran with no gateway routes. The public prepare, open, chunk PUT and finalize hops and Edge's gateway forward to the receivers were therefore never exercised by a real Edge."
+        faked_hop: "Edge's prepare and gateway forward were replaced by an emulator that inserted the rows Edge's accept() writes and then POSTed to the receiver with Edge's six x-ratatoskr-* claims and no Authorization header. Everything after that was real: the receiver, its outbox, its publish under the deployed ACL, and Edge's projection."
+        passed_assertions:
+          - "ChatGPT and Claude start from their shipped examples and report ready; GET /v1/capabilities on the receipt ports returns the ai_archive.receipt capability; /metrics is 404 on the receipt ports and 200 on the operator ports; the receipt path and /v1/capabilities are 404 on the operator ports"
+          - "Edge with no routes: /health/ready 200; 3 streams and 26 durables present; all 18 domain consumers present with the right filters, ack waits and max_deliver"
+          - "Real device pairing through real Edge (pairing code 201, pair 201, device kind export_agent)"
+          - "Claude: complete small archive succeeded, complete large archive (5.4 MB zip, one 5 MiB message) succeeded, the shipped fixture succeeded, an archive with reference-only or digest-mismatched knowledge files partially_succeeded with ai_archive.import.incomplete; each reached its terminal state through the real bus and Edge's projection in 1 to 2 seconds"
+          - "Negative receipts to both receivers: octet-stream 400 JSON ErrorEnvelope, Authorization present 401, GET 405 with allow: POST; replaying the same bytes under the same operation id returned 202 with unchanged counts"
+          - "Edge outage: after SIGKILL of Edge a Claude receipt returned 202, the operation stayed accepted while the projection durable showed pending=1, and after the restart it reached succeeded within 2 seconds"
+          - "NATS ACL probes by raw protocol with the real nkeys: all seven denied publishes (ChatGPT and Claude to subjects they may not publish) returned a Permissions Violation, the log holds exactly those 7 Publish Violation lines, and real traffic raised none"
+          - "The 5 MiB conversation fact fit under max_payload 8 MiB"
+        failed_assertions:
+          - "ChatGPT: small, large and fixture archives all ended partially_succeeded with ai_archive.import.incomplete (structurally_partial) and never succeeded; an archive carrying assets.json ended failed with chatgpt.archive.invalid"
+          - "Edge's own /v1/capabilities returned services: [] because Edge had no routes"
+        not_run: "413 payload_too_large on prepare; a chunk above 2 MiB; resume after an interrupted upload; re-preparing the same bytes returning the same operation; Edge's public capabilities reporting both providers; the export-agent Swift client; the complete-versus-incomplete pair on ChatGPT; Knowledge's consumption of the facts (Knowledge was not part of this flow)"
+        ports: "NATS 57910 and 57911, PostgreSQL 57912, Edge 57920 and 57921, ChatGPT 57930 and 57931, Claude 57940 and 57941 (not the production ports)"
+      - flow: F4 Channel digests (subscription and run through Platform Edge, bus, channel-digests worker, committed manifest, Knowledge recap with the scripted provider, bus, worker, terminal Edge operation)
+        ran: true
+        passed: true
+        as_reported: "passed true. The transcript handed to the workspace writer ends at leg A step 1. The result line, the NOT RUN / FAKED line and the DEVIATIONS line below come from the flow's own result.txt on disk, and the transcript's setup, build and durable facts are recorded in the lines that follow."
+        result_line: "PASS for the Platform Edge to bus to channel-digests worker to Knowledge (scripted) to bus to worker to Edge operation path"
+        not_run_or_faked:
+          - "NOT RUN: the Edge to channel-digests API read hop (Edge refuses any digests listener except 8098 and any non-allocated route listener, with ports limited to 57900..57999); Edge ran with no domain routes and no channel-digests listener, so the three digest read routes answered 503"
+          - "FAKED: MTProto acquisition. The manifest was committed by the service's own DigestCoordinator through a helper from synthetic posts; the provider session file is a locally encrypted file whose only data centre is a closed loopback port"
+        deviations:
+          - "NATS no_auth_user was mapped to the KNOWLEDGE identity and Knowledge's recap bus credential was removed, because the scripted provider refuses a credentials file. The deployed ACL was therefore not in force for Knowledge on this flow."
+        setup_facts: "PostgreSQL 17.11 and nats-server 2.15.1 native, pgvector pre-created by a superuser; release builds with --locked; the NATS file was the deployed one with only port, host, http, store_dir and the 13 nkeys changed; max_payload read back as 8388608; all S04 durables present with the contract values after Edge started; the worker registered its schedule (operations.schedules daily-digest for the owner, schedule.registration audited allowed)"
+      - flow: F2 Knowledge ingestion through a PDF blob capture
+        ran: not reported
+        passed: not reported
+      - flow: F3 Telegram to Platform
+        ran: not reported
+        passed: not reported
+      - flow: F5 Social captures
+        ran: not reported
+        passed: not reported
+      - flow: F6 Privacy deletion and tombstone delivery
+        ran: not reported
+        passed: not reported
+      - flow: F7 GitHub repository analysis loop
+        ran: not reported
+        passed: not reported
+    process_incident: "The channel-digests smoke agent ran pkill cargo, which matches by process name for the whole user and may have killed cargo processes belonging to other concurrent agents. The agent flagged it; it is not reversible."
+    environment_findings:
+      - "A release build with CARGO_PROFILE_RELEASE_DEBUG=0 (the plan's setting) fails on this host (macOS 27.0.1, ld 27037.1, rustc 1.97.0): rustc cannot dlopen the sqlx-macros proc-macro dylib, 'mis-aligned LINKEDIT string pool'. The default build passes; the channel-digests agent worked around it with CARGO_PROFILE_RELEASE_STRIP=none."
+      - "The plan's jetstream.max_file_store override of 2GB makes Edge fail at startup with 'insufficient storage resources available'; the deployed 8GB works. The rendering library keeps 8GB."
+      - nk, nsc and the nats CLI are not installed; nkeys were generated by a script using the nkeys encoding and the cryptography package in place of nk -gen user -pubout.
+      - "ratatoskr_chatgpt and ratatoskr_claude were created by hand as nosuperuser roles with connect and create on the database."
+    what_it_cannot_show: Real MTProto acquisition, live X, Meta, Threads and OpenRouter responses, the Export Agent's macOS keychain pairing, TLS termination by cloudflared, systemd sandboxing and the host's group permissions on the Telegram blob root, anything that needs more than single-machine loopback, and process restart behaviour except where a flow killed a process on purpose.
+  remaining_defects:
+    - "platform crates/core/src/config/validate.rs lines 196-199 and 316-319: gateway route listeners must equal the production port (8091 to 8097) and the channel-digests listener must be 8098 on loopback, so no isolated port range can run Edge with routes. Either allow a configurable allowed-port policy or document it."
+    - "workspace .omc/plans/XR-021/round2/workspace.md (local plan): the jetstream.max_file_store 2GB override and the CARGO_PROFILE_RELEASE_DEBUG=0 build setting are wrong on this host (see environment_findings). Not committed; the rendering library follows the findings."
+    - "chatgpt crates/chatgpt-archive/src/initial_import.rs lines 441-446 with synthetic_parser/mod.rs lines 105-109 and the gap_entries == 0 completeness rule (about line 474): a ChatGPT import cannot reach succeeded, and an archive with assets.json ends failed."
+    - "chatgpt initial_import.rs failure path (about lines 365-385, receipt::report::failed): a failed import and the 400, 401 and 405 receipt refusals log nothing, while Claude logs each refusal with its class, so an operator cannot diagnose a failed ChatGPT import."
+    - "chatgpt receipt/outbox.rs lines 70-72 and claude operation_outbox.rs lines 96-97: publish_pending_once opens a new NATS connection on every pump pass (about every 2 seconds, even with an empty outbox); 407 connect and close pairs in about 13 minutes from ChatGPT alone."
+    - "chatgpt deploy/systemd/chatgpt.conf.example line 10 and claude claude.conf.example line 10 point at roles ratatoskr_chatgpt and ratatoskr_claude on database ratatoskr, but platform/deploy/postgres/01-database-and-roles.sql creates only the edge, ingest and scheduler roles and revokes connect from public; no repository documents or creates the two importer roles."
+    - "claude claude.conf.example line 31 and its receipt authentication: a user in PLATFORM_ACCOUNTS whose archive account row does not exist gets 401 claude.auth.unauthenticated, while ChatGPT creates the account on first receipt; the two importers disagree and Edge's client sees an auth failure for a seeding problem."
+    - "chatgpt GET /v1/capabilities omits cache-control: no-store while claude's sends it (a small inconsistency)."
