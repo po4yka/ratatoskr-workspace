@@ -56,6 +56,11 @@ The profile contract tests (`export_agent_product_profile_test.sh`, `telegram_li
 `telegram_notification_profile_test.sh`) end with a step that starts a sentinel container, so they need
 a reachable Docker daemon; without one only their static assertions can be exercised.
 
+`web-operational` joined the other profiles in XR-021 round 3: its broker used to start from
+command-line flags with no authorization, and it now runs the rendered file for the Edge identity.
+`tests/no_unauthenticated_broker_test.sh` fails when any compose profile starts a NATS broker
+without one.
+
 ## Telegram notification profile (TG-010)
 
 Validate the port/deployment and Compose contracts against an exact Telegram checkout:
@@ -123,3 +128,12 @@ decision (`DEVELOPMENT.md`). TG-011 therefore pins its inputs through required f
 variables and refuses dirty, mismatched, or unpublished revisions instead of fabricating lockfile
 metadata. `RATATOSKR_ALLOW_DIRTY_SOURCES=1` and `RATATOSKR_ALLOW_UNPUBLISHED=1` exist only for a
 clearly labelled pre-publication smoke; their output cannot satisfy the exact-revision evidence row.
+
+## Native smoke (no Docker)
+
+`integration/native/` drives the cross-repository flows through Edge on one machine without Docker,
+with the deployed NATS ACL and the checked-in PostgreSQL provisioning, on the production loopback
+ports. It is a manual run and not a CI gate. Read [`native/README.md`](native/README.md) before
+running it: it states what each flow does, what is faked or seeded, what it cannot show, and that
+none of the committed flows has been run through `run.sh` yet. `tests/native_smoke_contract_test.sh`
+checks the scripts without starting a service.

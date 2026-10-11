@@ -2,6 +2,12 @@
 //! authorization file, every service that carries a copy of its own stanza must carry an equal
 //! one, and the stanzas must keep the least-privilege invariants of the XR-021 bus topology.
 //!
+//! XR-021 round 3 (R3-01) added the reply namespace: every non-Edge stanza may subscribe only to its
+//! own `_INBOX_<name>.>` prefix, Edge keeps `_INBOX.>`, the owning repository must hand the prefix to
+//! `custom_inbox_prefix(` in non-test source (the wiring scan lives in `support/inbox_wiring.rs`,
+//! with its limitation stated there), and twelve vendored copies, one per non-Edge identity, must
+//! equal their stanza.
+//!
 //! The splitter is plain text on purpose. The comparison is on what a reviewer read (comments,
 //! whitespace and the nkey token ignored), so it must not depend on a NATS parser's idea of
 //! meaning. A stanza is a brace block that opens at the start of a file or right after `[` or

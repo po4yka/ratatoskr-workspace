@@ -2,7 +2,7 @@
 
 > Status: Accepted  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-10-11 (port table and Telegram blob root revised for XR-021; no host fact re-verified)
+> Last reviewed: 2026-10-12 (port table, Telegram blob root, NATS inbox prefixes, PostgreSQL provisioning and the assertion-key procedure revised for XR-021; no host fact re-verified)
 
 > **The host is frozen as of 2026-08-21.** Nothing is deployed to it, nothing on it is changed, and
 > the drift between it and `main` is not tracked. The machine remains in scope for exactly one
@@ -143,6 +143,24 @@ shared-postgres psql -U postgres`. A container's `docker-entrypoint-initdb.d` ne
 against a non-empty data directory, so it is not a provisioning mechanism for a cluster that already
 exists.
 
+**One database, one role per service, provisioned in a fixed order (R3-11).** Every service connects
+to the single database `ratatoskr` on port 5432 as its own role, `ratatoskr_<service>` for
+`chatgpt`, `claude`, `knowledge`, `channel_digests`, `telegram` (the webhook and the dispatcher share
+it), `x`, `instagram`, `threads`, `vault`, `github` and `extractor`, and every schema is namespaced
+by its service. The examples of GitHub, Vault, X, Instagram and Threads named other databases and the
+development compose port 5435 before Round 3; they now name the shared database, and their own
+compose files keep their development databases as a development convenience. The order is: Platform's
+`deploy/postgres/01-database-and-roles.sql`, the first start of Edge (it applies `schema.sql`),
+Platform's `02-grants.sql`, and then each service's `deploy/postgres/role.sql` before that service's
+first start. Each role file creates the role without a password (set it with `\password`), withholds
+every privilege except `connect` and `create` on the database, and revokes the rights on schema
+`public`. Knowledge's file additionally runs `create extension if not exists vector`, which only a
+PostgreSQL administrator may do because pgvector is not a trusted extension, and grants `usage` on
+schema `public` because the `vector` type lives there; that extension is the reason its file is run
+by an administrator and not by the service. The harness test `postgres_roles.rs` fails
+when a deploy example names a role no checked-in file creates, or a host, port or database other than
+`127.0.0.1:5432/ratatoskr`.
+
 Re-verified at milestone 10: one login role (`postgres`, superuser), and no tenant database other
 than the templates and `template_postgis`. The safety gate that permits sharing still holds.
 
@@ -252,7 +270,7 @@ bind to `0.0.0.0`.
 |---|---|---|
 | 8080 | `ratatoskr-edge` public API; also the base URL Telegram's Platform client targets | `cloudflared` tunnel |
 | 8181 | `ratatoskr-ingest` webhook adapter | `cloudflared` tunnel |
-| 8182 | `ratatoskr-telegram-webhook` public listener | `cloudflared` tunnel |
+| 8182 | `ratatoskr-telegram-webhook` public listener. Its Platform assertion key is created on the host with `ratatoskr-telegram-webhook assertion-key generate` and the public key it prints goes into Edge's `RATATOSKR__IDENTITY__ASSERTION_KEY` (R3-12; the procedure is in `ratatoskr-telegram`'s `deploy/README.md`) | `cloudflared` tunnel |
 | 8091 | `ratatoskr-knowledge` domain API (`/v1/k`, `/v1/capabilities`, `/internal/search`, `/internal/user-content/*`), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9081` | loopback; reached only through Edge and Platform's library client |
 | 8092 | `ratatoskr-github` domain API (`/v1/gh`), plus its internal reader routes, which Edge never exposes | loopback; reached only through Edge |
 | 8093 | `ratatoskr-vault` domain API (`/v1/vault`); no listener yet, so Edge reports its capability as stale, which is truthful | loopback; reached only through Edge |
@@ -276,7 +294,7 @@ bind to `0.0.0.0`.
 | 9469 | `ratatoskr-channel-digests` API operator listener | host only |
 | 9470 | `ratatoskr-channel-digests` worker operator listener | host only |
 | 9570 | `ratatoskr-vault` operator listener | host only |
-| 4222 | NATS client, a container, `ratatoskr-nats`, config in `platform/deploy/nats/`; the server binds `0.0.0.0` inside the container and the port is published on `127.0.0.1` only, and it requires an nkey; the largest message it accepts is 8 MiB (`max_payload: 8MB`, up from the 1 MiB default) | host only |
+| 4222 | NATS client, a container, `ratatoskr-nats`, config in `platform/deploy/nats/`; the server binds `0.0.0.0` inside the container and the port is published on `127.0.0.1` only, and it requires an nkey; the largest message it accepts is 8 MiB (`max_payload: 8MB`, up from the 1 MiB default); every identity except Edge subscribes only to its own reply prefix, `_INBOX_telegram`, `_INBOX_chatgpt`, `_INBOX_claude`, `_INBOX_x`, `_INBOX_instagram`, `_INBOX_threads`, `_INBOX_extractor`, `_INBOX_extractor_browser_worker`, `_INBOX_knowledge`, `_INBOX_github`, `_INBOX_vault` or `_INBOX_channel_digests` (R3-01), so one service cannot read another's JetStream deliveries, and a service built before Round 3 times out under this ACL | host only |
 | 8222 | NATS monitoring, the same container; bound inside the container as above and published on `127.0.0.1` only | host only |
 | 5432 | PostgreSQL | host only |
 
@@ -289,6 +307,12 @@ its allocated port separately and the operator listener serves health, metrics a
 The harness test `port_allocation.rs` in this repository fails when this
 table lists a port twice or omits a documented listener, and when a repository's deploy examples bind
 a port that is not in the table or that another listener already holds.
+
+A smoke that needs Edge's routes must run on these production loopback ports, one flow at a time,
+because Edge's validation of the allocated route ports is a deliberate contract and not a defect
+(R3-17). The only exception is PostgreSQL: the native smoke under `integration/native/` runs its own
+cluster on `127.0.0.1:54329`, because a database URL is configuration. The GitHub example binds its
+database to 5432, not to the development compose port 5435.
 
 Already held by other software at the time of writing, and not available: 22, 3001, 3003, 4318,
 6060, 6333, 6334, **8081**, 8090, 8428, 9093, 20241. `8081` is why `ratatoskr-ingest` does not use it:

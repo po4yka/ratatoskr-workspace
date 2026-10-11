@@ -52,16 +52,22 @@ cd ..
 
 Fixture tests prove diagnostics and non-mutation; the committed-snapshot test proves the exact 16
 IDs, paths, audited gitlink SHAs, nonempty pinned-object evidence, clean baselines, and lock freshness.
-Four further tests in `harness/crates/workspace-core/tests/` read the pinned submodules, so they stay
-red between the first child merge and the pin advance, by design. `port_allocation.rs` fails when the
+Seven further tests in `harness/crates/workspace-core/tests/` read the pinned submodules, so they
+stay red between a child merge and the pin advance, by design. `port_allocation.rs` fails when the
 `## Ports` table of `docs/DEPLOYMENT_TARGET.md` lists a port twice or omits a documented listener, and
 when a repository's `deploy/**/*.example` or `.env.example` binds a port that is not in the table or
 that another listener already holds. `bus_acl.rs` fails when `ratatoskr-platform`'s
 `deploy/nats/ratatoskr.conf` does not hold exactly the thirteen identities, when a service-carried
 copy of its stanza differs from the reviewed one (comments, whitespace and the nkey token ignored),
-when the extractor's old permission file returns, or when a non-Edge identity can create topology or
-read the bus wholesale. Both fail loudly for a repository that is not checked out instead of skipping
-it. Neither contacts a broker: the real-broker permission matrix lives in `ratatoskr-platform`.
+when a non-Edge identity can create topology or read the bus wholesale, and, since XR-021 round 3,
+when any non-Edge stanza subscribes to anything but its own `_INBOX_<name>.>` prefix (Edge keeps
+`_INBOX.>`), when a non-Edge identity has no vendored copy (twelve are listed), or when the owning
+repository's non-test `.rs` files do not hand the prefix to `custom_inbox_prefix(` (the literal itself,
+or a `const` of that value used by a call in the same crate; a mutation test changes the literal and
+drops the call). That last check is a text scan: it proves the literal and the call exist together,
+not that the call sits on the connection the service really opens, which each service's real-broker
+test proves. Both fail loudly for a repository that is not checked out instead of skipping it. Neither
+contacts a broker: the real-broker permission matrix lives in `ratatoskr-platform`.
 `edge_upstreams.rs` fails when an address in `ratatoskr-platform`'s `edge.conf.example` for a route
 whose service exists (Knowledge 8091, GitHub 8092, ChatGPT 8096, Claude 8097) is not bound, outside
 the operator listener, by a deploy example of the owning repository, and when a route appears that is
@@ -73,12 +79,39 @@ durables, the Telegram notification durable and the two AI-archive projections) 
 filter as a row there, or when the owning repository's tracked `.rs` files do not hold the name and
 the filter as string literals; a mutation test proves the scan reports a renamed durable. It is a
 text scan: it cannot see a literal assembled at run time, and says nothing about ack wait,
-`max_deliver` or the stream. The tests that need Docker, the composed profiles under `integration/`,
-are not part of this gate and were not run for XR-021 round 2. The multi-service run that XR-021
-round 2 performed without Docker (native binaries, a local `nats-server` keyed from the deployed
-ACL, a local PostgreSQL) was done by hand, on one machine, with no script in this repository; it is
-not a CI gate and nothing in this repository reproduces it. The changeset records which flows ran,
-which hops were faked and which were not run.
+`max_deliver` or the stream.
+
+`contracts_pin.rs` fails when the `Cargo.lock` of any Rust repository resolves a `ratatoskr-*` git
+package of the contracts repository to a commit other than the `contracts_sha` the XR-021 changeset
+names, or to more than one commit, because Cargo treats two revisions of one git repository as
+different crates. It reads lock files; it cannot see a stale lock (`cargo build --locked` in the
+repository's own CI does), a vendored contracts crate, or a mirror URL. `postgres_roles.rs` fails when
+a `deploy/systemd/*.conf.example` holds a database URL whose host, port or database is not
+`127.0.0.1:5432/ratatoskr`, or whose role no checked-in `deploy/postgres/role.sql` (or Platform's
+`01-database-and-roles.sql`) creates, and when Knowledge's role file does not create the `vector`
+extension. It is a text scan: it cannot run the SQL, cannot see a password, and cannot see a URL
+assembled from separate keys. `shared_secrets.rs` fails when one of the four key pairs that must carry
+one secret (Edge and the channel-digests API, Knowledge and the channel-digests API in both
+directions, Knowledge and GitHub) is missing on either side, so a renamed key fails the gate. It
+cannot compare values, because every example holds `CHANGE-ME`; a mismatch of values surfaces only as
+a 401 between the services at run time, and the native smoke renders one random value into both
+sides. At the round 3 pins it passed from the first run, because the four pairs were already spelled
+consistently: it guards against a rename and did not fail first.
+
+The tests that need Docker, the composed profiles under `integration/`, are not part of this gate and
+were not run for XR-021 round 2 or 3; their static contract tests ran with a stubbed `docker`, and
+`integration/tests/no_unauthenticated_broker_test.sh` fails when any compose profile starts a NATS
+broker without a rendered configuration. The multi-service run is `integration/native/`: a manual,
+machine-dependent harness that builds the services natively, runs them under the deployed ACL with
+the checked-in PostgreSQL provisioning on the production loopback ports, and drives eight flows
+through Edge. It is not a CI gate and nothing in CI runs it; `integration/tests/native_smoke_contract_test.sh`
+checks only the scripts. The results recorded for XR-021 round 3 came from by-hand scripts, not from
+`run.sh`, and none of the committed flows has been run through `run.sh`. What it cannot show is
+stated in `integration/native/README.md` and in the changeset: real MTProto acquisition, live X,
+Meta, Threads, OpenRouter and Telegram responses, the Export Agent's keychain and Swift client, TLS
+through `cloudflared`, systemd sandboxing, the Raspberry Pi's glibc and page-size behaviour, and
+anything beyond single-machine loopback. The changeset records which flows ran, which hops were faked
+and which were not run.
 
 This gate does not rerun child CI, deploy the fleet, contact a provider, or establish runtime
 end-to-end health.

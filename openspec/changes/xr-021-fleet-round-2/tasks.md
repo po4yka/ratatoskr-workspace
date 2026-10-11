@@ -47,7 +47,7 @@ Dependency order. Every child repository pushed its round 2 commits directly to 
 
 ## 7. The native multi-service smoke
 
-- [ ] 7.1 NOT DONE: the `integration/native/` harness (`run.sh`, the flow scripts, the fixtures) and `native_smoke_contract_test.sh`. The flows were run by hand with throwaway scripts that are not in this repository, and those scripts depart from the plan in ways the findings below show; committing them would present an unproven script as a gate. The results are recorded in the changeset as reported, and the harness is a follow-up that has to start from those findings.
+- [x] 7.1 Built in round 3 (task 5.1 of `xr-021-fleet-round-3`): the `integration/native/` harness (`run.sh`, the flow scripts, the fixtures) and `native_smoke_contract_test.sh`, ported from the by-hand scripts and applying the findings below. NOT test first, and none of the committed flows has been run through `run.sh` yet (task 5.2 of the round 3 change stays open); the results in the changeset still come from the by-hand scripts.
 - [x] 7.2 Record in the changeset the flows that ran and their results without upgrading any of them: AI-archive upload `passed: false` (Edge refuses non-production listeners, so the Edge-to-receiver hop was faked), channel digests `passed: true` with its hops not run or faked; the other five flows have no reported result and are recorded as not reported.
 
 ## 8. Verification
