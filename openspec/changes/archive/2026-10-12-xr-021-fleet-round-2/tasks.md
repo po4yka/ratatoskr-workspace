@@ -16,7 +16,7 @@ Dependency order. Every child repository pushed its round 2 commits directly to 
 - [x] 1.12 `ratatoskr-claude` at `c242ac567c0ac7278f1a43b99ca39875847ac2dc`.
 - [x] 1.13 `ratatoskr-telegram` at `869333b8d78395526096f183b219afba71ca8573`.
 - [x] 1.14 `ratatoskr-browser-extension` at `70011f9e9c57877caf2f75ae0ba436456845ad5f`.
-- [ ] 1.15 `ratatoskr-workspace`, last: this change, the two harness checks, the profile library, the changeset record and the pins. Closes when it is published and its hosted CI is green, which is outside the step that wrote it.
+- [x] 1.15 `ratatoskr-workspace`, last: this change, the two harness checks, the profile library, the changeset record and the pins. Published with the round 3 commits; the hosted CI of 4df2b20cf440178b7c95c5b48317c2d1d38d9bcf concluded success on all five required checks on 2026-10-12.
 
 ## 2. The round 2 behaviour is recorded
 
@@ -53,4 +53,4 @@ Dependency order. Every child repository pushed its round 2 commits directly to 
 ## 8. Verification
 
 - [x] 8.1 Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` and `cargo test --workspace --all-features --locked` in `harness/`, `./ws manifest check`, `./ws lock check`, `./ws status`, `./ws doctor`, `openspec validate --all --strict`, `git diff --check`, and the profile contract tests that do not need Docker.
-- [ ] 8.2 Publish and confirm the hosted CI of the pushed commit is green.
+- [x] 8.2 Publish and confirm the hosted CI of the pushed commit is green: pushed as part of 4df2b20cf440178b7c95c5b48317c2d1d38d9bcf (the round 3 publication), whose five required checks (zizmor / audit, fleet / invariants, openspec / specs, deny, snapshot) concluded success on 2026-10-12.

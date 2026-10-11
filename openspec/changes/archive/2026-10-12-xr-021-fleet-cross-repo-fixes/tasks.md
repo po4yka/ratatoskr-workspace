@@ -17,7 +17,7 @@ Dependency order. Every child repository pushed its commits directly to `main` u
 - [x] 1.13 `ratatoskr-telegram` at `b43c62554b61cd70f89f581887d5903d74cdff5e`.
 - [x] 1.14 `ratatoskr-browser-extension` at `ff8bdd8e8816a499e34ba3aaefcfdd3879dea282`.
 - [x] 1.15 `ratatoskr-export-agent` at `da1acd41f20ce972b7530aad9c231ba7bd9b4a6c`.
-- [ ] 1.16 `ratatoskr-workspace`, last: specs, port table, the two harness checks, the changeset record and the pins. Committed locally on `main`; closes when it is published, which is outside the step that wrote it.
+- [x] 1.16 `ratatoskr-workspace`, last: specs, port table, the two harness checks, the changeset record and the pins. Published with the round 3 commits; the hosted CI of 4df2b20cf440178b7c95c5b48317c2d1d38d9bcf concluded success on all five required checks (zizmor / audit, fleet / invariants, openspec / specs, deny, snapshot) on 2026-10-12.
 
 ## 2. The cross-repository behaviour is recorded
 

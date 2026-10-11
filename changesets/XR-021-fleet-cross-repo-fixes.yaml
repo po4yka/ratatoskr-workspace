@@ -334,7 +334,7 @@ runtime:
   bus: thirteen nkey identities in platform/deploy/nats/ratatoskr.conf; bus_acl.rs enforces the copies
   telegram_blob_root: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, read group ratatoskr-telegram-blobs, read-only for the extractor
 workspace_changes:
-  openspec: openspec/changes/xr-021-fleet-cross-repo-fixes (five new capability specs and an added blob-references requirement; not archived until the workspace commits are published)
+  openspec: openspec/changes/archive/2026-10-12-xr-021-fleet-cross-repo-fixes (five new capability specs and an added blob-references requirement; archived in round 3, once the workspace commits were published and their hosted CI was green)
   docs: docs/DEPLOYMENT_TARGET.md
   harness_tests:
     - "harness/crates/workspace-core/tests/port_allocation.rs"
@@ -423,7 +423,7 @@ round_2:
   goal: Fix the defects that independent verifiers found by tracing each flow through the round 1 code (Edge upstream listeners, operation report authority, publisher health and outbox failure classes, channel-digest terminal states, tenant deletion of recap state, the blob registration and erasure race, GitHub origination, X provider deletion, operator examples, permalink hosts, profile ACLs), record the behaviour as an OpenSpec change, add the harness checks that stop the first and last kind of drift, and advance the pins.
   contract_source: .omc/plans/XR-021/CONTRACTS.md sections R2-01 to R2-19 (a local planning file, not committed). CONTRACTS_SHA stays ad16855c4e7f3d52cd118274faa3b8f3ab4da576 for every repository except chatgpt and claude, which pin 5426cf3096733d714c59b02ec41e946fdedcd94d, a contracts commit that adds a test and no crate source (see residual_risks).
   contracts_origin_main: 460057a61542320805167116eca556b26df312f3 is one commit ahead of the pinned 5426cf3 (a CI action bump); the snapshot pins the round 2 head every child built against.
-  openspec: "openspec/changes/xr-021-fleet-round-2 (not archived: task 7.1, the native smoke harness, is not done, and the change must be archived after xr-021-fleet-cross-repo-fixes)"
+  openspec: "openspec/changes/archive/2026-10-12-xr-021-fleet-round-2 (archived in round 3 after xr-021-fleet-cross-repo-fixes: task 7.1, the native smoke harness, was built in round 3 and has not been run)"
   hosted_ci_of_pinned_heads: every check run on every round 2 head concluded success when read through the GitHub API on 2026-10-11 (contracts 8, platform 6, extractor 6, knowledge 5, channel-digests 5, github 5, vault 5, x 5, instagram 5, threads 5, chatgpt 5, claude 5, telegram 5, browser-extension 4)
   repositories:
     - id: ratatoskr-contracts
@@ -606,7 +606,7 @@ round_2:
     - item: The browser-extension lockfile registry URLs; the export agent's configurable archive ceiling; the hand-written fixture inside Platform's nats_permissions.rs; per-service authorized-broker tests for X, Instagram, Threads, ChatGPT, Claude and Telegram; the dormant X bookmark and compliance lane; the tombstone owner mapping for unmapped ChatGPT accounts
       reason: CI is green for the first; a permanent-413 rule already makes a mismatch a clean failure for the second; deployed_nats_config.rs covers the third; the Platform matrix plus the NATS server log check cover the deployed ACL for the fourth; no service path syncs bookmarks for the fifth; an unmapped account never reached Knowledge, so the sixth is a configuration dependency
   workspace_changes:
-    openspec: openspec/changes/xr-021-fleet-round-2
+    openspec: openspec/changes/archive/2026-10-12-xr-021-fleet-round-2
     docs: docs/DEPLOYMENT_TARGET.md (the 8 MiB limit and the two dedicated listeners), docs/QUALITY_GATES.md, integration/README.md
     harness_tests:
       - harness/crates/workspace-core/tests/edge_upstreams.rs
@@ -697,7 +697,7 @@ round_2:
 round_3:
   goal: "Fix the defects that the Round 2 native smokes and the independent verifiers found and that were re-verified against current origin/main: per-service NATS inbox prefixes, the dispatch lane recorded on an operation, a refused archive delivery that ends its operation and an upstream 401 that never reaches a device, account rows created on the first receipt, ChatGPT completeness and survivors of a deleted export, one connection and event-id message names in the importers, Knowledge tombstones that are never dead-lettered and an index that holds text and no scaffold, channel-digests partial acquisition, queued runs and logging, one PostgreSQL database with a role file per service, an assertion-key command, Edge readiness, the extractor blob claim, the social permalink grammar and the X trust anchor, one contracts revision; record the behaviour as an OpenSpec change, add the harness checks that stop the drift, put the last Docker profile under the deployed ACL, write the native smoke harness, and advance the pins."
   contract_source: ".omc/plans/XR-021/CONTRACTS.md sections R3-01 to R3-20 (a local planning file, not committed). CONTRACTS_SHA stays ad16855c4e7f3d52cd118274faa3b8f3ab4da576 for every repository; chatgpt and claude return to it from 5426cf3 (R3-16). The contracts repository receives no round 3 commit and the workspace keeps pinning its round 2 head."
-  openspec: "openspec/changes/xr-021-fleet-round-3 (not archived: tasks 1.7 (x is not green), 5.2 (no committed native flow has been run through run.sh) and the publication tasks are open; the change must be archived after xr-021-fleet-cross-repo-fixes and xr-021-fleet-round-2)"
+  openspec: "openspec/changes/xr-021-fleet-round-3 (NOT archived: task 1.7 (x is not green), task 5.2 (no committed native flow has been run through run.sh) and task 9.1 are open; xr-021-fleet-cross-repo-fixes and xr-021-fleet-round-2 were archived in that order once their tasks were ticked)"
   hosted_ci_of_pinned_heads: "read through the GitHub API on 2026-10-12: every check run concluded success on platform 6, extractor 6, knowledge 5, channel-digests 5, github 6, vault 5, instagram 5, threads 5, chatgpt 5, claude 5, telegram 5, export-agent 4 and browser-extension 4 (a separate Dependabot Updates workflow run on the browser-extension head failed, which is not a check of the code); x concluded 4 of 5: fleet / invariants FAILED on 4a32e8ea because the fleet scan for committed private keys matches crates/x-core/tests/config.rs. That red check is recorded as a defect of ratatoskr-x and is not hidden; this repository does not edit it."
   repositories:
     - id: ratatoskr-platform
@@ -973,7 +973,7 @@ round_3:
       native_smoke_contract_test: "written after the harness, not before; shown able to fail by mutating the scripts (a pkill, a write under /tmp, a wrong binary name, a shellcheck warning, a kill of an unrecorded pid)"
     final_gate: "cd harness: cargo fmt --all -- --check clean, cargo clippy --workspace --all-targets --all-features --locked -- -D warnings clean, cargo test --workspace --all-features --locked 73 tests in 19 test binaries all passed (the new bus_acl, contracts_pin, postgres_roles and shared_secrets files included)"
     workspace_commands: ws manifest check valid, ws lock check current, ws status clean, ws doctor healthy
-    openspec: openspec validate --all --strict 28 passed
+    openspec: openspec validate --all --strict 32 passed once the first two XR-021 changes were archived; openspec validate --archived 16 passed
     profile_contract_tests_run: "web_operational_profile_test.sh, no_unauthenticated_broker_test.sh, nats_conf_test.sh (against the round 3 Platform pin, with go and nats-server) and telegram_deployment_profile_test.sh (against telegram 81aa9e2116ea9e61faad5da594dd3ae28df0dc46) PASS as written; export_agent_product, telegram_library and telegram_notification PASS only with a stand-in docker command that accepts the sentinel container's run, inspect and rm, because the daemon is not available here"
     native_smoke_contract_test_run: native_smoke_contract_test.sh PASS (it starts no service and builds nothing)
     could_not_run: "the three composed Docker profiles (web-operational, export-agent-product, telegram-notification, telegram-library) and every committed flow of integration/native through run.sh; no composed claim is made"

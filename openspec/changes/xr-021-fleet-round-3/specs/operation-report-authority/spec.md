@@ -19,6 +19,16 @@ Platform SHALL record on each operation the service it was dispatched to, as a n
 - **WHEN** a new mint site for a kind with a listed row passes no lane
 - **THEN** the enumeration test fails before any report can be dropped silently
 
+#### Scenario: A new operation kind is minted without a row
+
+- **WHEN** Platform mints a kind that the authority table does not list
+- **THEN** `every_minted_operation_kind_has_an_authority_row` fails before any report can be silently dropped
+
+#### Scenario: A producer outside the list reports
+
+- **WHEN** a producer that is not in the list for the operation's kind publishes a report
+- **THEN** the report is rejected and the status is unchanged
+
 ### Requirement: The residual risk of the shared subject is stated
 
 `evt.platform.operation.reported.v1` SHALL remain one subject trusted by the envelope producer, so a compromised producer can forge a report only for an operation of its own lane and tenant boundary. The identity that can read the subject through `ratatoskr_x_extractor_reports`, X, can still read the operation-report metadata of every tenant. Per-producer report subjects would close that and need a contract change outside this requirement. `docs/ARCHITECTURE.md` section 11.2 and the module comment of `authority.rs` in `ratatoskr-platform` SHALL state exactly these limits and no longer describe the cross-lane risk.

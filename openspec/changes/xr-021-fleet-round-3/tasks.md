@@ -16,7 +16,7 @@ Dependency order. Every child repository pushed its round 3 commits directly to 
 - [x] 1.12 `ratatoskr-telegram` at `81aa9e2116ea9e61faad5da594dd3ae28df0dc46`. Hosted CI: 5 of 5.
 - [x] 1.13 `ratatoskr-browser-extension` at `0aceedd44d2c9448c817cf6464fa6ea81917fd1c`. Hosted CI: the four checks of the commit succeeded; a separate `Dependabot Updates` run on the same commit failed, which is not a check of the code.
 - [x] 1.14 `ratatoskr-export-agent` at `1009f2992a51e5a6ff54724d3a3bf762e1c30243`. Hosted CI: 4 of 4.
-- [ ] 1.15 `ratatoskr-workspace`, last: this change, the harness checks, the profiles, the native harness, the documentation, the changeset record and the pins. Closes when it is published and its hosted CI is green.
+- [x] 1.15 `ratatoskr-workspace`, last: this change, the harness checks, the profiles, the native harness, the documentation, the changeset record and the pins. Published as 4df2b20cf440178b7c95c5b48317c2d1d38d9bcf; its five required checks (zizmor / audit, fleet / invariants, openspec / specs, deny, snapshot) concluded success on 2026-10-12.
 
 ## 2. The round 3 behaviour is recorded
 
@@ -50,8 +50,8 @@ Dependency order. Every child repository pushed its round 3 commits directly to 
 ## 8. Verification
 
 - [x] 8.1 Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` and `cargo test --workspace --all-features --locked` in `harness/`, `./ws manifest check`, `./ws lock check`, `./ws status`, `./ws doctor`, `openspec validate --all --strict`, `git diff --check`, and the integration contract tests that do not need Docker.
-- [ ] 8.2 Publish and confirm the hosted CI of the pushed commit is green.
+- [x] 8.2 Publish and confirm the hosted CI of the pushed commit is green: 4df2b20cf440178b7c95c5b48317c2d1d38d9bcf, five of five required checks succeeded on 2026-10-12.
 
 ## 9. Archive
 
-- [ ] 9.1 Archive `xr-021-fleet-cross-repo-fixes`, then `xr-021-fleet-round-2`, then this change, in that order, each only when every task is ticked, and run `openspec validate --archived`. This change cannot be archived while 1.7, 1.15, 5.2 and 8.2 are open.
+- [ ] 9.1 PARTLY DONE: `xr-021-fleet-cross-repo-fixes` and then `xr-021-fleet-round-2` were archived in that order on 2026-10-12 (every task ticked, hosted CI of 4df2b20 green), and `openspec validate --archived` passes. This change is NOT archived: tasks 1.7 and 5.2 are open, and an archive with an unticked task is the false close `openspec validate --archived` exists to refuse.

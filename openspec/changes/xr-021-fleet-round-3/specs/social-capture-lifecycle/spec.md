@@ -9,6 +9,11 @@ Platform's capture routing SHALL accept the four Threads hosts `threads.net`, `w
 - **WHEN** a user submits a `threads.com` permalink
 - **THEN** Platform dispatches it to the Threads lane instead of the generic extractor, verified by `crates/public-api/tests/capture.rs` in `ratatoskr-platform`
 
+#### Scenario: A twitter.com permalink in the extension
+
+- **WHEN** the extension sees a `twitter.com` status permalink
+- **THEN** it routes it to the X lane
+
 #### Scenario: A twenty-digit status id
 
 - **WHEN** the extension sees an X status whose id has 20 digits
