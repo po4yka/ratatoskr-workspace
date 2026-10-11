@@ -89,4 +89,3 @@ flow_run() {
   window=$(awk -v b="$(cat "$S/run/probe.begin")" -v e="$(cat "$S/run/probe.end")" 'NR > b && NR <= e && /Publish Violation|Subscription Violation/ { n++ } END { print n + 0 }' "$S/logs/nats.log")
   assert probe_window_holds_the_deliberate_violations '[ "$window" -ge "$expected" ]' "violations in the probe window: $window, expected at least $expected (two refused subscriptions and one refused publish per identity)"
 }
-

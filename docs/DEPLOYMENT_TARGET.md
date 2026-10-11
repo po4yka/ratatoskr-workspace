@@ -270,7 +270,7 @@ bind to `0.0.0.0`.
 |---|---|---|
 | 8080 | `ratatoskr-edge` public API; also the base URL Telegram's Platform client targets | `cloudflared` tunnel |
 | 8181 | `ratatoskr-ingest` webhook adapter | `cloudflared` tunnel |
-| 8182 | `ratatoskr-telegram-webhook` public listener. Its Platform assertion key is created on the host with `ratatoskr-telegram-webhook assertion-key generate` and the public key it prints goes into Edge's `RATATOSKR__IDENTITY__ASSERTION_KEY` (R3-12; the procedure is in `ratatoskr-telegram`'s `deploy/README.md`) | `cloudflared` tunnel |
+| 8182 | `ratatoskr-telegram-webhook` public listener | `cloudflared` tunnel |
 | 8091 | `ratatoskr-knowledge` domain API (`/v1/k`, `/v1/capabilities`, `/internal/search`, `/internal/user-content/*`), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9081` | loopback; reached only through Edge and Platform's library client |
 | 8092 | `ratatoskr-github` domain API (`/v1/gh`), plus its internal reader routes, which Edge never exposes | loopback; reached only through Edge |
 | 8093 | `ratatoskr-vault` domain API (`/v1/vault`); no listener yet, so Edge reports its capability as stale, which is truthful | loopback; reached only through Edge |
@@ -307,6 +307,14 @@ its allocated port separately and the operator listener serves health, metrics a
 The harness test `port_allocation.rs` in this repository fails when this
 table lists a port twice or omits a documented listener, and when a repository's deploy examples bind
 a port that is not in the table or that another listener already holds.
+
+The Telegram webhook (8182) signs its Platform identity assertions with an Ed25519 key that is
+created once on the host: `ratatoskr-telegram-webhook assertion-key generate <path>` writes the seed
+(mode 0600, `root:ratatoskr-telegram-secrets 0640` once installed at
+`/etc/ratatoskr/secrets/telegram-platform-signing-key`) and prints the public key, which goes into
+`RATATOSKR__IDENTITY__ASSERTION_KEY` of `/etc/ratatoskr/edge.conf` (R3-12). Without it
+`telegram.mini_app` is unavailable and `/v1/sessions/telegram` refuses every exchange with 401. The
+procedure is in `ratatoskr-telegram`'s `deploy/README.md` and Platform's `deploy/README.md`.
 
 A smoke that needs Edge's routes must run on these production loopback ports, one flow at a time,
 because Edge's validation of the allocated route ports is a deliberate contract and not a defect
