@@ -52,7 +52,7 @@ cd ..
 
 Fixture tests prove diagnostics and non-mutation; the committed-snapshot test proves the exact 16
 IDs, paths, audited gitlink SHAs, nonempty pinned-object evidence, clean baselines, and lock freshness.
-Two further tests in `harness/crates/workspace-core/tests/` read the pinned submodules, so they stay
+Four further tests in `harness/crates/workspace-core/tests/` read the pinned submodules, so they stay
 red between the first child merge and the pin advance, by design. `port_allocation.rs` fails when the
 `## Ports` table of `docs/DEPLOYMENT_TARGET.md` lists a port twice or omits a documented listener, and
 when a repository's `deploy/**/*.example` or `.env.example` binds a port that is not in the table or
@@ -62,6 +62,23 @@ copy of its stanza differs from the reviewed one (comments, whitespace and the n
 when the extractor's old permission file returns, or when a non-Edge identity can create topology or
 read the bus wholesale. Both fail loudly for a repository that is not checked out instead of skipping
 it. Neither contacts a broker: the real-broker permission matrix lives in `ratatoskr-platform`.
+`edge_upstreams.rs` fails when an address in `ratatoskr-platform`'s `edge.conf.example` for a route
+whose service exists (Knowledge 8091, GitHub 8092, ChatGPT 8096, Claude 8097) is not bound, outside
+the operator listener, by a deploy example of the owning repository, and when a route appears that is
+in neither the implemented group nor the allow-list of routes without a service (vault 8093, social
+8094, ai-archive 8095). It cannot see that the service really serves the route on that listener; the
+service's own tests do. `bus_durables.rs` fails when a fixed durable of `ratatoskr-platform`'s
+`crates/eventing/src/stream.rs` table (the eighteen service-owned ones, the three social capture
+durables, the Telegram notification durable and the two AI-archive projections) lacks its name and
+filter as a row there, or when the owning repository's tracked `.rs` files do not hold the name and
+the filter as string literals; a mutation test proves the scan reports a renamed durable. It is a
+text scan: it cannot see a literal assembled at run time, and says nothing about ack wait,
+`max_deliver` or the stream. The tests that need Docker, the composed profiles under `integration/`,
+are not part of this gate and were not run for XR-021 round 2. The multi-service run that XR-021
+round 2 performed without Docker (native binaries, a local `nats-server` keyed from the deployed
+ACL, a local PostgreSQL) was done by hand, on one machine, with no script in this repository; it is
+not a CI gate and nothing in this repository reproduces it. The changeset records which flows ran,
+which hops were faked and which were not run.
 
 This gate does not rerun child CI, deploy the fleet, contact a provider, or establish runtime
 end-to-end health.

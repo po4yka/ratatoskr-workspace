@@ -253,13 +253,13 @@ bind to `0.0.0.0`.
 | 8080 | `ratatoskr-edge` public API; also the base URL Telegram's Platform client targets | `cloudflared` tunnel |
 | 8181 | `ratatoskr-ingest` webhook adapter | `cloudflared` tunnel |
 | 8182 | `ratatoskr-telegram-webhook` public listener | `cloudflared` tunnel |
-| 8091 | `ratatoskr-knowledge` domain API (`/v1/k`) | loopback; reached only through Edge |
+| 8091 | `ratatoskr-knowledge` domain API (`/v1/k`, `/v1/capabilities`, `/internal/search`, `/internal/user-content/*`), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9081` | loopback; reached only through Edge and Platform's library client |
 | 8092 | `ratatoskr-github` domain API (`/v1/gh`), plus its internal reader routes, which Edge never exposes | loopback; reached only through Edge |
 | 8093 | `ratatoskr-vault` domain API (`/v1/vault`); no listener yet, so Edge reports its capability as stale, which is truthful | loopback; reached only through Edge |
 | 8094 | `ratatoskr-social` domain API (`/v1/social`); no listener yet, same as `8093` | loopback; reached only through Edge |
 | 8095 | `ratatoskr-ai-archive` domain API (`/v1/ai`); no listener yet, same as `8093` | loopback; reached only through Edge |
-| 8096 | `ratatoskr-chatgpt` archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
-| 8097 | `ratatoskr-claude` archive receipt (`/v1/ai-archives/receipt`) | loopback; reached only through Platform archive acceptance |
+| 8096 | `ratatoskr-chatgpt` archive receipt (`/v1/ai-archives/receipt`, `/v1/capabilities`), a dedicated listener (`RATATOSKR__RECEIPT__LISTEN_ADDRESS`) next to the operator listener `9085` | loopback; reached only through Platform archive acceptance |
+| 8097 | `ratatoskr-claude` archive receipt (`/v1/ai-archives/receipt`, `/v1/capabilities`), a dedicated listener (`RATATOSKR__RECEIPT__LISTEN_ADDRESS`) next to the operator listener `9086` | loopback; reached only through Platform archive acceptance |
 | 8098 | `ratatoskr-channel-digests` API (`/v1/manifests`, `/v1/subscriptions`, `/v1/results`, `/ready`) | loopback; Platform and Knowledge only |
 | 9081 | `ratatoskr-knowledge` operator listener | host only |
 | 9082 | `ratatoskr-instagram` operator listener | host only |
@@ -276,13 +276,17 @@ bind to `0.0.0.0`.
 | 9469 | `ratatoskr-channel-digests` API operator listener | host only |
 | 9470 | `ratatoskr-channel-digests` worker operator listener | host only |
 | 9570 | `ratatoskr-vault` operator listener | host only |
-| 4222 | NATS client, a container, `ratatoskr-nats`, config in `platform/deploy/nats/`; the server binds `0.0.0.0` inside the container and the port is published on `127.0.0.1` only, and it requires an nkey | host only |
+| 4222 | NATS client, a container, `ratatoskr-nats`, config in `platform/deploy/nats/`; the server binds `0.0.0.0` inside the container and the port is published on `127.0.0.1` only, and it requires an nkey; the largest message it accepts is 8 MiB (`max_payload: 8MB`, up from the 1 MiB default) | host only |
 | 8222 | NATS monitoring, the same container; bound inside the container as above and published on `127.0.0.1` only | host only |
 | 5432 | PostgreSQL | host only |
 
 Four compiled defaults moved in XR-021, because two services cannot bind one port: ChatGPT 9084 to
 9085, Claude 9084 to 9086, X 8080 to 9087 (8080 is Edge's) and the extractor 9467 to 9088 (9467 is
-the Telegram webhook's). The harness test `port_allocation.rs` in this repository fails when this
+the Telegram webhook's). Round 2 of XR-021 added two dedicated listeners rather than moving a
+default: ChatGPT's receipt (8096) and Knowledge's API (8091) were served on their operator
+listeners (9085 and 9081) before, so Edge's probe of the allocated port was refused; each now binds
+its allocated port separately and the operator listener serves health, metrics and version only.
+The harness test `port_allocation.rs` in this repository fails when this
 table lists a port twice or omits a documented listener, and when a repository's deploy examples bind
 a port that is not in the table or that another listener already holds.
 
