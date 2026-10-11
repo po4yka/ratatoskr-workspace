@@ -48,3 +48,32 @@ pub(crate) fn require_checkout(manifest: &ValidatedManifest, id: &str) -> PathBu
     );
     root
 }
+
+/// Tracked files of a checkout, read as text: `(path relative to the checkout, contents)`.
+///
+/// Lists with `git ls-files`, so build output and untracked scratch files never take part, and
+/// skips a file that is not valid UTF-8. The pathspec is a Git pathspec such as `*.rs`.
+pub(crate) fn tracked_files(root: &Path, pathspec: &str) -> Vec<(String, String)> {
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["ls-files", "-z", "--", pathspec])
+        .output()
+        .expect("git runs");
+    assert!(
+        output.status.success(),
+        "git ls-files failed in {}: {}",
+        root.display(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    output
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|path| !path.is_empty())
+        .filter_map(|path| {
+            let relative = String::from_utf8_lossy(path).into_owned();
+            let text = std::fs::read_to_string(root.join(&relative)).ok()?;
+            Some((relative, text))
+        })
+        .collect()
+}

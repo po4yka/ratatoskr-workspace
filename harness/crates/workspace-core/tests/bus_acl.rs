@@ -11,8 +11,11 @@
 
 #[path = "support/checkout.rs"]
 mod checkout;
+#[path = "support/inbox_wiring.rs"]
+mod inbox_wiring;
 
 use checkout::{committed_manifest, require_checkout};
+use inbox_wiring::{Sources, inbox_wiring_problem, sources_of};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 
@@ -51,8 +54,15 @@ const OWNERS: [(&str, &str); 13] = [
     ("CHANNEL_DIGESTS", "channel-digests"),
 ];
 
-/// `(repository, path of the copy, identity)`.
-const FRAGMENTS: [(&str, &str, &str); 6] = [
+/// `(repository, path of the copy, identity)`: one vendored copy for every non-Edge identity
+/// (R3-01 gave the six services that had none a `deploy/nats/identity.conf` as well).
+const FRAGMENTS: [(&str, &str, &str); 12] = [
+    ("telegram", "deploy/nats/identity.conf", "TELEGRAM"),
+    ("chatgpt", "deploy/nats/identity.conf", "CHATGPT"),
+    ("claude", "deploy/nats/identity.conf", "CLAUDE"),
+    ("x", "deploy/nats/identity.conf", "X"),
+    ("instagram", "deploy/nats/identity.conf", "INSTAGRAM"),
+    ("threads", "deploy/nats/identity.conf", "THREADS"),
     ("extractor", "deploy/nats/identity.conf", "EXTRACTOR"),
     (
         "extractor",
@@ -67,6 +77,26 @@ const FRAGMENTS: [(&str, &str, &str); 6] = [
     ),
     ("github", "deploy/nats/identity.conf", "GITHUB"),
     ("vault", "deploy/nats/identity.conf", "VAULT"),
+];
+
+/// R3-01: the one reply namespace each non-Edge identity may subscribe to. EDGE keeps `_INBOX.>`.
+/// `_INBOX_x.>` does not match `_INBOX.>` because NATS compares whole tokens.
+const INBOX_PREFIXES: [(&str, &str); 12] = [
+    ("TELEGRAM", "_INBOX_telegram"),
+    ("CHATGPT", "_INBOX_chatgpt"),
+    ("CLAUDE", "_INBOX_claude"),
+    ("X", "_INBOX_x"),
+    ("INSTAGRAM", "_INBOX_instagram"),
+    ("THREADS", "_INBOX_threads"),
+    ("EXTRACTOR", "_INBOX_extractor"),
+    (
+        "EXTRACTOR_BROWSER_WORKER",
+        "_INBOX_extractor_browser_worker",
+    ),
+    ("KNOWLEDGE", "_INBOX_knowledge"),
+    ("GITHUB", "_INBOX_github"),
+    ("VAULT", "_INBOX_vault"),
+    ("CHANNEL_DIGESTS", "_INBOX_channel_digests"),
 ];
 
 const COMMANDS: &str = "ratatoskr_commands";
@@ -417,13 +447,6 @@ fn non_edge_stanzas_obey_the_permission_invariants() {
         if stanza.text.contains("deny:") {
             problems.push(format!("{} has a deny block", stanza.name));
         }
-        let subscribe = allow_list(&stanza.text, "subscribe:");
-        if subscribe != ["_INBOX.>"] {
-            problems.push(format!(
-                "{} subscribes to {subscribe:?}, expected only `_INBOX.>`",
-                stanza.name
-            ));
-        }
         for subject in allow_list(&stanza.text, "publish:") {
             if FORBIDDEN_EXACT.contains(&subject.as_str())
                 || FORBIDDEN_PREFIXES
@@ -489,13 +512,191 @@ fn non_edge_stanzas_obey_the_permission_invariants() {
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
+fn inbox_prefix_of(identity: &str) -> &'static str {
+    let Some((_, prefix)) = INBOX_PREFIXES.iter().find(|(name, _)| *name == identity) else {
+        panic!("identity `{identity}` has no inbox prefix row");
+    };
+    prefix
+}
+
+#[test]
+fn every_non_edge_stanza_subscribes_only_to_its_own_inbox_prefix() {
+    let found = platform_stanzas();
+    let mut problems = Vec::new();
+
+    for (identity, prefix) in INBOX_PREFIXES {
+        if !IDENTITIES.contains(&identity) {
+            problems.push(format!(
+                "the prefix table names unknown identity `{identity}`"
+            ));
+        }
+        let expected = format!("{prefix}.>");
+        match found.iter().find(|stanza| stanza.name == identity) {
+            None => problems.push(format!("ratatoskr.conf has no `{identity}` stanza")),
+            Some(stanza) => {
+                let subscribe = allow_list(&stanza.text, "subscribe:");
+                if subscribe != [expected.as_str()] {
+                    problems.push(format!(
+                        "{identity} subscribes to {subscribe:?}, expected only `{expected}`"
+                    ));
+                }
+            }
+        }
+    }
+    for identity in IDENTITIES.iter().filter(|name| **name != "EDGE") {
+        if !INBOX_PREFIXES.iter().any(|(name, _)| name == identity) {
+            problems.push(format!("`{identity}` has no row in the prefix table"));
+        }
+    }
+    match found.iter().find(|stanza| stanza.name == "EDGE") {
+        None => problems.push("ratatoskr.conf has no EDGE stanza".to_owned()),
+        Some(edge) => {
+            let subscribe = allow_list(&edge.text, "subscribe:");
+            if subscribe != ["_INBOX.>"] {
+                problems.push(format!(
+                    "EDGE subscribes to {subscribe:?}, expected only `_INBOX.>`"
+                ));
+            }
+        }
+    }
+
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn every_identity_has_a_vendored_copy() {
+    let manifest = committed_manifest();
+    let covered = FRAGMENTS
+        .iter()
+        .map(|(_, _, identity)| *identity)
+        .collect::<BTreeSet<_>>();
+    let wanted = IDENTITIES
+        .iter()
+        .copied()
+        .filter(|name| *name != "EDGE")
+        .collect::<BTreeSet<_>>();
+    let mut problems = Vec::new();
+
+    for missing in wanted.difference(&covered) {
+        problems.push(format!("no vendored copy is listed for `{missing}`"));
+    }
+    for (repository, relative, identity) in FRAGMENTS {
+        let owner = owner_of(identity);
+        if owner != repository {
+            problems.push(format!(
+                "the copy of `{identity}` is listed in `{repository}`, its owner is `{owner}`"
+            ));
+        }
+        let path = require_checkout(&manifest, repository).join(relative);
+        if !path.is_file() {
+            problems.push(format!("{repository}: {relative} is missing"));
+        }
+    }
+
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn the_owner_repository_uses_the_prefix_literal() {
+    let mut problems = Vec::new();
+    let mut by_owner = BTreeMap::<&str, Sources>::new();
+    for (identity, prefix) in INBOX_PREFIXES {
+        let owner = owner_of(identity);
+        let sources = by_owner.entry(owner).or_insert_with(|| sources_of(owner));
+        if let Some(problem) = inbox_wiring_problem(sources, prefix) {
+            problems.push(format!("{owner} ({identity}): {problem}"));
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn the_wiring_scan_reports_a_changed_literal_and_a_dropped_call() {
+    let sources = sources_of("knowledge");
+    let prefix = inbox_prefix_of("KNOWLEDGE");
+    assert!(
+        inbox_wiring_problem(&sources, prefix).is_none(),
+        "the unmodified source must pass before a mutation means anything"
+    );
+
+    let mutate = |from: &str, to: &str| Sources {
+        rust: sources
+            .rust
+            .iter()
+            .map(|(path, text)| (path.clone(), text.replace(from, to)))
+            .collect(),
+        crate_dirs: sources.crate_dirs.clone(),
+    };
+    let changed = mutate(&format!("\"{prefix}\""), &format!("\"{prefix}_other\""));
+    assert!(
+        inbox_wiring_problem(&changed, prefix).is_some(),
+        "a changed literal must be reported"
+    );
+    let dropped = mutate("custom_inbox_prefix(", "custom_inbox_prefx(");
+    assert!(
+        inbox_wiring_problem(&dropped, prefix).is_some(),
+        "a dropped call must be reported"
+    );
+}
+
+#[test]
+fn the_wiring_scan_reads_both_wirings_and_ignores_tests() {
+    let crate_dirs = vec!["crates/a/".to_owned()];
+    let constant = Sources {
+        rust: vec![(
+            "crates/a/src/bus.rs".to_owned(),
+            "const INBOX_PREFIX: &str = \"_INBOX_a\";\nfn f() { o.custom_inbox_prefix(INBOX_PREFIX) }"
+                .to_owned(),
+        )],
+        crate_dirs: crate_dirs.clone(),
+    };
+    assert!(inbox_wiring_problem(&constant, "_INBOX_a").is_none());
+    assert!(inbox_wiring_problem(&constant, "_INBOX_b").is_some());
+
+    let literal = Sources {
+        rust: vec![(
+            "crates/a/src/bus.rs".to_owned(),
+            "fn f() { o.custom_inbox_prefix(\"_INBOX_a\") }".to_owned(),
+        )],
+        crate_dirs: crate_dirs.clone(),
+    };
+    assert!(inbox_wiring_problem(&literal, "_INBOX_a").is_none());
+
+    let only_a_test = Sources {
+        rust: vec![(
+            "crates/a/tests/bus.rs".to_owned(),
+            "const P: &str = \"_INBOX_a\"; fn f() { o.custom_inbox_prefix(P) }".to_owned(),
+        )],
+        crate_dirs: crate_dirs.clone(),
+    };
+    assert!(inbox_wiring_problem(&only_a_test, "_INBOX_a").is_some());
+
+    let other_crate = Sources {
+        rust: vec![
+            (
+                "crates/a/src/topology.rs".to_owned(),
+                "pub const INBOX_PREFIX: &str = \"_INBOX_a\";".to_owned(),
+            ),
+            (
+                "crates/b/src/lib.rs".to_owned(),
+                "fn f() { o.custom_inbox_prefix(INBOX_PREFIX) }".to_owned(),
+            ),
+        ],
+        crate_dirs: vec!["crates/a/".to_owned(), "crates/b/".to_owned()],
+    };
+    assert!(
+        inbox_wiring_problem(&other_crate, "_INBOX_a").is_some(),
+        "a call in another crate must not satisfy the declaring crate"
+    );
+}
+
 const FIXTURE_STANZA: &str = r#"
 # comment with "quotes" and { braces
 {
     nkey: UREPLACE_ME_WITH_THE_PUBLIC_NKEY_OF_RATATOSKR_VAULT_XXXXXXXX
     permissions: {
         publish: { allow: ["evt.vault.backup_policy.acknowledged.v1"] }
-        subscribe: { allow: ["_INBOX.>"] }
+        subscribe: { allow: ["_INBOX_vault.>"] }
     }
 }
 "#;
