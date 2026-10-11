@@ -22,9 +22,12 @@
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
 
+#[path = "support/binds.rs"]
+mod binds;
 #[path = "support/checkout.rs"]
 mod checkout;
 
+use binds::{bind_of, example_files};
 use checkout::{committed_manifest, is_checked_out, repository_root, workspace_root};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -35,9 +38,6 @@ const REQUIRED_PORTS: &[u16] = &[
     4222, 5432, 8080, 8091, 8092, 8093, 8094, 8095, 8096, 8097, 8098, 8181, 8182, 8222, 9081, 9082,
     9083, 9084, 9085, 9086, 9087, 9088, 9095, 9464, 9465, 9466, 9467, 9468, 9469, 9470, 9570,
 ];
-
-/// Bind keys end in one of these.
-const BIND_SUFFIXES: [&str; 3] = ["__BIND", "__LISTEN_ADDRESS", "__LISTENER"];
 
 /// Keys that name the address of another service's listener. They must be allocated but they do
 /// not claim a port: the owning service binds it.
@@ -89,52 +89,6 @@ fn table_ports() -> Vec<(u16, String)> {
         }
     }
     rows
-}
-
-fn example_files(root: &Path) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    let env_example = root.join(".env.example");
-    if env_example.is_file() {
-        files.push(env_example);
-    }
-    let mut pending = vec![root.join("deploy")];
-    while let Some(directory) = pending.pop() {
-        let Ok(entries) = fs::read_dir(&directory) else {
-            continue;
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if path.is_dir() {
-                if name != "target" && name != "node_modules" && name != ".git" {
-                    pending.push(path);
-                }
-            } else if name.ends_with(".example") {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    files
-}
-
-/// `Some((key, port))` when the line is a bind, documented or commented out.
-fn bind_of(line: &str) -> Option<(String, u16)> {
-    let statement = line.trim().trim_start_matches('#').trim_start();
-    if !statement.starts_with("RATATOSKR__") {
-        return None;
-    }
-    let (key, value) = statement.split_once('=')?;
-    let key = key.trim();
-    if !BIND_SUFFIXES.iter().any(|suffix| key.ends_with(suffix)) {
-        return None;
-    }
-    let value = value.trim().trim_matches('"');
-    let (host, port) = value.rsplit_once(':')?;
-    if host.is_empty() {
-        return None;
-    }
-    Some((key.to_owned(), port.trim().parse::<u16>().ok()?))
 }
 
 fn role_of(file: &Path) -> Option<String> {
