@@ -1,0 +1,101 @@
+//! Smoke helper for the channel-digests recap leg. It stands in for the MTProto acquisition hop ONLY: it builds a
+//! manifest from synthetic channel posts with the service's own ManifestBuilder and commits it with the service's own
+//! DigestCoordinator::commit_manifest (manifest row, outbox row, run -> waiting_recap in one transaction), for a run
+//! that the real worker already accepted from the real bus command. Everything after the commit is the real code.
+use ratatoskr_channel_digests::{DigestCoordinator, ManifestBuilder, ManifestSource};
+use sha2::{Digest as _, Sha256};
+use uuid::Uuid;
+
+fn sha(text: &str) -> String {
+    Sha256::digest(text.as_bytes()).iter().map(|b| format!("{b:02x}")).collect()
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut args = std::env::args().skip(1);
+    let url = args.next().ok_or("database url")?;
+    let run_id: Uuid = args.next().ok_or("run id")?.parse()?;
+    let pool = sqlx::PgPool::connect(&url).await?;
+    let row: (Uuid, Uuid, String, String, String, String) = sqlx::query_as(
+        "select owner_id, operation_id,
+                to_char(window_start at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"'),
+                to_char(window_end at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"'),
+                output_language, state
+         from channel_digests.digest_runs where run_id = $1",
+    )
+    .bind(run_id)
+    .fetch_one(&pool)
+    .await?;
+    let (owner, operation_id, start, end, language, state) = row;
+    eprintln!("run {run_id} state={state}");
+    // two synthetic posts of two synthetic channels, published inside the window (window_end minus 1h / 2h)
+    let (a, b) = (Uuid::now_v7(), Uuid::now_v7());
+    let posts = [
+        (a, "smoke_alpha", 101_i64, "Smoke alpha: the harbour crane inspection finished early and traffic resumed."),
+        (b, "smoke_bravo", 202_i64, "Smoke bravo: a new tram timetable starts Monday, with ten extra evening runs."),
+    ];
+    let hours_back = [2_i64, 1_i64];
+    let sources: Vec<ManifestSource> = posts
+        .iter()
+        .zip(hours_back)
+        .map(|((channel_id, username, message_id, body), back)| ManifestSource {
+            revision_id: Uuid::now_v7(),
+            channel_id: *channel_id,
+            channel_username: (*username).to_owned(),
+            channel_display_name: None,
+            message_id: *message_id,
+            content_sha256: sha(body),
+            published_at: shift(&end, back),
+            canonical_link: format!("https://t.me/{username}/{message_id}"),
+            body: (*body).to_owned(),
+            revision_index: 1,
+        })
+        .collect();
+    let manifest = ManifestBuilder::build(Uuid::now_v7(), owner, run_id, &start, &end, &sources)?;
+    let request = serde_json::to_vec(&serde_json::json!({
+        "operation_id": operation_id,
+        "owner": format!("user:{owner}"),
+        "digest_run_id": run_id,
+        "window": {"start_at": start, "end_at": end},
+        "output_language": language,
+        "source_count": manifest.source_count,
+        "channel_count": manifest.channel_count,
+        "manifest_ref": format!("channel-digest-manifest:{}", manifest.manifest_id),
+        "manifest_digest": {"algorithm": "sha256", "hex": manifest.sha256},
+        "analysis_family": "channel_digest_recap",
+        "analysis_contract": "channel_digest_recap.v1"
+    }))?;
+    let outcome = DigestCoordinator::new(pool.clone()).commit_manifest(&manifest, &request).await?;
+    println!("committed manifest {} sha256 {} outcome {outcome:?}", manifest.manifest_id, manifest.sha256);
+    Ok(())
+}
+
+/// Shifts an RFC 3339 UTC second-precision instant back by whole hours (same-day window assumption is not needed:
+/// day arithmetic is done via epoch seconds).
+fn shift(instant: &str, hours_back: i64) -> String {
+    // YYYY-MM-DDTHH:MM:SSZ -> epoch via civil-from-days algorithm
+    let (y, mo, d, h, mi, s) = (
+        instant[0..4].parse::<i64>().unwrap_or(0), instant[5..7].parse::<i64>().unwrap_or(0),
+        instant[8..10].parse::<i64>().unwrap_or(0), instant[11..13].parse::<i64>().unwrap_or(0),
+        instant[14..16].parse::<i64>().unwrap_or(0), instant[17..19].parse::<i64>().unwrap_or(0),
+    );
+    let y2 = if mo <= 2 { y - 1 } else { y };
+    let era = y2.div_euclid(400);
+    let yoe = y2 - era * 400;
+    let doy = (153 * (if mo > 2 { mo - 3 } else { mo + 9 }) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    let t = days * 86_400 + h * 3600 + mi * 60 + s - hours_back * 3600;
+    let (days, rem) = (t.div_euclid(86_400), t.rem_euclid(86_400));
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let yy = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let dd = doy - (153 * mp + 2) / 5 + 1;
+    let mm = if mp < 10 { mp + 3 } else { mp - 9 };
+    let yy = if mm <= 2 { yy + 1 } else { yy };
+    format!("{yy:04}-{mm:02}-{dd:02}T{:02}:{:02}:{:02}Z", rem / 3600, rem % 3600 / 60, rem % 60)
+}
