@@ -15,7 +15,7 @@ nats_up() {
     cp "$seed" "$S/nk/$(basename "$seed")"
     chmod 600 "$S/nk/$(basename "$seed")"
   done
-  RENDERED="$render/ratatoskr.conf" OUT="$S/nats.conf" STORE="$S/nats-js" python3 -I - <<'PY' || return 1
+  RENDERED="$render/ratatoskr.conf" OUT="$S/nats.conf" STORE="$S/nats-js" "$PY" -I - <<'PY' || return 1
 import os, pathlib, re
 text = pathlib.Path(os.environ["RENDERED"]).read_text()
 text, host = re.subn(r"^host: 0\.0\.0\.0$", "host: 127.0.0.1", text, flags=re.M)
@@ -55,7 +55,7 @@ nats_restart() {
   return 1
 }
 
-# The S04 table: durable, filter, ack wait in seconds, max_deliver. Edge provisions every one of them at startup.
+# The S04 table (Round 5: 23 service durables, of which this table holds the 22 that deliver with an acknowledgement and assert_s04_durables checks the 23rd, ratatoskr_extractor_render_awaits, separately because it is ack none): durable, filter, ack wait in seconds, max_deliver. Edge provisions every one of them at startup. Edge's own platform_stream_erasure durable is created by Edge's consumer, not by the table, and is asserted by flow F0.
 S04_DURABLES=(
   "ratatoskr_extractor_capture|cmd.content.capture.requested.v1|30|12"
   "ratatoskr_browser_worker|cmd.content.render.requested.v1|300|12"
@@ -74,6 +74,11 @@ S04_DURABLES=(
   "ratatoskr_x_extractor_reports|evt.platform.operation.reported.v1|30|-1"
   "ratatoskr_channel_digest_recap_completed|evt.knowledge.channel_digest_recap.completed.v1|30|-1"
   "ratatoskr_channel_digest_recap_failed|evt.knowledge.channel_digest_recap.failed.v1|30|-1"
+  "ratatoskr_chatgpt_deletion_acks|evt.knowledge.deletion.acknowledged.v1|30|-1"
+  "ratatoskr_claude_deletion_acks|evt.knowledge.deletion.acknowledged.v1|30|-1"
+  "ratatoskr_x_deletion_acks|evt.knowledge.deletion.acknowledged.v1|30|-1"
+  "ratatoskr_instagram_deletion_acks|evt.knowledge.deletion.acknowledged.v1|30|-1"
+  "ratatoskr_threads_deletion_acks|evt.knowledge.deletion.acknowledged.v1|30|-1"
 )
 
 # Asserts that every durable of the S04 table exists with its filter, ack wait and max_deliver, and writes durables.tsv.

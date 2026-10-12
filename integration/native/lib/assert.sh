@@ -14,17 +14,24 @@ ev_init() {
 
 # assert NAME 'shell condition' [detail]
 # The condition is evaluated in the caller's scope, so every local of this function carries the `_assert_` prefix: a caller variable named `name`, `cond`, `detail` or `line` stays visible to its own condition.
+# A query helper (q) that failed while the condition ran makes the assertion FAIL whatever the condition said: a command substitution that fails does not fail `[ "$(q ...)" = 0 ]`, and two empty strings compare equal.
 assert() {
-  local _assert_name=$1 _assert_cond=$2 _assert_detail=${3:-} _assert_line
-  if eval "$_assert_cond"; then
+  local _assert_name=$1 _assert_cond=$2 _assert_detail=${3:-} _assert_line _assert_verdict=PASS _assert_q
+  rm -f "${EV:?ev_init first}/.q-failed"
+  eval "$_assert_cond" || _assert_verdict=FAIL
+  if [[ -s "$EV/.q-failed" ]]; then
+    _assert_q=$(head -c 300 "$EV/.q-failed" | tr '\n' ' ')
+    _assert_verdict=FAIL
+    _assert_detail="$_assert_detail [a query failed: $_assert_q]"
+  fi
+  if [[ "$_assert_verdict" == PASS ]]; then
     PASS_COUNT=$((PASS_COUNT + 1))
-    _assert_line="ASSERT $_assert_name: PASS $_assert_detail"
   else
     FAIL_COUNT=$((FAIL_COUNT + 1))
-    _assert_line="ASSERT $_assert_name: FAIL $_assert_detail"
   fi
+  _assert_line="ASSERT $_assert_name: $_assert_verdict $_assert_detail"
   printf '%s\n' "$_assert_line"
-  printf '%s\n' "$_assert_line" >>"${EV:?ev_init first}/asserts.txt"
+  printf '%s\n' "$_assert_line" >>"$EV/asserts.txt"
 }
 
 # The deviation of a flow that is not a failure, for example a hop that was not exercised.
@@ -33,8 +40,34 @@ info() {
   printf 'INFO %s\n' "$*" >>"${EV:?ev_init first}/asserts.txt"
 }
 
+# metric PORT NAME [LABEL]: the value of one series on an operator port (127.0.0.1:PORT/metrics), for example `metric 9081 knowledge_ingest_redeliveries_total` or `metric 9464 platform_bus_consumer_pending 'durable="ratatoskr_knowledge_ai_archive"'` (the label text must occur in the series' label set). A series the endpoint does not state is an error recorded for the running assertion, not an empty string.
+metric() {
+  local _metric_value
+  _metric_value=$(curl -fsS "127.0.0.1:$1/metrics" 2>/dev/null | awk -v name="$2" -v labels="${3:-}" '
+    labels == "" && $1 == name { print $2; exit }
+    labels != "" && index($0, name "{") == 1 && index($0, labels) > 0 { print $NF; exit }')
+  if [[ -z "$_metric_value" ]]; then
+    printf 'metric %s%s{%s} is not stated on 127.0.0.1:%s/metrics\n' "$2" "" "${3:-}" "$1" >>"${EV:?ev_init first}/.q-failed"
+    return 1
+  fi
+  printf '%s' "$_metric_value"
+}
+
+# logcount FILE PATTERN: how many lines of a log match (0 when none or the file is missing; grep -c, not rg -c, which prints nothing for zero).
+logcount() { grep -c -- "$2" "$1" 2>/dev/null || true; }
+
 code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
-q() { psql -X -At -q -d "$1" -c "$2"; }
+# q DATABASE SQL: prints the rows, and on a psql error prints the error to stderr, records it for the assertion that ran the query (see assert) and returns psql's non-zero status. It never prints "nothing" for an error.
+q() {
+  local _q_err="${EV:?ev_init first}/.q-stderr" _q_rc
+  psql -X -At -q -v ON_ERROR_STOP=1 -d "$1" -c "$2" 2>"$_q_err"
+  _q_rc=$?
+  if ((_q_rc != 0)); then
+    printf 'q failed (rc=%s) on %s: %s\n' "$_q_rc" "$1" "$(tr '\n' ' ' <"$_q_err")" >>"$EV/.q-failed"
+    cat "$_q_err" >&2
+  fi
+  return "$_q_rc"
+}
 untilt() { local i; for ((i = 0; i < $2; i++)); do eval "$1" && return 0; sleep 1; done; return 1; }
 waitready() {
   local url=$1 max=${2:-60} i
@@ -97,7 +130,7 @@ nats_violation_count() {
 # A submodule that a flow built from must still be clean when the flow ends.
 assert_repo_clean() {
   local id=$1 dir dirty
-  dir=$(repo_dir "$id")
+  dir=$(baseline_dir "$id")
   dirty=$(git -C "$dir" status --porcelain --untracked-files=all | wc -l | tr -d ' ')
   assert "repo_clean_$id" '[ "$dirty" = 0 ]' "dirty files: $dirty"
 }

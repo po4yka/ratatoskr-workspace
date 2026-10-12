@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # F5 Social captures (Edge, X, Instagram, Threads; R3-02, R3-15). Sourced by run.sh; defines the flow, runs nothing.
 #
-# Provenance: the X legs follow the by-hand X capture smoke (.workspaces/XR-021/smoke/xcapp: the capture shape of the browser extension, a fake HTTPS X API behind a throwaway CA), which ended at the TLS leg in Round 2 and was fixed by R3-15; the lane-authority legs (R3-02), Instagram and Threads were not run before. Run through run.sh as committed: NO.
+# Provenance: the X legs follow the by-hand X capture smoke (.workspaces/XR-021/smoke/xcapp: the capture shape of the browser extension, a fake HTTPS X API behind a throwaway CA), which ended at the TLS leg in Round 2 and was fixed by R3-15; the lane-authority legs (R3-02), Instagram and Threads were not run before. Run through run.sh as committed in Round 5: see README.md for the verdict.
 
 FLOW_ID=f5
 FLOW_TITLE="Social captures: X, Instagram, Threads lanes, cross-lane report authority, public-resolution outcomes"
@@ -15,6 +15,8 @@ FLOW_HONESTY=(
   "seeded: a user and a browser_extension device with a device session (fixtures/platform-seed.sql); the pairing API is exercised in F1"
   "NOT RUN: the success legs of Instagram and Threads public resolution. Their endpoints are allow-listed to Meta hosts on purpose and need credentials; only lane acceptance and the queued state are asserted"
   "deviation: Knowledge runs with the recap disabled and OpenRouter faked, started late in the flow to index the captured X post"
+  "deviation (R4): the transport-failure leg restarts X without the throwaway CA, so every call fails TLS; X retries with a 30 s, 2 min, 8 min, 30 min backoff, so only the retry is asserted (the terminal report after the fifth attempt is NOT RUN, about 40 minutes)"
+  "NOT RUN natively (R5-09): an Instagram caption update (Meta resolution needs credentials); NOT RUN: the browser extension's capture client module against the live Edge (best-effort, not written)"
   "the cross-lane reports are published with the X identity's real seed by fixtures/natsprobe.py; the Instagram and Threads services are stopped for those legs so no provider call is made"
 )
 
@@ -33,7 +35,7 @@ capture_plain() {
 threads_canonical_rows() { q ratatoskr "select count(*) from threads_archive.captures where operation_id = '$1' and canonical_url like '%$2' and canonical_url not like '%?%' and canonical_url not like '%!%%' escape '!'"; }
 op_of() { jq -r .operation_id "$EV/$1.resp.body"; }
 reporter_of() { q ratatoskr "select coalesce(reporter, '') from operations.operations where operation_id='$1'"; }
-fact_count() { python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" messages "$S/nk/edge.nkey" ratatoskr_events "$1" | jq -s "[.[] | select($2)] | length"; }
+fact_count() { "$PY" -I "$NATIVE_ROOT/fixtures/natsprobe.py" messages "$S/nk/edge.nkey" ratatoskr_events "$1" | jq -s "[.[] | select($2)] | length"; }
 
 # Polls an operation every half second and prints the distinct statuses it showed with their stage, until it is terminal or the time is up.
 watch_statuses() {
@@ -59,7 +61,7 @@ flow_run() {
     pg_role "$repo" "$role" || { assert "role_$role" 'false' "role.sql failed"; return; }
   done
   mkdir -p "$S/blobs/threads" "$S/blobs/knowledge"
-  python3 -I "$NATIVE_ROOT/fixtures/make_pki.py" "$S/pki" || return
+  "$PY" -I "$NATIVE_ROOT/fixtures/make_pki.py" "$S/pki" || return
   : >"$S/run/deleted.list"
   fake_start fake-x fake_x_api.py "$FAKE_X_PORT" "$S/pki/leaf.pem" "$S/pki/leaf.key" "$S/logs/fake-x.jsonl" "$S/run/deleted.list"
   conf_x && conf_instagram && conf_threads || return
@@ -125,12 +127,22 @@ flow_run() {
   assert fake_x_api_saw_authenticated_requests '[ "$(jq -s "[.[] | select(.kind==\"request\" and .auth_bearer==true)] | length" "$S/logs/fake-x.jsonl")" -ge 2 ]'
 
   info "X: a deleted post and a transport failure"
+  local removed_before
+  removed_before=$(fact_count evt.social.source.removed.v1 "$tenant_filter")
   printf '1700000000000000404\n' >>"$S/run/deleted.list"
   status=$(capture_social x404 x "https://x.com/ada/status/1700000000000000404" smoke-x404)
   local deleted_op
   deleted_op=$(op_of x404)
   assert deleted_post_terminates_failed '[ "$(pollop "$deleted_op" "$DEV" 90 x404)" = failed ] && grep -q "social.source.deleted" "$EV/op-x404.json"' "$(jq -c "[.status,.errors]" "$EV/op-x404.json" | cut -c1-200)"
-  assert removed_fact_published '[ "$(fact_count evt.social.source.removed.v1 "$tenant_filter")" -ge 1 ]'
+  sleep 3
+  assert a_deleted_post_the_owner_never_preserved_publishes_no_removal '[ "$(fact_count evt.social.source.removed.v1 "$tenant_filter")" = "$removed_before" ]' "x_archive remove_owner_source: an owner who never preserved the post has nothing to remove; removed facts $removed_before -> $(fact_count evt.social.source.removed.v1 "$tenant_filter")"
+  printf '1700000000000000002\n' >>"$S/run/deleted.list"
+  status=$(capture_social x2del x "https://twitter.com/ada/status/1700000000000000002" smoke-x2-del)
+  local deleted2_op
+  deleted2_op=$(op_of x2del)
+  assert recapture_of_a_preserved_post_that_was_deleted_terminates_failed '[ "$(pollop "$deleted2_op" "$DEV" 90 x2del)" = failed ] && grep -q "social.source.deleted" "$EV/op-x2del.json"' "$(jq -c "[.status,.errors]" "$EV/op-x2del.json" | cut -c1-200)"
+  untilt '[ "$(fact_count evt.social.source.removed.v1 "$tenant_filter")" -gt "$removed_before" ]' 60
+  assert removed_fact_published_for_the_preserved_post '[ "$(fact_count evt.social.source.removed.v1 "$tenant_filter")" -gt "$removed_before" ]' "removed facts $removed_before -> $(fact_count evt.social.source.removed.v1 "$tenant_filter")"
   svc_stop x
   render_conf x x.conf.example x \
     "--set RATATOSKR__DATABASE__URL=$(db_url ratatoskr_x)" \
@@ -142,8 +154,11 @@ flow_run() {
   status=$(capture_social xtls x "https://x.com/ada/status/1700000000000000505" smoke-xtls)
   local tls_op
   tls_op=$(op_of xtls)
-  assert transport_failure_terminates_failed_unavailable '[ "$(pollop "$tls_op" "$DEV" 150 xtls)" = failed ] && grep -q "social.source.unavailable" "$EV/op-xtls.json"' "$(jq -c "[.status,.errors]" "$EV/op-xtls.json" | cut -c1-200)"
-  assert unavailable_is_reported_once_and_not_pending '[ "$(q ratatoskr "select count(*) from x_archive.explicit_captures where operation_id='"'"'$tls_op'"'"' and status='"'"'unavailable'"'"' and reported_at is not null and next_attempt_at <= now()")" = 1 ]'
+  # X retries a transient provider failure with a 30 s, 2 min, 8 min, 30 min backoff (x-sync public_capture retry_delay) and reports only after the last attempt, so the terminal "unavailable" state arrives after about 40 minutes: the first harness expected it within 150 s. The leg asserts the retry (a second attempt after the first delay, the operation still queued and not reported) and records the terminal state as NOT RUN.
+  untilt '[ "$(q ratatoskr "select attempts from x_archive.explicit_captures where operation_id = '"'"'$tls_op'"'"'")" -ge 2 ]' 150
+  curl -s -H "Authorization: Bearer $DEV" "$EDGE/v1/operations/$tls_op" >"$EV/op-xtls-now.json"
+  assert transport_failure_is_retried_with_backoff_not_reported_early '[ "$(q ratatoskr "select attempts from x_archive.explicit_captures where operation_id = '"'"'$tls_op'"'"'")" -ge 2 ] && [ "$(jq -r .status "$EV/op-xtls-now.json")" = queued ]' "attempts: $(q ratatoskr "select attempts from x_archive.explicit_captures where operation_id = '$tls_op'"); status $(jq -r .status "$EV/op-xtls-now.json")"
+  info "NOT RUN: the terminal unavailable report of a transport failure arrives after the last of five attempts (about 40 minutes); the repository tests with a fake clock are the evidence"
 
   info "Knowledge indexes the captured post when it runs with ingest enabled"
   fake_start fake-openrouter fake_openrouter.py "$FAKE_OPENROUTER_PORT" "$S/logs/fake-openrouter.jsonl" "$S/run"
@@ -152,6 +167,24 @@ flow_run() {
   svc_wait_ready knowledge 90
   untilt '[ "$(q ratatoskr "select count(*) from knowledge.search_documents")" -ge 1 ]' 90
   assert captured_post_is_indexed '[ "$(q ratatoskr "select count(*) from knowledge.search_documents")" -ge 1 ]' "search documents: $(q ratatoskr "select count(*) from knowledge.search_documents")"
+
+  info "Knowledge deletion leg (R4): an X post found deleted by a recapture is removed from the library"
+  local docs_before deleted_again_op
+  svc_stop x
+  conf_x || return
+  svc_start x
+  svc_wait_ready x 60
+  docs_before=$(q ratatoskr "select count(*) from knowledge.search_documents where tenant_ref = 'user:$U1'")
+  printf '1700000000000000001\n' >>"$S/run/deleted.list"
+  status=$(capture_social x1again x "https://x.com/ada/status/1700000000000000001" smoke-x1-again)
+  deleted_again_op=$(op_of x1again)
+  assert recapture_of_a_deleted_post_terminates_failed_deleted '[ "$(pollop "$deleted_again_op" "$DEV" 90 x1again)" = failed ] && grep -q "social.source.deleted" "$EV/op-x1again.json"' "$(jq -c "[.status,.errors]" "$EV/op-x1again.json" | cut -c1-200)"
+  untilt '[ "$(q ratatoskr "select count(*) from knowledge.search_documents where tenant_ref = '"'"'user:$U1'"'"'")" -lt "$docs_before" ]' 120
+  assert deleted_post_is_removed_from_the_library '[ "$(q ratatoskr "select count(*) from knowledge.search_documents where tenant_ref = '"'"'user:$U1'"'"'")" -lt "$docs_before" ]' "search documents $docs_before -> $(q ratatoskr "select count(*) from knowledge.search_documents where tenant_ref = 'user:$U1'")"
+  untilt '[ "$(pending ratatoskr_x_deletion_acks)" = 0 ] && [ "$(pending ratatoskr_knowledge_social_sources)" = 0 ]' 90
+  assert social_deletion_durables_drained '[ "$(pending ratatoskr_knowledge_social_sources)" = 0 ]' "social source intake pending: $(pending ratatoskr_knowledge_social_sources); X acknowledgement durable pending: $(pending ratatoskr_x_deletion_acks)"
+  info "NOT RUN natively (R5-09): an Instagram caption update with its own digest and observation time needs Meta resolution (credentials); the repository tests are the evidence"
+  info "NOT RUN: the browser extension's capture client module (src/capture/platform-client.ts) against the live Edge; best-effort leg not written in Round 5"
 
   info "cross-lane report authority (R3-02): the Instagram and Threads services are stopped so no provider call is made"
   svc_stop instagram
@@ -162,15 +195,15 @@ flow_run() {
   sleep 3
   local before event_id outcome
   before=$(q ratatoskr "select status || '/' || coalesce(stage, '') from operations.operations where operation_id='$victim'")
-  event_id=$(python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" report "$S/nk/x.nkey" _INBOX_x "user:$U1" "$victim" ratatoskr-x)
+  event_id=$("$PY" -I "$NATIVE_ROOT/fixtures/natsprobe.py" report "$S/nk/x.nkey" _INBOX_x "user:$U1" "$victim" ratatoskr-x)
   untilt '[ -n "$(q ratatoskr "select outcome from operations.inbox where message_id='"'"'$event_id'"'"'")" ]' 30
   outcome=$(q ratatoskr "select outcome from operations.inbox where message_id='$event_id'")
   assert forged_report_for_another_lane_is_rejected '[ "$outcome" = rejected ]' "inbox outcome: $outcome"
   assert forged_report_leaves_the_operation_unchanged '[ "$(q ratatoskr "select status || '"'"'/'"'"' || coalesce(stage, '"'"''"'"') from operations.operations where operation_id='"'"'$victim'"'"'")" = "$before" ]' "before=$before"
-  event_id=$(python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" report "$S/nk/x.nkey" _INBOX_x "user:$U2" "$victim" ratatoskr-x)
+  event_id=$("$PY" -I "$NATIVE_ROOT/fixtures/natsprobe.py" report "$S/nk/x.nkey" _INBOX_x "user:$U2" "$victim" ratatoskr-x)
   untilt '[ -n "$(q ratatoskr "select outcome from operations.inbox where message_id='"'"'$event_id'"'"'")" ]' 30
   assert report_for_another_tenant_is_rejected '[ "$(q ratatoskr "select outcome from operations.inbox where message_id='"'"'$event_id'"'"'")" = rejected ]'
-  event_id=$(python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" report "$S/nk/instagram.nkey" _INBOX_instagram "user:$U1" "$victim" ratatoskr-instagram)
+  event_id=$("$PY" -I "$NATIVE_ROOT/fixtures/natsprobe.py" report "$S/nk/instagram.nkey" _INBOX_instagram "user:$U1" "$victim" ratatoskr-instagram)
   untilt '[ -n "$(q ratatoskr "select outcome from operations.inbox where message_id='"'"'$event_id'"'"'")" ]' 30
   assert report_from_the_right_producer_and_tenant_is_applied '[ "$(q ratatoskr "select outcome from operations.inbox where message_id='"'"'$event_id'"'"'")" = applied ]' "operation now $(q ratatoskr "select status from operations.operations where operation_id='$victim'")"
 

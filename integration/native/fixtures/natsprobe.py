@@ -161,17 +161,60 @@ def publish_refused(seed_path, subject, inbox):
         c.close()
 
 
+def publish_probe(seed_path, prefix, subject, payload=b"{}"):
+    """Publishes one message with the identity of the seed and flushes. The result is invisible to the client whether the ACL allowed it or not (CONTRACTS S03 invariant 6); the flow reads the NATS log for a Publish Violation naming the subject."""
+    c = Client(seed_path, inbox=prefix)
+    try:
+        c.pub(subject, payload)
+        c.f.write(b"PING\r\n")
+        c.s.settimeout(3)
+        c.f.readline()
+    finally:
+        c.close()
+
+
+def fetch_answered(seed_path, prefix, stream, durable, wait=2.0):
+    """Asks for the next message of a durable (a pull request with no_wait). JetStream answers every permitted request at once (a message, or a 404/408 status header); a request the ACL does not allow is dropped and nothing comes back. Returns True when an answer arrived."""
+    c = Client(seed_path, inbox=prefix)
+    try:
+        inbox = f"{prefix}.{uuid.uuid4().hex}"
+        c.sub(inbox)
+        c.pub(f"$JS.API.CONSUMER.MSG.NEXT.{stream}.{durable}", b'{"batch":1,"no_wait":true}', reply=inbox)
+        c.s.settimeout(wait)
+        try:
+            while True:
+                line = c.f.readline().decode().strip()
+                if not line:
+                    return False
+                if line.startswith(("MSG", "HMSG")):
+                    return True
+                if line == "PING":
+                    c.f.write(b"PONG\r\n")
+        except OSError:
+            return False
+    finally:
+        c.close()
+
+
 def oversize_refused(seed_path, subject, size):
     """The broker checks the declared size when it parses the PUB line, so the header alone shows whether `size` is above its max_payload; no payload is sent, which the flow labels."""
     c = Client(seed_path)
     try:
         c.f.write(f"PUB {subject} {size}\r\n".encode())
         c.s.settimeout(3)
+        # The server may send an asynchronous INFO (a changed server view) before it answers; skip those and PONGs until the verdict or the end of the connection.
+        line = ""
         try:
-            line = c.f.readline().decode().strip()
+            while True:
+                raw = c.f.readline().decode().strip()
+                if not raw:
+                    break
+                line = raw
+                if not (raw.startswith("INFO") or raw in ("PONG", "+OK")):
+                    break
         except OSError:
-            line = ""
-        return {"refused": "Maximum Payload" in line, "reply": line}
+            pass
+        return {"refused": "Maximum Payload" in line, "reply": line[:200]}
     finally:
         c.close()
 
@@ -255,13 +298,21 @@ if __name__ == "__main__":
             if m["subject"] == subject:
                 try:
                     envelope = json.loads(m["data"])
-                    print(json.dumps({"seq": m["seq"], "subject": subject, "producer": envelope.get("producer"), "tenant_id": envelope.get("tenant_id"), "aggregate_id": envelope.get("aggregate_id")}))
+                    payload = envelope.get("payload") if isinstance(envelope.get("payload"), dict) else {}
+                    # Identifiers only, never content: a flow filters on them with jq.
+                    print(json.dumps({"seq": m["seq"], "subject": subject, "producer": envelope.get("producer"), "tenant_id": envelope.get("tenant_id"), "aggregate_id": envelope.get("aggregate_id"),
+                                      "event_id": envelope.get("event_id"), "document_id": payload.get("document_id"), "outcome": payload.get("outcome"), "refusal": payload.get("refusal"),
+                                      "acknowledged_event_id": payload.get("acknowledged_event_id"), "family": payload.get("family")}))
                 except json.JSONDecodeError:
                     print(json.dumps({"seq": m["seq"], "subject": subject, "unparsed": True}))
     elif cmd == "tombstone":
         print(publish_tombstone(*sys.argv[2:9]))
     elif cmd == "report":
         print(publish_report(*sys.argv[2:7]))
+    elif cmd == "publish":
+        publish_probe(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5].encode() if len(sys.argv) > 5 else b"{}")
+    elif cmd == "fetch":
+        print(json.dumps({"answered": fetch_answered(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], float(sys.argv[6]) if len(sys.argv) > 6 else 2.0)}))
     elif cmd == "oversize":
         print(json.dumps(oversize_refused(sys.argv[2], sys.argv[3], int(sys.argv[4]))))
     else:

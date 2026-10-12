@@ -70,6 +70,10 @@ write_zip("claude-complete.zip", {"export.json": claude_export("clcomp", "basil"
 write_zip("claude-nofiles.zip", {"export.json": claude_export("clnone", "thyme", [])})
 write_zip("claude-reference-only.zip", {"export.json": claude_export("clref", "sage", [
     {"id": "knowledge-ref", "filename": "seasonal-source.pdf", "media_type": "application/pdf"}])})
+# A knowledge file whose declared digest does not match its bytes (R4-02: kept as a quarantined blob, never reported as backed up).
+bad_kb = [{"id": "knowledge-bad", "filename": "mismatched.txt", "media_type": "text/plain",
+           "sha256": hashlib.sha256(b"some other bytes").hexdigest(), "bytes": list(KB)}]
+write_zip("claude-badkb.zip", {"export.json": claude_export("clbad", "rosemary", bad_kb)})
 # not a zip, not an archive at all (importer must fail it permanently)
 (out / "corrupt.zip").write_bytes(b"this is not a zip archive\n" * 40)
 

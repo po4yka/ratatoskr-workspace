@@ -21,6 +21,7 @@ svc_bin() {
     github) echo ratatoskr-github-catalog ;;
     webhook) echo ratatoskr-telegram-webhook ;;
     dispatcher) echo ratatoskr-telegram-dispatcher ;;
+    scheduler) echo ratatoskr-scheduler ;;
     *) smoke_die "unknown service $1" ;;
   esac
 }
@@ -41,13 +42,14 @@ svc_ready_url() {
     github) echo 127.0.0.1:9095/ready ;;
     webhook) echo 127.0.0.1:9467/health/ready ;;
     dispatcher) echo 127.0.0.1:9468/health/ready ;;
+    scheduler) echo 127.0.0.1:9466/health/ready ;;
     *) smoke_die "unknown service $1" ;;
   esac
 }
 
 svc_start() {
   local name=$1
-  nohup python3 -I "$NATIVE_ROOT/lib/envrun.py" "$S/conf/$name.env" "$S/bin/$(svc_bin "$name")" >>"$S/logs/$name.log" 2>&1 &
+  nohup "$PY" -I "$NATIVE_ROOT/lib/envrun.py" "$S/conf/$name.env" "$S/bin/$(svc_bin "$name")" >>"$S/logs/$name.log" 2>&1 &
   echo $! >"$S/run/$name.pid"
   note "started $name pid $(cat "$S/run/$name.pid")"
 }
@@ -93,7 +95,7 @@ stop_all() {
 fake_start() {
   local name=$1 script=$2
   shift 2
-  nohup python3 -I "$NATIVE_ROOT/fixtures/$script" "$@" >>"$S/logs/$name.log" 2>&1 &
+  nohup "$PY" -I "$NATIVE_ROOT/fixtures/$script" "$@" >>"$S/logs/$name.log" 2>&1 &
   echo $! >"$S/run/$name.pid"
 }
 
@@ -101,7 +103,7 @@ fake_start() {
 render_conf() {
   local repo=$1 example=$2 dst=$3
   shift 3
-  python3 -I "$NATIVE_ROOT/lib/render_conf.py" "$(repo_dir "$repo")/deploy/systemd/$example" "$S/conf/$dst.env" "$S/conf/deviations.txt" "$@"
+  "$PY" -I "$NATIVE_ROOT/lib/render_conf.py" "$(repo_dir "$repo")/deploy/systemd/$example" "$S/conf/$dst.env" "$S/conf/deviations.txt" "$@"
 }
 
 nkey() { printf '%s/nk/%s.nkey' "$S" "$1"; }
@@ -115,6 +117,8 @@ conf_edge() {
     "--set RATATOSKR__DATABASE__URL=$(db_url ratatoskr_edge)"
     "--set RATATOSKR__BUS__NKEY_SEED_PATH=$(nkey edge)"
   )
+  # A flow that watches the staging reaper shortens its interval (rule V23: 30 to 3600 seconds); the deviation is listed in result.txt.
+  [[ -n "${EDGE_SWEEP_SECONDS:-}" ]] && rules+=("--set RATATOSKR__ARCHIVE_STAGING__SWEEP_INTERVAL_SECONDS=$EDGE_SWEEP_SECONDS")
   if [[ -n "${1:-}" ]]; then
     rules+=("--set RATATOSKR__IDENTITY__ASSERTION_KEY=$1")
   else
@@ -133,7 +137,8 @@ conf_chatgpt() {
     "--set RATATOSKR__STORAGE__BLOB_ROOT=$S/blobs/chatgpt" \
     "--set RATATOSKR__STORAGE__RECEIPT_STAGING_ROOT=$S/staging/chatgpt" \
     "--set RATATOSKR__RECEIPT__PLATFORM_ACCOUNTS=${1:-$(chatgpt_accounts)}" \
-    "--set RATATOSKR__RECEIPT__EVENT_BUS_NKEY_SEED_PATH=$(nkey chatgpt)"
+    "--set RATATOSKR__RECEIPT__EVENT_BUS_NKEY_SEED_PATH=$(nkey chatgpt)" \
+    ${TOMBSTONE_RESEND_SECONDS:+"--set RATATOSKR__TOMBSTONE__RESEND_AFTER_SECONDS=$TOMBSTONE_RESEND_SECONDS"}
 }
 
 conf_claude() {
@@ -141,7 +146,8 @@ conf_claude() {
     "--set RATATOSKR__STORAGE__DATABASE_URL=$(db_url ratatoskr_claude)" \
     "--set RATATOSKR__STORAGE__BLOB_ROOT=$S/blobs/claude" \
     "--set RATATOSKR__RECEIPT__PLATFORM_ACCOUNTS=${1:-$(claude_accounts)}" \
-    "--set RATATOSKR__RECEIPT__EVENT_BUS_NKEY_SEED_PATH=$(nkey claude)"
+    "--set RATATOSKR__RECEIPT__EVENT_BUS_NKEY_SEED_PATH=$(nkey claude)" \
+    ${TOMBSTONE_RESEND_SECONDS:+"--set RATATOSKR__TOMBSTONE__RESEND_AFTER_SECONDS=$TOMBSTONE_RESEND_SECONDS"}
 }
 
 conf_extractor() {
@@ -174,9 +180,9 @@ conf_api() {
     "--set RATATOSKR__KNOWLEDGE__RESULT_READER_SERVICE_SECRET=$(secret reader)"
 }
 
-# The worker needs an encrypted provider session file (fixtures/session_file.py); the MTProto connection fails because the smoke has no credentials. $1 is the run deadline, $2 the schedule owner.
+# The worker needs an encrypted provider session file (fixtures/session_file.py); the MTProto connection fails because the smoke has no credentials. $1 is the run deadline, $2 the schedule owner, $3 and $4 (optional) the retention window in days and the sweep interval in seconds (R5-07), $5 (optional) the cron expression of the schedule it registers.
 conf_worker() {
-  python3 -I "$NATIVE_ROOT/fixtures/session_file.py" "$S/keys" || return 1
+  "$PY" -I "$NATIVE_ROOT/fixtures/session_file.py" "$S/keys" || return 1
   render_conf channel-digests worker.conf.example worker \
     "--set RATATOSKR__DATABASE__URL=$(db_url ratatoskr_channel_digests)" \
     "--set RATATOSKR__AUTH__SERVICE_SECRET=$(secret digest)" \
@@ -185,7 +191,17 @@ conf_worker() {
     "--set RATATOSKR__PROVIDER__SESSION_FILE=$S/keys/session.enc" \
     "--set RATATOSKR__PROVIDER__SESSION_KEY_FILE=$S/keys/session.key" \
     "--set RATATOSKR__SCHEDULE__OWNER_USER_ID=${2:-$U1}" \
-    "--set RATATOSKR__LIMITS__RUN_DEADLINE_SECONDS=${1:-60}"
+    "--set RATATOSKR__LIMITS__RUN_DEADLINE_SECONDS=${1:-60}" \
+    ${3:+"--set RATATOSKR__RETENTION__BODY_DAYS=$3"} \
+    ${4:+"--set RATATOSKR__RETENTION__SWEEP_INTERVAL_SECONDS=$4"} \
+    ${5:+"--set RATATOSKR__SCHEDULE__CRON=$5"}
+}
+
+# Platform's scheduler: it reads stored schedules and writes an occurrence command to the outbox that Edge relays to the bus; it never reaches the broker itself (ADR-0013).
+conf_scheduler() {
+  render_conf platform scheduler.conf.example scheduler \
+    "--set RATATOSKR__ADMIN__BIND=127.0.0.1:9466" \
+    "--set RATATOSKR__DATABASE__URL=$(db_url ratatoskr_scheduler)"
 }
 
 # X. The only X-specific deviation is the fake API base URL and the throwaway CA for it (R3-15).
@@ -310,6 +326,7 @@ upload_archive() {
   local provider=$1 file=$2 device=$3 sha size status operation upload_path token
   sha=$(sha256_file "$file")
   size=$(wc -c <"$file" | tr -d ' ')
+  printf '%s\n' "$sha" >"$S/fx/$(basename "$file" .zip).sha256"
   local t0 tries
   t0=$(date +%s)
   while :; do

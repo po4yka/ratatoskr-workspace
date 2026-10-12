@@ -6,13 +6,14 @@
 
 BUILD_FLOOR_GIB=6
 
-# build_bins REPO_ID BIN...: builds the named binaries of one repository, copies them to $S/bin and deletes the target directory. A binary that already exists in $S/bin is not rebuilt (--prune removes them).
+# build_bins REPO_ID BIN...: builds the named binaries of one repository, copies them to $S/bin and deletes the target directory. A binary that already exists in $S/bin for the same commit is not rebuilt (--prune removes them).
 build_bins() {
   local repo=$1
   shift
-  local unbuilt=() bin dir target log rc
+  local unbuilt=() bin dir target log rc commit
+  commit=$(repo_commit "$repo")
   for bin in "$@"; do
-    [[ -x "$S/bin/$bin" ]] || unbuilt+=("$bin")
+    [[ -x "$S/bin/$bin" && "$(cat "$S/bin/$bin.commit" 2>/dev/null)" == "$commit" ]] || unbuilt+=("$bin")
   done
   ((${#unbuilt[@]} > 0)) || { note "build: $repo already built ($*)"; return 0; }
   local free
@@ -26,19 +27,20 @@ build_bins() {
   log=$S/logs/build-$repo.log
   local args=()
   for bin in "${unbuilt[@]}"; do args+=(--bin "$bin"); done
-  (cd "$dir" && CARGO_INCREMENTAL=0 CARGO_TARGET_DIR="$target" cargo build --release --locked "${args[@]}" >"$log" 2>&1)
+  (cd "$dir" && CARGO_INCREMENTAL=0 CARGO_TARGET_DIR="$target" cargo build --release --locked --workspace "${args[@]}" >"$log" 2>&1)
   rc=$?
   if ((rc != 0)) && rg --quiet 'mis-aligned LINKEDIT string pool' "$log"; then
     printf '%s: retried %s with CARGO_PROFILE_RELEASE_STRIP=none after the LINKEDIT error\n' "$repo" "${unbuilt[*]}" >>"$S/logs/build-notes.txt"
-    (cd "$dir" && CARGO_INCREMENTAL=0 CARGO_PROFILE_RELEASE_STRIP=none CARGO_TARGET_DIR="$target" cargo build --release --locked "${args[@]}" >>"$log" 2>&1)
+    (cd "$dir" && CARGO_INCREMENTAL=0 CARGO_PROFILE_RELEASE_STRIP=none CARGO_TARGET_DIR="$target" cargo build --release --locked --workspace "${args[@]}" >>"$log" 2>&1)
     rc=$?
   fi
   if ((rc == 0)); then
     for bin in "${unbuilt[@]}"; do
       cp "$target/release/$bin" "$S/bin/$bin" || rc=1
+      printf '%s' "$commit" >"$S/bin/$bin.commit"
     done
   fi
-  printf '%s %s\n' "$repo" "$(git -C "$dir" rev-parse HEAD)" >>"$S/logs/built-commits.txt"
+  printf '%s %s\n' "$repo" "$(repo_commit "$repo")" >>"$S/logs/built-commits.txt"
   [[ -d "$target" && -f "$S/$SMOKE_MARKER" ]] && rm -rf -- "$target"
   if ((rc == 0)); then note "build: $repo OK (${unbuilt[*]})"; else note "build: $repo FAILED (rc=$rc), see $log"; tail -20 "$log"; fi
   return "$rc"

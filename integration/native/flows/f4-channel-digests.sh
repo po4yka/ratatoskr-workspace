@@ -2,18 +2,20 @@
 # shellcheck disable=SC2034
 # F4 Channel digests (Edge, channel-digests API and worker, Knowledge; R3-09, R3-10, R2-05). Sourced by run.sh; defines the flow, runs nothing.
 #
-# Provenance: ported from the by-hand channel-digests smoke of Round 3 (.workspaces/XR-021/smoke/cdr3: legA, legRun1, legRun2, legRun3, legNeg), which was reported passed with MTProto acquisition faulted. Knowledge runs the recap in the shipped openrouter mode against a loopback fake (the scripted provider is refused by the deployed ACL by design). Run through run.sh as committed: NO.
+# Provenance: ported from the by-hand channel-digests smoke of Round 3 (.workspaces/XR-021/smoke/cdr3: legA, legRun1, legRun2, legRun3, legNeg), which was reported passed with MTProto acquisition faulted. Knowledge runs the recap in the shipped openrouter mode against a loopback fake (the scripted provider is refused by the deployed ACL by design). Run through run.sh as committed in Round 5: see README.md for the verdict.
 
 FLOW_ID=f4
 FLOW_TITLE="Channel digests: subscription set, run deadline, recap (faulted acquisition), read hop, schedule owner"
-FLOW_BINARIES=("platform:ratatoskr-edge render-nats-config" "knowledge:ratatoskr-knowledge-service" "channel-digests:ratatoskr-channel-digests-api ratatoskr-channel-digests-worker")
-FLOW_PORTS="$INFRA_PORTS 8091 9081 8098 9469 9470 $FAKE_OPENROUTER_PORT"
+FLOW_BINARIES=("platform:ratatoskr-edge render-nats-config ratatoskr-scheduler" "knowledge:ratatoskr-knowledge-service" "channel-digests:ratatoskr-channel-digests-api ratatoskr-channel-digests-worker")
+FLOW_PORTS="$INFRA_PORTS 8091 9081 8098 9469 9470 9466 $FAKE_OPENROUTER_PORT"
 FLOW_REPOS="platform knowledge channel-digests"
 FLOW_EVIDENCE="by-hand run in Round 3 (cdr3): ran, passed, with the MTProto hop faulted and OpenRouter faked; the logging assertions are new"
 FLOW_HONESTY=(
   "faked: OpenRouter is a loopback fake, so the recap text is not a live provider result"
   "FAULTED HOP: the MTProto acquisition. fixtures/legb (the 'legb' helper) commits a manifest of two synthetic posts through the service's own ManifestBuilder and DigestCoordinator::commit_manifest for a run the real worker accepted; everything after the commit is the real path"
   "seeded: two users and their browser sessions (fixtures/platform-seed.sql)"
+  "NOT RUN natively (R5-07): the 100-post cap, the honest partial flag and the withdrawal by absence; they need MTProto"
+  "seeded (R5-07): the retention leg inserts two post revisions by SQL, one 12 days old"
   "not exercised: leg C, partial acquisition. MTProto cannot be faked without credentials; the repository's executor tests are the evidence"
   "deviations: RATATOSKR__LIMITS__RUN_DEADLINE_SECONDS=60 and a dummy API_HASH; the worker's provider session file is a synthetic encrypted session whose connection fails, so the worker logs provider_unavailable and stays not ready while its bus intake works"
 )
@@ -33,9 +35,10 @@ flow_run() {
   conf_knowledge true && conf_api && conf_worker 60 "$U1" || return
   svc_start knowledge
   svc_start api
+  svc_wait_ready api 60
+  # The API applies the channel-digests schema when it starts; a worker that starts before that exits with Database(Schema). The first harness started both at once.
   svc_start worker
   svc_wait_ready knowledge 90
-  svc_wait_ready api 60
   local T1 T2 status op rid
   T1=$(secret browser1)
   T2=$(secret browser2)
@@ -72,7 +75,7 @@ flow_run() {
   local schedules_before
   schedules_before=$(q ratatoskr "select count(*) from operations.schedules")
   svc_stop worker
-  conf_worker 60 "$(python3 -c 'import uuid;print(uuid.uuid4())')" || return
+  conf_worker 60 "$("$PY" -c 'import uuid;print(uuid.uuid4())')" || return
   svc_start worker
   untilt '[ "$(q ratatoskr "select count(*) from identity.audit_events where action='"'"'schedule.registration'"'"' and outcome='"'"'denied'"'"'")" -ge 1 ]' 60
   assert unknown_owner_registration_is_audited_denied '[ "$(q ratatoskr "select count(*) from identity.audit_events where action='"'"'schedule.registration'"'"' and outcome='"'"'denied'"'"'")" -ge 1 ]'
@@ -142,6 +145,35 @@ flow_run() {
   assert run_row_failed_provider_unavailable '[ "$(q ratatoskr "select safe_failure_class from channel_digests.digest_runs where run_id='"'"'$rid'"'"'")" = provider_unavailable ]'
   assert knowledge_recap_run_failed '[ "$(q ratatoskr "select count(*) from knowledge.channel_recap_runs where state='"'"'failed'"'"'")" -ge 1 ]'
   rm -f "$S/run/fake-fail"
+  info "leg R (R5-07): the retention timer nulls stored post bodies older than the window, keeps provenance and digests, and leaves a younger body alone"
+  local chan old_rev young_rev
+  chan=$(q ratatoskr "select channel_id from channel_digests.channels where username = 'smoke_alpha'")
+  old_rev=$("$PY" -c 'import uuid;print(uuid.uuid4())')
+  young_rev=$("$PY" -c 'import uuid;print(uuid.uuid4())')
+  # SEEDED: two revisions inserted by SQL, one published 12 days ago and one yesterday
+  q ratatoskr "insert into channel_digests.post_revisions (revision_id, channel_id, provider_message_id, content_sha256, body, published_at, observed_at, canonical_link) values ('$old_rev', '$chan', 9000001, '$(printf '%064d' 1)', 'old retained body', now() - interval '12 days', now() - interval '12 days', 'https://t.me/smoke_alpha/9000001'), ('$young_rev', '$chan', 9000002, '$(printf '%064d' 2)', 'young retained body', now() - interval '1 day', now() - interval '1 day', 'https://t.me/smoke_alpha/9000002')" >/dev/null
+  assert retention_seed_rows_inserted '[ "$(q ratatoskr "select count(*) from channel_digests.post_revisions where revision_id in ('"'"'$old_rev'"'"', '"'"'$young_rev'"'"') and body is not null")" = 2 ]'
+  svc_stop worker
+  conf_worker 60 "$U1" 8 60 || return
+  svc_start worker
+  untilt '[ "$(q ratatoskr "select count(*) from channel_digests.post_revisions where revision_id = '"'"'$old_rev'"'"' and body is null and minimized_at is not null")" = 1 ]' 150
+  assert old_body_is_nulled_and_minimized_at_set '[ "$(q ratatoskr "select count(*) from channel_digests.post_revisions where revision_id = '"'"'$old_rev'"'"' and body is null and minimized_at is not null")" = 1 ]'
+  assert provenance_and_digest_of_the_old_revision_stay '[ "$(q ratatoskr "select count(*) from channel_digests.post_revisions where revision_id = '"'"'$old_rev'"'"' and content_sha256 = '"'"'$(printf '%064d' 1)'"'"' and canonical_link = '"'"'https://t.me/smoke_alpha/9000001'"'"' and published_at is not null")" = 1 ]'
+  assert younger_body_is_untouched '[ "$(q ratatoskr "select count(*) from channel_digests.post_revisions where revision_id = '"'"'$young_rev'"'"' and body = '"'"'young retained body'"'"' and minimized_at is null")" = 1 ]'
+  info "NOT RUN natively (R5-07): the 100-post cap, the honest partial flag and the withdrawal by absence need the MTProto provider (live credentials); the repository's scripted-provider tests are the evidence"
+  info "leg S (R4, best-effort): the scheduler fires an occurrence for the schedule the worker registered; the worker creates a scheduled run for the owner"
+  pg_set_password ratatoskr_scheduler || return
+  conf_scheduler || return
+  svc_stop worker
+  conf_worker 60 "$U1" 8 60 "* * * * *" || return
+  svc_start worker
+  svc_start scheduler
+  svc_wait_ready scheduler 60
+  untilt '[ "$(q ratatoskr "select count(*) from channel_digests.digest_runs where trigger = '"'"'scheduled'"'"' and owner_id = '"'"'$U1'"'"'")" -ge 1 ]' 170
+  assert scheduler_is_ready '[ "$(code 127.0.0.1:9466/health/ready)" = 200 ]'
+  assert the_occurrence_command_reached_the_worker_and_created_a_scheduled_run_for_the_owner '[ "$(q ratatoskr "select count(*) from channel_digests.digest_runs where trigger = '"'"'scheduled'"'"' and owner_id = '"'"'$U1'"'"'")" -ge 1 ]' "scheduled runs of the owner: $(q ratatoskr "select count(*) from channel_digests.digest_runs where trigger = 'scheduled' and owner_id = '$U1'"); the final state is not asserted (R4-13: a scheduled run that fails leaves no operation; the provider is down in this flow)"
+  assert the_schedule_row_was_occurred '[ "$(q ratatoskr "select count(*) from operations.schedules where service_name like '"'"'%channel-digests%'"'"'")" -ge 1 ]'
+  svc_stop scheduler
   info "leg C (partial acquisition) NOT RUN: MTProto cannot be faked without credentials"
   info "events stream and consumers: $(curl -s "$NATS_MON/jsz?streams=true&consumers=true" | jq -c "[.account_details[].stream_detail[] | {s:.name, msgs:.state.messages}]")"
 }

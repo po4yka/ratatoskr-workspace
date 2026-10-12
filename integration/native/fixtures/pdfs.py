@@ -1,6 +1,6 @@
 """Synthetic PDFs with a text layer for flow F2. usage: pdfs.py OUTDIR
 
-Writes text-small.pdf (one page, one distinctive word), big-over.pdf and big-under.pdf. The extractor refuses to publish a Document IR whose event exceeds MAX_EVENT_BYTES (default 8,000,000, the broker's 8 MiB limit minus the envelope), so big-over.pdf carries about 9 MB of extracted text and big-under.pdf about 5 MB; the flow reports what the extractor really does with each. The no-text-layer case uses extractor/crates/pdf/tests/fixtures/no-text-layer.pdf from the pinned checkout. Pure standard library; the content is invented."""
+Writes text-small.pdf (one page, one distinctive word), text-outage.pdf and text-bad-request.pdf (one distinctive word each, for the outage legs of F2), big-over.pdf and big-under.pdf. The extractor refuses to publish a Document IR whose event exceeds MAX_EVENT_BYTES (default 8,000,000, the broker's 8 MiB limit minus the envelope), so big-over.pdf carries about 8 MB of extracted text (above the event limit once the Document IR is serialised, and below the parser's own 8 MiB text budget, which a larger document would hit first and fail with content.extraction.failed) and big-under.pdf about 5 MB; the flow reports what the extractor really does with each. The no-text-layer case uses extractor/crates/pdf/tests/fixtures/no-text-layer.pdf from the pinned checkout. Pure standard library; the content is invented."""
 import pathlib
 import random
 import sys
@@ -38,7 +38,7 @@ def lines_of(total_bytes: int, marker: str, seed: int) -> list[str]:
     pages, size = [], 0
     while size < total_bytes:
         page = []
-        for _ in range(60):
+        for _ in range(150):
             line = " ".join(rng.choice(WORDS) for _ in range(12)) + f" {marker}"
             page.append(f"({line}) Tj T*")
             size += len(line) + 1
@@ -48,6 +48,21 @@ def lines_of(total_bytes: int, marker: str, seed: int) -> list[str]:
 
 out = pathlib.Path(sys.argv[1])
 out.mkdir(parents=True, exist_ok=True)
-(out / "text-small.pdf").write_bytes(pdf(["(Chartreuse expedition notes: the lantern survey ended early.) Tj T*"]))
-(out / "big-over.pdf").write_bytes(pdf(lines_of(9_000_000, "overfixture", 1)))
+def prose(word: str, topic: str) -> list[str]:
+    """A short page of plain prose with enough words for the extractor's text-layer check (a one-line PDF is judged as having no text layer). `word` is the distinctive search term."""
+    sentences = [
+        f"{word} {topic} notes, first section.",
+        f"The survey of the {topic} began on a cold morning and the team recorded every measurement by hand.",
+        f"Each reading was checked twice before it was written into the shared notebook of the {word} project.",
+        "Volunteers walked the northern boundary, then the eastern boundary, and compared their paper maps.",
+        "By the afternoon the weather had improved, which made the remaining measurements considerably easier.",
+        f"The final summary of the {word} {topic} survey lists the open questions for the next season.",
+    ]
+    return [" ".join(f"({sentence}) Tj T*" for sentence in sentences)]
+
+
+(out / "text-small.pdf").write_bytes(pdf(prose("Chartreuse", "lantern")))
+(out / "text-outage.pdf").write_bytes(pdf(prose("Persimmon", "orchard")))
+(out / "text-bad-request.pdf").write_bytes(pdf(prose("Mulberry", "trellis")))
+(out / "big-over.pdf").write_bytes(pdf(lines_of(8_000_000, "overfixture", 1)))
 (out / "big-under.pdf").write_bytes(pdf(lines_of(5_000_000, "underfixture", 2)))

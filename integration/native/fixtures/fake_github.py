@@ -26,6 +26,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
     def reply(self, status: int, body: bytes, content_type: str, etag: str | None = None) -> None:
+        with open(LOG, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps({"t": time.time(), "answer": status, "path": self.path, "etag": etag}) + "\n")
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
@@ -36,12 +38,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         with open(LOG, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps({"t": time.time(), "path": self.path, "auth": "present" if self.headers.get("authorization") else "absent", "accept": self.headers.get("accept")}) + "\n")
-        if control("github-stall"):
+            handle.write(json.dumps({"t": time.time(), "path": self.path, "auth": "present" if self.headers.get("authorization") else "absent", "accept": self.headers.get("accept"), "if_none_match": self.headers.get("if-none-match")}) + "\n")
+        if os.path.exists(os.path.join(RUNDIR, "github-stall")):  # existence, not content: the flow creates the file empty
             time.sleep(20)
         match = re.fullmatch(r"/repos/([^/]+)/([^/]+)(/readme)?", self.path.split("?")[0])
         if self.path == "/user":
-            return self.reply(200, b'{"login":"smoke"}', "application/json")
+            return self.reply(200, b'{"login":"smoke","id":4242}', "application/json")
         if not match:
             return self.reply(404, b'{"message":"Not Found"}', "application/json")
         owner, name, readme = match.group(1), match.group(2), match.group(3)

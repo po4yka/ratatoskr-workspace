@@ -1,4 +1,4 @@
-"""Flow F1 driver: export-agent style HTTP calls into Platform Edge (127.0.0.1:8080) with the real ChatGPT receipt listener (8096) and Claude receipt listener (8097) behind it. Ported from the by-hand scenario of the Round 3 AI-archive smoke (.workspaces/XR-021/smoke/ai/scenario.py), which produced the recorded F1 result; extended with the cumulative series for flow F6 (section s13). Not yet run through run.sh as committed.
+"""Flow F1 driver: export-agent style HTTP calls into Platform Edge (127.0.0.1:8080) with the real ChatGPT receipt listener (8096) and Claude receipt listener (8097) behind it. Ported from the by-hand scenario of the Round 3 AI-archive smoke (.workspaces/XR-021/smoke/ai/scenario.py), which produced the recorded F1 result; extended with the cumulative series for flow F6 (section s13). Run through run.sh as committed in Round 5: see README.md.
 
 Prints `ASSERT <name>: PASS|FAIL <detail>` and writes redacted evidence under $EV/http and $EV/ops. usage: f1_scenario.py [section ...] (default: all)
 
@@ -97,6 +97,8 @@ class Upload:
         self.data = self.path.read_bytes(); self.sha = hashlib.sha256(self.data).hexdigest()
         self.key = key or f"smoke-{self.path.stem}-{os.urandom(4).hex()}"
         self.op = None; self.token = None; self.upload_path = None; self.tag = self.path.stem
+        # The digest of what is uploaded, recorded at upload time so a later flow looks it up instead of recomputing it from a file that may have changed.
+        (FX / f"{self.path.stem}.sha256").write_text(self.sha + "\n")
 
     def prepare(self, size=None, sha=None):
         st, _, b = http_req(f"{self.tag}-prepare", "POST", f"/v1/ai-archives/{self.provider}",
@@ -213,14 +215,24 @@ def s2_pair():
         A(f"pair.u{t}_paired_201", p == 201 and j.get("user_id") == u and j.get("credential"), f"status={p} user_matches={j.get('user_id') == u}")
         state[f"cred{t}"] = j.get("credential"); state[f"dev{t}"] = j.get("device_id")
         # a paired device kind check is also what makes prepare 404 for a non-export_agent principal
-    st, _, b = http_req("edge-capabilities-u1", "GET", "/v1/capabilities", bearer(state["cred1"]))
-    j = js(b)
+    # Edge refreshes the receivers' capabilities every 15 s (platform services/edge/src/main.rs, OBSERVE_INTERVAL), so right after pairing a prepare answers 404 platform.resource.not_found until the first tick has seen both receivers. Wait for fresh documents before the first prepare; the wait is bounded and its outcome is an assertion.
+    def fresh(j):
+        svc = {s["service"]: s for s in j.get("services", [])}
+        return all(svc.get(p, {}).get("document") and not svc[p].get("stale") for p in ("chatgpt", "claude"))
+    deadline = time.time() + 90
+    waited_from = time.time()
+    while True:
+        st, _, b = http_req("edge-capabilities-u1", "GET", "/v1/capabilities", bearer(state["cred1"]), save=False)
+        j = js(b)
+        if (st == 200 and fresh(j)) or time.time() > deadline:
+            break
+        time.sleep(2)
+    http_req("edge-capabilities-u1", "GET", "/v1/capabilities", bearer(state["cred1"]))
     (EV / "edge-capabilities.json").write_text(json.dumps(j, indent=1))
-    txt = json.dumps(j)
     A("edge.capabilities_200_with_device_credential", st == 200, f"status={st}")
     svc = {s["service"]: s for s in j.get("services", [])}
-    A("edge.capabilities_report_chatgpt_and_claude_fresh", all(svc.get(p, {}).get("document") and not svc[p].get("stale") for p in ("chatgpt", "claude")),
-      "chatgpt=%s claude=%s" % (svc.get("chatgpt", {}).get("stale"), svc.get("claude", {}).get("stale")))
+    A("edge.capabilities_report_chatgpt_and_claude_fresh", fresh(j),
+      "chatgpt=%s claude=%s after %.0f s" % (svc.get("chatgpt", {}).get("stale"), svc.get("claude", {}).get("stale"), time.time() - waited_from))
 
 
 def s3_uploads():
@@ -449,6 +461,230 @@ def s12_sigkill_edge():
     A("claude.corrupt_archive_ends_failed", opcl.get("status") == "failed", f"status={opcl.get('status')} codes={warn_codes(opcl)}")
 
 
+def staging_dirs():
+    root = S / "staging/edge"
+    return sorted(d.name for d in root.iterdir() if d.is_dir()) if root.exists() else []
+
+
+def sql(statement):
+    r = sh(f"q ratatoskr \"{statement}\"")
+    return r.stdout.strip(), r.returncode, r.stderr.strip()
+
+
+def staging_counter(reason):
+    out = subprocess.run(["curl", "-s", "127.0.0.1:9464/metrics"], capture_output=True, text=True).stdout
+    total = 0.0
+    for line in out.splitlines():
+        if line.startswith("platform_archive_staging_removed_total{") and f'reason="{reason}"' in line:
+            total += float(line.rsplit(" ", 1)[1])
+    return total
+
+
+def wait_for(predicate, seconds):
+    end = time.time() + seconds
+    while time.time() < end:
+        if predicate():
+            return True
+        time.sleep(2)
+    return predicate()
+
+
+def s16_claude_knowledge_and_repeats():
+    """Round 4 legs of F1: (a) the Claude knowledge file (R4-02) verified, with a wrong digest, and referenced only; (b) a corrupt archive of each provider ends failed with its session failed and no staging left; (c) repeated Idempotency-Key (R4-13)."""
+    c1 = state["cred1"]
+    KB = b"garden plan"
+    # (a) verified bytes: claude-complete.zip ended succeeded in s3 with no incomplete warning
+    ok = state["ops"].get("claude-complete.zip", {})
+    A("claude_knowledge.verified_file_ends_succeeded_without_the_incomplete_warning", ok.get("status") == "succeeded" and "ai_archive.import.incomplete" not in ok.get("codes", []), f"{ok}")
+    row, rc, err = sql("select locally_backed_up::text || '|' || (blob_ref is not null)::text || '|' || (content_hash is not null)::text from claude_archive.project_sources where external_source_id = 'knowledge-ok'")
+    A("claude_knowledge.verified_row_has_blob_ref_hash_and_is_backed_up", row == "true|true|true", f"row={row!r} {err[:120]}")
+    want = hashlib.sha256(KB).hexdigest()
+    found = [f for f in (S / "blobs/claude").rglob("*") if f.is_file() and hashlib.sha256(f.read_bytes()).hexdigest() == want]
+    A("claude_knowledge.verified_blob_is_under_the_claude_blob_root_with_the_right_digest", len(found) >= 1, f"files with the digest: {len(found)}")
+    # wrong digest
+    u, op, fj = full_upload("claude", c1, "claude-badkb.zip")
+    codes = warn_codes(op)
+    A("claude_knowledge.wrong_digest_ends_partially_succeeded", op.get("status") == "partially_succeeded", f"status={op.get('status')} codes={codes}")
+    A("claude_knowledge.wrong_digest_carries_a_warning", len(codes) >= 1, f"codes={codes}")
+    row, rc, err = sql("select locally_backed_up::text || '|' || (blob_ref is not null)::text from claude_archive.project_sources where external_source_id = 'knowledge-bad'")
+    A("claude_knowledge.wrong_digest_row_keeps_a_blob_ref_but_is_not_backed_up", row == "false|true", f"row={row!r} {err[:120]}")
+    # referenced only
+    ref = state["ops"].get("claude-reference-only.zip", {})
+    A("claude_knowledge.referenced_only_ends_partially_succeeded", ref.get("status") == "partially_succeeded" and "ai_archive.import.incomplete" in ref.get("codes", []), f"{ref}")
+    row, rc, err = sql("select locally_backed_up::text || '|' || (blob_ref is null)::text from claude_archive.project_sources where external_source_id = 'knowledge-ref'")
+    A("claude_knowledge.referenced_only_row_has_no_blob", row == "false|true", f"row={row!r} {err[:120]}")
+
+    # (b) a corrupt archive per provider: failed, the transfer session failed or reaped, no staging directory for the operation
+    for provider in ("chatgpt", "claude"):
+        u, op, fj = full_upload(provider, c1, "corrupt.zip")
+        A(f"corrupt.{provider}_ends_failed", op.get("status") == "failed", f"status={op.get('status')} codes={warn_codes(op)}")
+        session, _, _ = sql(f"select coalesce(max(session_state), 'reaped') from operations.ai_archive_transfers where operation_id = '{u.op}'")
+        A(f"corrupt.{provider}_session_is_failed_or_already_reaped", session in ("failed", "reaped", "finalized"), f"session={session}")
+        A(f"corrupt.{provider}_carries_a_public_error_code", len(warn_codes(op)) >= 1, f"codes={warn_codes(op)}")
+        A(f"corrupt.{provider}_no_staging_directory_is_left_for_the_token", wait_for(lambda: u.token not in staging_dirs(), 70), f"token present={u.token in staging_dirs()}")
+
+    # (c) the same bytes with the same key return the same operation; a new key creates a second one that also ends terminal
+    first = Upload("chatgpt", c1, FX / "chatgpt-conversations-only.zip", key="smoke-repeat-key-1")
+    st1, j1 = first.prepare()
+    again = Upload("chatgpt", c1, FX / "chatgpt-conversations-only.zip", key="smoke-repeat-key-1")
+    st2, j2 = again.prepare()
+    A("repeat.same_key_returns_the_same_operation", st1 == 202 and st2 in (200, 202) and first.op == again.op, f"{st1}/{st2} {first.op} {again.op}")
+    other = Upload("chatgpt", c1, FX / "chatgpt-conversations-only.zip", key="smoke-repeat-key-2")
+    st3, j3 = other.prepare()
+    A("repeat.new_key_creates_a_second_operation", st3 == 202 and other.op and other.op != first.op, f"{st3} {other.op} vs {first.op}")
+    print(f"INFO repeat: operations {first.op} and {other.op} for the same bytes (R4-13: by design, both are reported from the first import)", flush=True)
+    other.open()
+    for i in range(len(other.chunks())):
+        other.put(i)
+    other.finalize()
+    done = other.poll(120)
+    A("repeat.second_operation_ends_terminal", done.get("status") in ("succeeded", "partially_succeeded", "failed"), f"status={done.get('status')} codes={warn_codes(done)}")
+    # the first, never finalized, stays accepted until its session is reaped or it is finalized: finish it so it ends terminal too
+    first.open()
+    for i in range(len(first.chunks())):
+        first.put(i)
+    first.finalize()
+    done1 = first.poll(120)
+    A("repeat.first_operation_ends_terminal", done1.get("status") in ("succeeded", "partially_succeeded", "failed"), f"status={done1.get('status')}")
+    # a duplicate bound to an already failed run ends failed (R3-04)
+    dup = Upload("chatgpt", c1, FX / "corrupt.zip", key=f"smoke-dup-corrupt-{os.urandom(3).hex()}")
+    dup.prepare(); dup.open()
+    for i in range(len(dup.chunks())):
+        dup.put(i)
+    dup.finalize()
+    done2 = dup.poll(120)
+    A("repeat.duplicate_of_a_failed_run_ends_failed", done2.get("status") == "failed", f"status={done2.get('status')} codes={warn_codes(done2)}")
+
+
+def s17_receiver_401_stand_in():
+    """(d) A loopback stand-in on 8097 answers 401 (R3-03): Edge relays 502 edge.upstream_invalid_response and device pairing still works. The Claude receiver is stopped for the leg and started again; the stand-in is labelled in result.txt."""
+    c1 = state["cred1"]
+    # prepare, open and the chunks go to Edge's own staging, so they are done while the real receiver still answers; only finalize reaches the receiver
+    u = Upload("claude", c1, FX / "claude-nofiles.zip", key=f"smoke-401-{os.urandom(3).hex()}")
+    st, _ = u.prepare()
+    u.open()
+    for i in range(len(u.chunks())):
+        u.put(i)
+    r = sh("svc_stop claude")
+    A("stand_in.claude_stopped", r.returncode == 0, r.stderr[-120:])
+    stand_in = subprocess.Popen([os.environ["PY"], "-I", str(NATIVE / "fixtures/stand_in_receipt.py"), "8097"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        time.sleep(1)
+        fs, fj, _ = u.finalize()
+        A("stand_in.finalize_is_502_edge_upstream_invalid_response", fs == 502 and fj.get("code") == "edge.upstream_invalid_response", f"prepare={st} finalize={fs} code={fj.get('code')}")
+        code_, p2, j = pair(1)
+        A("stand_in.device_pairing_still_works", code_ == 201 and p2 == 201, f"codes={code_}/{p2}")
+    finally:
+        stand_in.terminate()
+        stand_in.wait(10)
+    r = sh("svc_start claude; svc_wait_ready claude 60")
+    A("stand_in.claude_receiver_started_again", r.returncode == 0, r.stderr[-120:])
+
+
+def s14_staging_reaper():
+    """R5-04: abandoned staging is reaped, a dead session is replaced, readiness follows the staging root. Edge runs with SWEEP_INTERVAL_SECONDS=30 (a documented key; the example's 300 s would make the flow wait minutes). The rewound expires_at is SEEDED and labelled so."""
+    c1 = state["cred1"]
+    # (a) an abandoned upload, a digest-mismatch session and a fresh open session
+    abandoned = Upload("chatgpt", c1, FX / "chatgpt-multichunk.zip", key=f"smoke-abandoned-{os.urandom(3).hex()}")
+    abandoned.prepare(); abandoned.open(); abandoned.put(0)
+    mismatch = Upload("chatgpt", c1, FX / "chatgpt-conversations-only.zip", key=f"smoke-mismatch-{os.urandom(3).hex()}")
+    mismatch.data = bytes([mismatch.data[0] ^ 0xFF]) + mismatch.data[1:]  # same length, different bytes: the declared digest stays the original
+    mismatch.prepare(); mismatch.open()
+    for i in range(len(mismatch.chunks())):
+        mismatch.put(i)
+    fs, fj, _ = mismatch.finalize()
+    A("reaper.digest_mismatch_session_is_refused", fs in (400, 409, 422) or mismatch.status()[0] == 404, f"finalize={fs} code={fj.get('code')}")
+    fresh = Upload("chatgpt", c1, FX / "chatgpt-multichunk.zip", key=f"smoke-fresh-{os.urandom(3).hex()}")
+    fresh.prepare(); fresh.open(); fresh.put(0)
+    rows, rc, err = sql(f"select resumption_token || ' ' || session_state from operations.ai_archive_transfers where operation_id in ('{abandoned.op}','{mismatch.op}','{fresh.op}') order by opened_at")
+    A("reaper.three_sessions_staged", rc == 0 and len(rows.splitlines()) == 3 and all(t in staging_dirs() for t in (abandoned.token, fresh.token)), f"rows={rows!r} dirs={len(staging_dirs())} {err[:100]}")
+    states = dict(line.split(" ") for line in rows.splitlines() if " " in line)
+    A("reaper.mismatch_session_is_failed", states.get(mismatch.token) == "failed" or mismatch.token not in states, f"state={states.get(mismatch.token)}")
+    # SEEDED: rewind the abandoned session's clock (the schema requires expires_at to follow opened_at, so both move); an orphan directory an hour old, made by hand
+    out, rc, err = sql(f"update operations.ai_archive_transfers set opened_at = now() - interval '25 hours', expires_at = now() - interval '1 minute' where operation_id = '{abandoned.op}' returning 1")
+    A("reaper.expiry_rewound_by_sql_seeded", rc == 0 and out == "1", f"{out!r} {err[:160]}")
+    orphan = S / "staging/edge" / ("rst_" + "0123456789abcdefghijklmn")
+    orphan.mkdir()
+    subprocess.run(["touch", "-t", time.strftime("%Y%m%d%H%M", time.localtime(time.time() - 2 * 3600)), str(orphan)])
+    before = {r: staging_counter(r) for r in ("expired", "failed")}
+    gone = wait_for(lambda: abandoned.token not in staging_dirs() and orphan.name not in staging_dirs()
+                    and (mismatch.token not in staging_dirs()), 75)
+    A("reaper.abandoned_expired_failed_and_orphan_directories_removed_within_two_intervals", gone, f"dirs left={[d for d in staging_dirs()]}")
+    rows_after, _, _ = sql(f"select count(*) from operations.ai_archive_transfers where operation_id in ('{abandoned.op}','{mismatch.op}')")
+    A("reaper.expired_and_failed_rows_removed", rows_after == "0", f"rows={rows_after}")
+    A("reaper.fresh_open_session_untouched", fresh.token in staging_dirs() and fresh.status()[0] == 200, f"status={fresh.status()[0]}")
+    A("reaper.counter_counts_each_reason", staging_counter("expired") > before["expired"] and staging_counter("failed") > before["failed"],
+      f"expired {before['expired']}->{staging_counter('expired')} failed {before['failed']}->{staging_counter('failed')}")
+
+    # (b) a dead token: the transfer row is deleted (SEEDED); status and chunk answer 404; the client reopens the same operation and completes
+    dead = Upload("chatgpt", c1, FX / "chatgpt-multichunk.zip", key=f"smoke-dead-{os.urandom(3).hex()}")
+    dead.prepare(); dead.open(); dead.put(0)
+    old = dead.token
+    out, rc, err = sql(f"delete from operations.ai_archive_transfers where operation_id = '{dead.op}' returning 1")
+    A("reaper.dead_token_made_by_sql_seeded", rc == 0 and out == "1", f"{out!r} {err[:160]}")
+    A("reaper.dead_token_status_404", dead.status()[0] == 404)
+    A("reaper.dead_token_chunk_404", dead.put(1)[0] == 404)
+    st, _ = dead.open()
+    A("reaper.reopen_after_a_dead_token_returns_a_new_token", st == 201 and dead.token and dead.token != old, f"status={st}")
+    for i in range(len(dead.chunks())):
+        dead.put(i)
+    fs, fj, _ = dead.finalize()
+    op = dead.poll(180)
+    A("reaper.reopened_upload_completes", fs == 200 and op.get("status") == "succeeded", f"finalize={fs} status={op.get('status')} codes={warn_codes(op)}")
+    # after a digest mismatch an open returns a new token (R5-04 rule 5)
+    mm = Upload("chatgpt", c1, FX / "chatgpt-conversations-only.zip", key=f"smoke-mm2-{os.urandom(3).hex()}")
+    good = mm.data
+    mm.data = bytes([good[0] ^ 0xFF]) + good[1:]
+    mm.prepare(); mm.open()
+    for i in range(len(mm.chunks())):
+        mm.put(i)
+    mm.finalize()
+    first = mm.token
+    st, _ = mm.open()
+    A("reaper.open_after_a_digest_mismatch_returns_a_new_token", st == 201 and mm.token and mm.token != first, f"status={st}")
+
+    # (c) readiness follows the staging root
+    root = S / "staging/edge"
+    def staging_ready():
+        """The state of the `archive_staging` check on Edge's readiness report ("pass" or another state), or None when the report is unreadable."""
+        out = subprocess.run(["curl", "-s", "127.0.0.1:9464/health/ready"], capture_output=True, text=True).stdout
+        try:
+            checks = json.loads(out).get("checks", [])
+        except json.JSONDecodeError:
+            return None
+        return next((c.get("state") for c in checks if c.get("name") == "archive_staging"), None)
+    A("reaper.readiness_reports_archive_staging_pass", staging_ready() == "pass", f"archive_staging={staging_ready()}")
+    os.chmod(root, 0o000)
+    try:
+        flipped = wait_for(lambda: staging_ready() not in ("pass", None), 75)
+        A("reaper.readiness_leaves_pass_when_the_root_is_unwritable", flipped, f"archive_staging={staging_ready()}")
+    finally:
+        os.chmod(root, 0o700)
+    back = wait_for(lambda: staging_ready() == "pass", 75)
+    A("reaper.readiness_turns_pass_again", back, f"archive_staging={staging_ready()}")
+
+
+def s15_scale():
+    """R5-04 (d), best-effort and labelled: one 256 MiB synthetic archive through prepare, chunks and finalize. Wall time is recorded; this is NOT the Raspberry Pi measurement. The bytes are a ZIP of one stored member of zeros-like pseudo-random padding, so the receiver reads a valid archive."""
+    c1 = state["cred1"]
+    import zipfile
+    path = FX / "chatgpt-256mib.zip"
+    pad = hashlib.sha256(b"scale").digest() * (4 * 1024 * 1024 // 32)
+    conv = {"id": "conversation-scale", "title": "Okapi scale notes", "mapping": {"message-scale": {"id": "message-scale", "parent": None, "message": {"id": "message-scale", "author": {"role": "user"}, "content": {"parts": ["Scale fixture about the numbat."]}}}}}
+    info = zipfile.ZipInfo("conversations.json", (2026, 8, 31, 0, 0, 0)); info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as z:
+        z.writestr(info, json.dumps([conv]).encode() + b"\n")
+        for i in range(64):
+            member = zipfile.ZipInfo(f"assets/pad-{i:02d}.bin", (2026, 8, 31, 0, 0, 0)); member.compress_type = zipfile.ZIP_STORED
+            z.writestr(member, pad)
+    t0 = time.time()
+    u, op, fj = full_upload("chatgpt", c1, path.name, chunk=16 * 1024 * 1024)
+    wall = time.time() - t0
+    print(f"INFO scale: {path.stat().st_size} bytes, wall {wall:.1f} s, status={op.get('status')} (best-effort, not the Raspberry Pi measurement)", flush=True)
+    A("scale.256mib_archive_reaches_a_terminal_state", op.get("status") in ("succeeded", "partially_succeeded", "failed"), f"status={op.get('status')} wall={wall:.0f}s codes={warn_codes(op)}")
+    path.unlink()
+
+
 def s13_series():
     """The cumulative series of flow F6 (R3-06): three exports per provider for tenant 1, one for tenant 2. Tenant 2 is mapped first, because the receivers answered 403 for it in s4."""
     r = sh("map_second_user")
@@ -463,7 +699,7 @@ def s13_series():
 
 
 SECTIONS = [("s1", s1_surface), ("s2", s2_pair), ("s3", s3_uploads), ("s4", s4_unmapped), ("s5", s5_receiver_down),
-            ("s6", s6_direct_receipt), ("s7", s7_ceilings), ("s8", s8_edge_restart), ("s9", s9_connz), ("s10", s10_facts), ("s12", s12_sigkill_edge), ("s13", s13_series), ("s11", s11_nats_log)]
+            ("s6", s6_direct_receipt), ("s7", s7_ceilings), ("s8", s8_edge_restart), ("s9", s9_connz), ("s10", s10_facts), ("s12", s12_sigkill_edge), ("s13", s13_series), ("s16", s16_claude_knowledge_and_repeats), ("s17", s17_receiver_401_stand_in), ("s14", s14_staging_reaper), ("s15", s15_scale), ("s11", s11_nats_log)]
 
 if __name__ == "__main__":
     want = set(sys.argv[1:])

@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # F3 Telegram to Platform (the webhook and the dispatcher as shipped, a fake Bot API, plus F2's services; R3-12). Sourced by run.sh; defines the flow, runs nothing.
 #
-# Provenance: the assertion-key steps and the PDF capture follow the by-hand Telegram PDF smoke of Round 3 (.workspaces/XR-021/smoke/tgpdf), which used a scripted assertion issuer; this flow runs the real webhook and dispatcher binaries, which no earlier smoke did (the Telegram webhook and dispatcher were never run before). Run through run.sh as committed: NO.
+# Provenance: the assertion-key steps and the PDF capture follow the by-hand Telegram PDF smoke of Round 3 (.workspaces/XR-021/smoke/tgpdf), which used a scripted assertion issuer; this flow runs the real webhook and dispatcher binaries, which no earlier smoke did (the Telegram webhook and dispatcher were never run before). Run through run.sh as committed in Round 5: see README.md for the verdict.
 
 FLOW_ID=f3
 FLOW_TITLE="Telegram to Platform: assertion key, webhook update, session exchange, replies, dispatcher idle"
@@ -15,6 +15,9 @@ FLOW_HONESTY=(
   "deviation: RATATOSKR__PLATFORM__BASE_URL of the webhook and the dispatcher points at a recording tap (fixtures/tap_proxy.py) that forwards unchanged to Edge, so the request the webhook sends can be read"
   "not exercised: notifications. Nothing in the fleet publishes evt.platform.notification.raised.v1 (excluded: a product decision), so the dispatcher can only be shown ready and idle"
   "not exercised: Telegram MTProto, a real bot token, TLS through cloudflared"
+  "faked (R5-10): the held-stream leg stops the extractor with the harness's pid file and starts it again; the tap passes the dispatcher's text/event-stream request through frame by frame (the first tap buffered a response until it ended, which would have held a progress stream back)"
+  "seeded (R4-08): the session-loss leg revokes the sender's Platform sessions by SQL (revoked_at), because a session row cannot be deleted while the audit trail references it"
+  "NOT RUN: a bare URL then the same URL forwarded (the extractor's URL lane refuses loopback addresses by design); a 409 from Platform (cannot be provoked once the key describes the body)"
 )
 
 KAT_SEED=9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60
@@ -29,13 +32,14 @@ post_update() {
 }
 
 bot_replies_after() { jq -rs --argjson seq "$1" '[.[] | select(.seq > $seq and (.method | ascii_downcase | IN("sendmessage","editmessagetext")))] | map(.request.text // "") | .[]' "$S/logs/fake-bot.jsonl"; }
-bot_seq() { jq -s 'map(.seq) | max // 0' "$S/logs/fake-bot.jsonl" 2>/dev/null || echo 0; }
+# The highest sequence number a recording holds, or 0 when it does not exist yet (jq -s on a missing file prints 0 AND fails, so the file is tested first).
+bot_seq() { if [[ -f "$S/logs/fake-bot.jsonl" ]]; then jq -s 'map(.seq) | max // 0' "$S/logs/fake-bot.jsonl"; else echo 0; fi; }
 
 # bot_calls_after SEQ METHOD: how many Bot API calls of that method (any case) the fake recorded after SEQ. Calls are counted by method, never by lines of text: one message with two lines is one call.
 bot_calls_after() { jq -rs --argjson seq "$1" --arg method "$2" '[.[] | select(.seq > $seq and ((.method | ascii_downcase) == $method))] | length' "$S/logs/fake-bot.jsonl"; }
 # reply_sequence_after SEQ: one "method:first 80 characters of the text" line per reply call after SEQ, in call order.
 reply_sequence_after() { jq -rs --argjson seq "$1" '[.[] | select(.seq > $seq and ((.method | ascii_downcase) | IN("sendmessage","editmessagetext")))] | map((.method | ascii_downcase) + ":" + ((.request.text // "") | gsub("\n"; " ") | .[0:80])) | .[]' "$S/logs/fake-bot.jsonl"; }
-tap_seq() { jq -s 'map(.seq) | max // 0' "$S/logs/tap.jsonl" 2>/dev/null || echo 0; }
+tap_seq() { if [[ -f "$S/logs/tap.jsonl" ]]; then jq -s 'map(.seq) | max // 0' "$S/logs/tap.jsonl"; else echo 0; fi; }
 # capture_statuses TAP_SEQ: the status of every /v1/captures* call the tap recorded after TAP_SEQ, in order, space separated. A retry, a conflict or a refusal shows here; the reply the sender saw does not.
 capture_statuses() { jq -rs --argjson seq "${1:-0}" '[.[] | select(.seq > $seq and (.path | startswith("/v1/captures"))) | .status | tostring] | join(" ")' "$S/logs/tap.jsonl"; }
 terminal_operations() { q ratatoskr "select count(*) from operations.operations where status in ('succeeded','partially_succeeded','failed')"; }
@@ -63,6 +67,8 @@ flow_run() {
   done
   mkdir -p "$S/blobs/knowledge" "$S/blobs/extractor" "$S/blobs/telegram" "$S/fx/botfiles"
   cp "$R/extractor/crates/pdf/tests/fixtures/text-two-pages.pdf" "$S/fx/botfiles/doc1.pdf"
+  # A second, different PDF: the webhook's idempotency key describes the body, so an update that repeats doc1 is a replay of the first operation and starts no new one.
+  "$PY" -I "$NATIVE_ROOT/fixtures/pdfs.py" "$S/fx/pdfs" >/dev/null && cp "$S/fx/pdfs/text-outage.pdf" "$S/fx/botfiles/doc2.pdf"
   fake_start fake-openrouter fake_openrouter.py "$FAKE_OPENROUTER_PORT" "$S/logs/fake-openrouter.jsonl" "$S/run"
   fake_start fake-bot fake_bot_api.py "$FAKE_BOT_PORT" "$S/logs/fake-bot.jsonl" "$S/fx/botfiles"
   fake_start tap tap_proxy.py "$FAKE_TAP_PORT" 8080 "$S/logs/tap.jsonl"
@@ -89,7 +95,7 @@ flow_run() {
   local final
   final=$(q ratatoskr "select status from operations.operations order by accepted_at desc limit 1")
   assert pdf_capture_operation_succeeded '[ "$final" = succeeded ]' "$final"
-  assert plain_capture_status_is_202 '[ "$(capture_statuses "$tap0")" = 202 ]' "tap statuses of /v1/captures*: $(capture_statuses "$tap0")"
+  assert plain_capture_status_is_202 '[ "$(capture_statuses "$tap0")" = 202 ]' "tap statuses of /v1/captures*: $(capture_statuses "$tap0") (tap0=$tap0; tap log: $(wc -l <"$S/logs/tap.jsonl" 2>&1 | tr -d " ") lines; bot log: $(wc -l <"$S/logs/fake-bot.jsonl" 2>&1 | tr -d " ") lines, seq0=$seq)"
   assert blob_is_in_the_shared_telegram_root '[ "$(find "$S/blobs/telegram" -type f | wc -l | tr -d " ")" -ge 1 ]'
   assert session_exchange_returned_201 '[ "$(jq -rs "[.[] | select(.path==\"/v1/sessions/telegram\" and .status==201)] | length" "$S/logs/tap.jsonl")" -ge 1 ]' "a real exchange through the tap"
   assert identity_row_written_by_the_first_exchange '[ "$(q ratatoskr "select count(*) from telegram.identities where internal_user_id is not null")" -ge 1 ]'
@@ -125,7 +131,7 @@ Send a PDF document with a text layer; images, video, voice, and audio are not s
   assert both_operations_succeeded '[ "$(q ratatoskr "select count(*) from operations.operations where status = '"'"'succeeded'"'"'")" -ge 2 ]'
   untilt '[ "$(q ratatoskr "select count(*) from knowledge.search_documents")" -ge 1 ]' 90
   assert knowledge_holds_one_document_for_the_digest '[ "$(q ratatoskr "select count(*) from knowledge.search_documents")" = 1 ]' "rows: $(q ratatoskr "select count(*) from knowledge.search_documents")"
-  info "NOT RUN: a bare URL then the same URL forwarded needs a fetchable page for the extractor's URL lane; no loopback page server is part of this harness yet"
+  info "NOT RUN: a bare URL then the same URL forwarded needs a page the extractor may fetch; its URL lane refuses loopback and private addresses by design (crates/url-routing) and the harness has no public page, so the plain-then-forwarded PDF above is the evidence"
 
   info "the same update delivered twice converges on one operation"
   local tap2
@@ -136,10 +142,11 @@ Send a PDF document with a text layer; images, video, voice, and audio are not s
   assert redelivered_update_is_acknowledged_to_telegram '[ "$status" = 200 ]' "http=$status"
   assert redelivered_update_creates_no_operation_and_no_capture_call '[ "$(q ratatoskr "select count(*) from operations.operations")" = "$ops_before" ] && [ -z "$(capture_statuses "$tap2")" ]' "operations $ops_before, capture calls: $(capture_statuses "$tap2")"
 
-  info "session loss: the Platform session rows of the sender are deleted while the webhook runs (R4-08)"
+  info "session loss: the Platform sessions of the sender are revoked while the webhook runs (R4-08; a row cannot be deleted, the audit trail references it)"
   local deleted tap3 exchange
-  deleted=$(q ratatoskr "delete from identity.sessions where kind = 'telegram_mini_app' and user_id = (select internal_user_id from telegram.identities where telegram_user_id = $OWNER_ID) returning 1" | wc -l | tr -d " ")
-  assert session_rows_deleted '[ "$deleted" -ge 1 ]' "deleted $deleted rows"
+  q ratatoskr "select kind || ' ' || count(*) from identity.sessions group by kind order by kind" >"$EV/sessions-before-loss.txt" 2>&1
+  deleted=$(q ratatoskr "update identity.sessions set revoked_at = now() where kind = 'telegram_mini_app' and revoked_at is null and user_id = (select internal_user_id from telegram.identities where telegram_user_id = $OWNER_ID) returning 1" 2>"$EV/session-delete.err" | wc -l | tr -d " ")
+  assert session_rows_revoked '[ "$deleted" -ge 1 ]' "deleted $deleted rows; sessions before: $(tr "\n" "," <"$EV/sessions-before-loss.txt"); $(head -c 200 "$EV/session-delete.err")"
   seq=$(bot_seq)
   tap3=$(tap_seq)
   status=$(post_update 1006 '{"document":{"file_id":"doc1.pdf","file_unique_id":"u1","file_name":"notes.pdf","mime_type":"application/pdf","file_size":1400}}')
@@ -150,6 +157,27 @@ Send a PDF document with a text layer; images, video, voice, and audio are not s
   reply_sequence_after "$seq" >"$EV/replies-session-loss.txt"
   assert sender_sees_no_refusal_after_session_loss '[ "$(grep -Ec "Could not save|temporarily unavailable" "$EV/replies-session-loss.txt")" = 0 ]' "$(tr "\n" "|" <"$EV/replies-session-loss.txt")"
   info "NOT RUN here: a 409 from Platform cannot be provoked once the key describes the body, so the retry-then-unavailable path of a conflict is covered by the Telegram repository tests"
+
+  info "a progress stream held over 25 seconds is followed over one connection, not one per 10 seconds (R5-10)"
+  local tap4 events_requests ops_now
+  svc_stop extractor
+  seq=$(bot_seq)
+  tap4=$(tap_seq)
+  ops_now=$(terminal_operations)
+  status=$(post_update 1010 '{"document":{"file_id":"doc2.pdf","file_unique_id":"u2","file_name":"held.pdf","mime_type":"application/pdf","file_size":1200}}')
+  assert held_update_accepted_by_the_webhook '[ "$status" = 200 ]' "http=$status"
+  sleep 32
+  events_requests=$(jq -rs --argjson seq "$tap4" '[.[] | select(.seq > $seq and .method == "GET" and (.path | test("^/v1/operations/[^/]+/events")))] | length' "$S/logs/tap.jsonl")
+  svc_start extractor
+  svc_wait_ready extractor 60
+  untilt '[ "$(terminal_operations)" -gt "$ops_now" ]' 120
+  reply_sequence_after "$seq" >"$EV/replies-held.txt"
+  assert at_most_two_follow_requests_over_a_32_second_hold '[ "$events_requests" -le 2 ]' "GET /v1/operations/{id}/events requests during the hold: $events_requests (before the fix: about one per 10 s)"
+  assert at_least_one_follow_request_was_made '[ "$events_requests" -ge 1 ]' "the dispatcher followed the operation: $events_requests requests"
+  assert dispatcher_log_has_no_follow_frame_failed '[ "$(logcount "$S/logs/dispatcher.log" follow_frame_failed)" = 0 ]'
+  untilt 'reply_sequence_after "$seq" | grep -q "^editmessagetext:.*Completed"' 120
+  reply_sequence_after "$seq" >"$EV/replies-held.txt"
+  assert held_operation_completion_edit_arrives_after_the_extractor_starts 'grep -q "^editmessagetext:.*Completed" "$EV/replies-held.txt"' "$(tr "\n" "|" <"$EV/replies-held.txt")"
 
   info "Edge stopped before a PDF is sent"
   svc_stop edge
@@ -165,6 +193,6 @@ Your item was not saved. Please send it again in a few minutes.'
   info "step 3: notifications"
   sleep 10
   assert dispatcher_stays_ready_and_idle '[ "$(code 127.0.0.1:9468/health/ready)" = 200 ]'
-  python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" stream "$S/nk/edge.nkey" ratatoskr_events 'evt.platform.notification.>' >"$EV/notification-subjects.json" 2>&1
+  "$PY" -I "$NATIVE_ROOT/fixtures/natsprobe.py" stream "$S/nk/edge.nkey" ratatoskr_events 'evt.platform.notification.>' >"$EV/notification-subjects.json" 2>&1
   assert nothing_published_a_notification '[ "$(jq -r ".subjects // {} | length" "$EV/notification-subjects.json" 2>/dev/null || echo 0)" = 0 ]' "no notification can be produced in this fleet: excluded, recorded in the changeset"
 }

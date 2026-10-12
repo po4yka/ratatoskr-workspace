@@ -7,7 +7,8 @@
 #   run.sh --prune                remove what earlier runs left under $RATATOSKR_SMOKE_DIR (nothing else)
 #   run.sh FLOW [FLOW...]         run flows one at a time, in the order given
 #
-# This is a manual, machine-dependent run, not a CI gate. State lives in $RATATOSKR_SMOKE_DIR (default $HOME/.cache/ratatoskr-smoke/XR-021-r4); evidence summaries go to the gitignored evidence/XR-021-r4/<flow>/. See README.md.
+# This is a manual, machine-dependent run, not a CI gate. State lives in $RATATOSKR_SMOKE_DIR (default $HOME/.cache/ratatoskr-smoke/XR-021-r5); evidence summaries go to the gitignored evidence/XR-021-r5/<flow>/. See README.md.
+# RATATOSKR_SMOKE_REF=origin/main runs the flows against that ref of every repository a flow uses (exported with git archive into the state directory) instead of the commits the workspace pins; the pinned submodules are never touched.
 
 set -uo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -39,7 +40,7 @@ flow_file() {
 load_flow() {
   local file
   file=$(flow_file "$1") || { printf 'unknown flow %s; try --list\n' "$1" >&2; return 2; }
-  FLOW_BINARIES=() FLOW_HONESTY=() FLOW_KEEP_DATA=0 FLOW_NEEDS_KEPT='' FLOW_NEEDS=''
+  FLOW_BINARIES=() FLOW_HONESTY=() FLOW_KEEP_DATA=0 FLOW_NEEDS_KEPT='' FLOW_NEEDS='' EDGE_SWEEP_SECONDS=''
   # shellcheck disable=SC1090
   source "$file"
 }
@@ -47,7 +48,7 @@ load_flow() {
 list_flows() {
   local file id
   printf 'Native smoke flows (a manual run; state under %s)\n' "$S"
-  printf 'Common prerequisites: nats-server 2.10 or later, initdb, pg_ctl, psql and pg_config with the pgvector files, cargo, python3 with cryptography, jq, curl, lsof, rg, git, at least %s GiB free, and every port a flow lists free (run.sh --dry-run FLOW checks all of it).\n' "$MIN_FREE_GIB"
+  printf 'Common prerequisites: nats-server 2.10 or later, initdb, pg_ctl, psql and pg_config with the pgvector files, cargo, a python that serves HTTP and imports cryptography (chosen by lib/common.sh::py_select), jq, curl, lsof, rg, git, at least %s GiB free, and every port a flow lists free (run.sh --dry-run FLOW checks all of it).\n' "$MIN_FREE_GIB"
   for file in "${FLOW_FILES[@]}"; do
     id=$(basename "$file" | cut -d- -f1)
     (
@@ -64,7 +65,7 @@ list_flows() {
 # Prints one MISSING line per missing prerequisite and returns 3 when there is one.
 check_prerequisites() {
   local absent=0 tool version extension_dir lib_dir
-  for tool in nats-server initdb pg_ctl psql pg_config cargo python3 jq curl lsof rg shasum git; do
+  for tool in nats-server initdb pg_ctl psql pg_config cargo perl jq curl lsof rg shasum git; do
     command -v "$tool" >/dev/null 2>&1 || { printf 'MISSING: command %s is not on PATH\n' "$tool"; absent=1; }
   done
   if command -v nats-server >/dev/null 2>&1; then
@@ -72,9 +73,7 @@ check_prerequisites() {
     awk -v v="$version" 'BEGIN { split(v, p, "."); exit !(p[1] > 2 || (p[1] == 2 && p[2] >= 10)) }' \
       || { printf 'MISSING: nats-server 2.10 or later (found %s)\n' "${version:-unknown}"; absent=1; }
   fi
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -c 'import cryptography' 2>/dev/null || { printf 'MISSING: python3 module cryptography\n'; absent=1; }
-  fi
+  py_select || { printf 'MISSING: python with HTTP serving and cryptography (candidates tried: %s)\n' "$(py_candidates | tr '\n' ' ')"; absent=1; }
   if command -v pg_config >/dev/null 2>&1; then
     extension_dir=$(pg_config --sharedir)/extension
     lib_dir=$(pg_config --pkglibdir)
@@ -132,6 +131,7 @@ cleanup_flow() {
 }
 
 run_flow() {
+  local repo
   load_flow "$1" || return 2
   smoke_dir_guard
   if [[ -n "${FLOW_NEEDS_KEPT:-}" && ! -d "$S/pg" ]]; then
@@ -142,8 +142,16 @@ run_flow() {
   lock_acquire
   trap 'cleanup_flow; lock_release' EXIT
   smoke_init_dirs
+  # Logs belong to one flow: a leg that counts lines in a service log must not see the lines of an earlier flow (build logs stay).
+  find "$S/logs" -maxdepth 1 -type f ! -name 'build-*' ! -name 'built-commits.txt' -delete
+  # Control files (fake-fail, fake-status, github-description, deleted.list, probe markers) belong to one flow as well: a file an earlier flow left behind would change a fake's first answer. No process is running here (the lock is held and every flow stops its own), so no pid file is lost.
+  find "$S/run" -maxdepth 1 -type f -delete
   ev_init "$FLOW_ID"
   : >"$S/conf/deviations.txt"
+  # shellcheck disable=SC2086
+  src_prepare $FLOW_REPOS
+  printf 'python: %s (%s)\n' "$PY" "$("$PY" -V 2>&1)" >>"$S/conf/deviations.txt"
+  source_note >>"$S/conf/deviations.txt"
   PASS_COUNT=0 FAIL_COUNT=0
   printf '== %s  %s\n' "$FLOW_ID" "$FLOW_TITLE"
   build_flow_binaries "${FLOW_BINARIES[@]}" || { info "build failed: the flow did not run"; FLOW_HONESTY+=("NOT RUN: a build failed"); FAIL_COUNT=1; }
@@ -152,7 +160,6 @@ run_flow() {
     # After EVERY flow: no ACL violation in the NATS log. The deliberate probes of F0 are the only whitelisted hits (lib/assert.sh::nats_violation_count excludes their window).
     assert nats_log_has_no_acl_violations '[ "$(nats_violation_count)" = 0 ]' "violations: $(nats_violation_count); $(rg 'Publish Violation|Subscription Violation|Authorization Violation' "$S/logs/nats.log" 2>/dev/null | head -3 | cut -c1-200 | tr '\n' '|')"
   fi
-  local repo
   for repo in $FLOW_REPOS; do assert_repo_clean "$repo"; done
   result_write "$FLOW_ID"
   cp "$S/logs/build-notes.txt" "$S/logs/built-commits.txt" "$EV/" 2>/dev/null
