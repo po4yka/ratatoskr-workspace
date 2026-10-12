@@ -1167,6 +1167,11 @@ round_4:
       hosted_ci: "5 of 5 (the round 3 pin 4a32e8e had a red fleet / invariants check)"
       commits:
         - "f57fdda0e2d3ded31c0a387364506ab301a8ca7a test(x-core): keep the test CA certificate in its own fixture [no R4 id: repairs the round 3 pin whose fleet / invariants check was red]"
+    - id: ratatoskr-workspace
+      head: "bd843fdb4422103727c6a677e95db44b5c09f720 (the pins); the specs, checks, harness fixes, documentation and changeset are f9302cc, its parent"
+      previous_head: 9cd5228
+      pull_requests: none, pushed directly to main under the repository owner authorization (a plain fast-forward, never forced)
+      hosted_ci: "bd843fd: 5 of 5 required checks succeeded on 2026-10-12 (zizmor / audit, fleet / invariants, openspec / specs, deny, snapshot)"
   repositories_without_round_4_work:
     - id: ratatoskr-contracts
       reason: "no contract changes in round 4; origin/main gained one CI-action update (460057a) that touches no contract file, and the pin stays at 5426cf3"

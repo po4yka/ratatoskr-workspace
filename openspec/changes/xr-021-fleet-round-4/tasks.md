@@ -12,7 +12,7 @@ Dependency order. Every child repository pushed its round 4 commits directly to 
 - [x] 1.8 `ratatoskr-chatgpt` at `78b3dfa0dede9b7d9cd23e17ce64836eec2a11df` (R4-04, R4-10). Hosted CI: 5 of 5.
 - [x] 1.9 `ratatoskr-x` at `f57fdda0e2d3ded31c0a387364506ab301a8ca7a`, the commit that moves the test CA certificate into its own fixture and repairs the red `fleet / invariants` check of the round 3 pin (round 3 task 1.7). Hosted CI: 5 of 5.
 - [x] 1.10 Contracts, extractor, vault, instagram, browser-extension, export-agent, mobile and web have no round 4 work. Contracts gained a CI-action update (`460057a`) that changes no contract file; its pin stays.
-- [ ] 1.11 `ratatoskr-workspace`, last: this change, the harness checks, the native harness fixes, the documentation, the changeset record and the pins. Published as the commits named in the changeset; its required checks are recorded in 8.2.
+- [x] 1.11 `ratatoskr-workspace`, last: this change, the harness checks, the native harness fixes, the documentation, the changeset record and the pins. Published as f9302cc (specs, checks, harness fixes, documentation, changeset) and bd843fdb4422103727c6a677e95db44b5c09f720 (the nine pins); the five required checks of bd843fd are recorded in 8.2.
 
 ## 2. The round 4 behaviour is recorded
 
@@ -47,7 +47,7 @@ Dependency order. Every child repository pushed its round 4 commits directly to 
 ## 8. Verification
 
 - [x] 8.1 Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` and `cargo test --workspace --all-features --locked` in `harness/`, `./ws manifest check`, `./ws lock check`, `./ws status`, `./ws doctor`, `openspec validate --all --strict`, `git diff --check`, and the integration contract tests that do not need Docker.
-- [ ] 8.2 Publish and confirm the hosted CI of the pushed commits is green.
+- [x] 8.2 Publish and confirm the hosted CI of the pushed commits is green: bd843fdb4422103727c6a677e95db44b5c09f720, five of five required checks (zizmor / audit, fleet / invariants, openspec / specs, deny, snapshot) succeeded on 2026-10-12. The commit that records this result is checked the same way and named in the changeset.
 
 ## 9. Archive
 
