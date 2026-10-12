@@ -19,17 +19,17 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "channel-digests",
         "repos/integrations/channel-digests",
-        "cdbf87fbbc757d445c27c4e72950e755af29690e",
+        "a0ee415a3342ff4da30ec9085fa6a23661c4cc8a",
     ),
     (
         "chatgpt",
         "repos/ai-archive/chatgpt",
-        "d994f8b7a05436d0cdc81de51f608c601d70a8ac",
+        "78b3dfa0dede9b7d9cd23e17ce64836eec2a11df",
     ),
     (
         "claude",
         "repos/ai-archive/claude",
-        "49baae26bea34ecf3d87018ab8a2b96275ba12e3",
+        "6f27d836a3670554866b50da3636cd0410a65f04",
     ),
     (
         "contracts",
@@ -49,7 +49,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "github",
         "repos/github",
-        "2bc979d27db9c82b5e347294cd48665769d4ecea",
+        "cc8c78d70880f68e3985ef437867a7b8146619d4",
     ),
     (
         "instagram",
@@ -59,7 +59,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "knowledge",
         "repos/knowledge",
-        "542cd6998deaa7228dbdf1fe9d48bfb99a639ad8",
+        "4bf28ddce1fd0247c2e41e3d417ec572fcf11308",
     ),
     (
         "mobile",
@@ -69,17 +69,17 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "platform",
         "repos/platform",
-        "075c7efca80adad938843faf7ae194a35386d55f",
+        "1624d037f3bf8b682d16ed5b273e5a82d1c3fe24",
     ),
     (
         "telegram",
         "repos/integrations/telegram",
-        "81aa9e2116ea9e61faad5da594dd3ae28df0dc46",
+        "04c25a5346df1acf95fa01f82bb984053026fafd",
     ),
     (
         "threads",
         "repos/social/threads",
-        "e3656d08da406537cd63c143d3dba5520e1aa43a",
+        "ba00a1e2114d2b59e7a93526e423ba4c6ccc12b8",
     ),
     (
         "vault",
@@ -94,7 +94,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "x",
         "repos/social/x",
-        "4a32e8eaa39771a2926d6932ff08f84848d7ce8a",
+        "f57fdda0e2d3ded31c0a387364506ab301a8ca7a",
     ),
 ];
 
