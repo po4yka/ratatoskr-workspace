@@ -6,8 +6,8 @@ export PYTHONDONTWRITEBYTECODE=1
 NATIVE_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 WORKSPACE_ROOT=$(cd "$NATIVE_ROOT/../.." && pwd)
 R=$WORKSPACE_ROOT/repos
-S=${RATATOSKR_SMOKE_DIR:-$HOME/.cache/ratatoskr-smoke/XR-021-r3}
-EVIDENCE_ROOT=$WORKSPACE_ROOT/evidence/XR-021-r3
+S=${RATATOSKR_SMOKE_DIR:-$HOME/.cache/ratatoskr-smoke/XR-021-r4}
+EVIDENCE_ROOT=$WORKSPACE_ROOT/evidence/XR-021-r4
 SMOKE_MARKER=.ratatoskr-smoke-dir
 
 # PostgreSQL is the one port that is not a production port (R3-17): a private port whose URL is configuration.

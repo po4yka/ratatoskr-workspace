@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Contract test of the native smoke harness (integration/native, XR-021 round 3 task 4). It checks the scripts themselves and starts no service, builds nothing and needs no Docker: the flow list, the prerequisite check and its exit codes, the busy-port report, --prune, the safety rules (no pkill, no kill of an unrecorded pid, no write outside the state directory), shellcheck when installed, the Python fixtures and fakes, the configuration renderer, and that every binary a flow builds exists in the pinned checkout. It does NOT prove that a flow passes against real services; that is the manual run, and none of the flows has been run through run.sh as committed.
+# Contract test of the native smoke harness (integration/native, XR-021 round 3 task 4, extended in round 4 task 3). It checks the scripts themselves and starts no service, builds nothing and needs no Docker: the flow list, the prerequisite check and its exit codes, the busy-port report, --prune, the safety rules (no pkill, no kill of an unrecorded pid, no write outside the state directory), shellcheck when installed, the Python fixtures and fakes, the configuration renderer, and that every binary a flow builds exists in the pinned checkout. It does NOT prove that a flow passes against real services; that is the manual run, and the README states per flow whether it was ever run through run.sh as committed.
 set -euo pipefail
 export PYTHONDONTWRITEBYTECODE=1
 
@@ -116,7 +116,41 @@ done < <(code_lines "$native/lib/services.sh" | awk '/(^|[;&|({ \t])kill[ \t]/')
 rg --quiet --fixed-strings 'kill -KILL "$pid"' "$native/lib/services.sh" || fail "lib/services.sh lost its SIGKILL of the recorded pid"
 rg --quiet --fixed-strings 'kill -TERM "$pid"' "$native/lib/services.sh" || fail "lib/services.sh lost its SIGTERM of the recorded pid"
 rg --quiet --fixed-strings 'smoke_dir_guard' "$native/lib/common.sh" || fail "the state directory guard is gone"
-(cd "$workspace_root" && git check-ignore --quiet evidence/XR-021-r3/f0/result.txt) || fail "evidence/XR-021-r3 is not gitignored"
+(cd "$workspace_root" && git check-ignore --quiet evidence/XR-021-r4/f0/result.txt) || fail "evidence/XR-021-r4 is not gitignored"
+
+# --- Round 4 fixes (R4-12): each is a defect the first honest read of the harness found --------------------------
+# The state directory and the evidence root name the round; none of the harness may still name the previous one.
+previous_round="XR-021-r$((4 - 1))"
+stale=$(rg --files-with-matches --fixed-strings "$previous_round" "$native" "$workspace_root/integration/tests" || true)
+[[ -z "$stale" ]] || fail "a file still names $previous_round: $stale"
+rg --quiet --fixed-strings 'XR-021-r4' "$native/lib/common.sh" || fail "lib/common.sh does not default to the round 4 state directory"
+
+# assert evaluates the caller's condition in the caller's scope, so its own locals must not shadow a caller variable.
+shadow=$(EV="$scratch/shadow-ev" bash -c 'mkdir -p "$EV"; source "$1"
+  name=caller-name cond=caller-cond detail=caller-detail line=caller-line
+  assert sees_name '"'"'test "$name" = caller-name'"'"'
+  assert sees_cond '"'"'test "$cond" = caller-cond'"'"'
+  assert sees_detail '"'"'test "$detail" = caller-detail'"'"'
+  assert sees_line '"'"'test "$line" = caller-line'"'"'' _ "$native/lib/assert.sh")
+for variable in name cond detail line; do
+  rg --quiet "^ASSERT sees_$variable: PASS" <<<"$shadow" || fail "assert shadows the caller variable $variable: $shadow"
+done
+
+# assert_s04_durables passes for a broker that holds the whole table (the durable lookup is replaced by the table itself).
+durable_run=$(EV="$scratch/durable-ev" NATS_MON=http://127.0.0.1:1 bash -c 'mkdir -p "$EV"; source "$1"; source "$2"
+  jsz() { printf "{\"account_details\":[]}"; }
+  dur() { local row n f w m; for row in "${S04_DURABLES[@]}"; do IFS="|" read -r n f w m <<<"$row"; [[ "$n" == "$1" ]] && printf "%s %s %s" "$f" "$w" "$m"; done; }
+  assert_s04_durables' _ "$native/lib/assert.sh" "$native/lib/nats.sh")
+durable_rows=$(bash -c 'source "$1"; printf "%s" "${#S04_DURABLES[@]}"' _ "$native/lib/nats.sh")
+[[ "$durable_rows" == 17 ]] || fail "the S04 table of lib/nats.sh has $durable_rows rows, expected the 17 durables of CONTRACTS S04 that Edge creates for services"
+[[ "$(rg -c '^ASSERT durable_ratatoskr_[a-z_]+: PASS' <<<"$durable_run")" == "$durable_rows" ]] || fail "assert_s04_durables does not pass every row of a broker that holds the table: $(rg '^ASSERT durable_' <<<"$durable_run" | head -3)"
+
+# F3 counts bot calls by method and reads the status of every capture call; a line count is not a message count.
+f3="$native/flows/f3-telegram.sh"
+[[ "$(matches "$f3" 'bot_replies_after[^|]*[|][^|]*wc -l')" == 0 ]] || fail "f3 counts replies with wc -l, so one two-line message satisfies a two-message assertion"
+rg --quiet --fixed-strings 'bot_calls_after' "$f3" || fail "f3 does not count bot calls by method"
+rg --quiet --fixed-strings 'capture_statuses' "$f3" || fail "f3 does not read the tap-recorded status of the capture calls"
+rg --quiet 'assert forwarded_capture_status_is_202' "$f3" || fail "f3 does not assert the status of the forwarded capture"
 
 # --- syntax, and shellcheck when installed -----------------------------------------------------------------------
 for script in "${scripts[@]}"; do
@@ -216,6 +250,12 @@ recap=$(jq -nc '{model:"m",messages:[{role:"system",content:"s"},{role:"user",co
 [[ "$(post "$port" "$recap" /api/v1/chat/completions)" == 200 ]] || fail "the fake OpenRouter did not answer a recap request"
 jq -e '.choices[0].message.content | fromjson | (.topics | length) == 2' "$scratch/body" >/dev/null || fail "the fake recap does not cite both revisions"
 [[ "$(post "$port" '{"model":"m","messages":[{"role":"user","content":"nothing known"}]}' /api/v1/chat/completions)" == 400 ]] || fail "the fake OpenRouter answered an unknown family"
+repository_prompt=$(jq -nc --rawfile readme /dev/stdin '{model:"m",messages:[{role:"system",content:"s"},{role:"user",content:("family: repository\nrepository_id: 42\nfull_name: owner/repository\ndescription: A fixture\nprimary_language: Rust\nREADME_BEGIN\n" + $readme + "README_END\n")}]}' <<<"# Fixture repository
+It indexes synthetic documents.")
+[[ "$(post "$port" "$repository_prompt" /api/v1/chat/completions)" == 200 ]] || fail "the fake OpenRouter did not answer a repository-analysis prompt"
+jq -e '.choices[0].message.content | fromjson | (keys == ["evidence_excerpt","readme_evidence","summary","topics"]) and (.readme_evidence == "present") and (.summary | length > 0 and length <= 2000) and (.evidence_excerpt | length > 0 and length <= 500) and (.topics | length <= 12)' "$scratch/body" >/dev/null || fail "the fake repository analysis is not schema-valid"
+jq -e '.choices[0].message.content | fromjson | .evidence_excerpt | . as $e | "# Fixture repository\nIt indexes synthetic documents.\n" | contains($e)' "$scratch/body" >/dev/null || fail "the fake repository analysis cites text the README does not hold"
+
 : >"$scratch/run/fake-fail"
 [[ "$(post "$port" "$recap" /api/v1/chat/completions)" == 401 ]] || fail "the fake OpenRouter ignored its failure switch"
 rm -f "$scratch/run/fake-fail"
@@ -240,6 +280,12 @@ wait_port "$port" || fail "fake_bot_api.py did not start"
 [[ "$(curl -s "http://127.0.0.1:$port/file/botTOKEN/doc1.pdf")" == "bot file" ]] || fail "the fake Bot API did not serve the file"
 ! rg --quiet 'TOKEN' "$scratch/bot.jsonl" || fail "the fake Bot API logged the bot token"
 [[ "$(jq -s 'length' "$scratch/bot.jsonl")" == 2 ]] || fail "the fake Bot API did not record the calls in order"
+bot_api_fixture="$workspace_root/repos/integrations/telegram/crates/bot-api/tests/fixtures/get_me.json"
+[[ -f "$bot_api_fixture" ]] || fail "the bot-api crate's getMe fixture is not in the pinned Telegram checkout: $bot_api_fixture"
+curl -s "http://127.0.0.1:$port/botTOKEN/getMe" >"$scratch/getme.json"
+missing=$(jq -rn --slurpfile fixture "$bot_api_fixture" --slurpfile fake "$scratch/getme.json" '($fixture[0].result | keys) - ($fake[0].result | keys) | join(",")')
+[[ -z "$missing" ]] || fail "the fake Bot API's getMe lacks the keys the bot-api crate requires: $missing"
+
 
 x_port=$(free_port)
 python3 -I "$native/fixtures/fake_x_api.py" "$x_port" "$scratch/pki/leaf.pem" "$scratch/pki/leaf.key" "$scratch/x.jsonl" &

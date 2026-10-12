@@ -2,17 +2,18 @@
 # shellcheck disable=SC2034
 # F0 Topology and provisioning (Edge, no flow). Sourced by run.sh; defines the flow, runs nothing.
 #
-# Provenance: assembled from the by-hand runs under .workspaces/XR-021/smoke/{ai,kp} (infrastructure, durables, roles) and written new for the inbox probes of R3-01. Run through run.sh as committed: NO. The Round 3 smoke results in the changeset came from the by-hand scripts.
+# Provenance: assembled from the by-hand runs under .workspaces/XR-021/smoke/{ai,kp} (infrastructure, durables, roles) and written new for the inbox probes of R3-01. Round 4 added the legs of step 5 (R4-08, R4-11 and the max_payload probe). Run through run.sh as committed: NO. The Round 3 smoke results in the changeset came from the by-hand scripts.
 
 FLOW_ID=f0
-FLOW_TITLE="Topology and provisioning (Edge, no flow): roles, durables, inbox ACL, 8 MiB limit"
-FLOW_BINARIES=("platform:ratatoskr-edge render-nats-config")
+FLOW_TITLE="Topology and provisioning (Edge, no flow): roles, durables, inbox ACL, 8 MiB limit, notification ack wait"
+FLOW_BINARIES=("platform:ratatoskr-edge render-nats-config" "telegram:ratatoskr-telegram-dispatcher")
 FLOW_PORTS="$INFRA_PORTS"
-FLOW_REPOS="platform"
+FLOW_REPOS="platform telegram"
 FLOW_EVIDENCE="by-hand run in the Round 3 AI-archive and Knowledge smokes covered steps 1 to 3 and 5; the inbox probes of step 4 were not run before this harness"
 FLOW_HONESTY=(
   "seeded: none in this flow"
-  "faked: nothing"
+  "faked: nothing; the oversize probe declares a 9 MiB publish and sends the PUB header only, because the broker checks the declared size when it parses the line (no 9 MiB payload crosses the socket)"
+  "deviation: the dispatcher runs only its check-config command, from its shipped example with RATATOSKR__NOTIFICATION_BUS__ACK_WAIT_SECONDS set to 31 and then to 30; no dispatcher process is started"
   "not exercised: any service other than Edge; the roles are exercised only by connecting as each one"
 )
 
@@ -88,4 +89,19 @@ flow_run() {
   local expected=$((${#F0_IDENTITIES[@]} * 3)) window
   window=$(awk -v b="$(cat "$S/run/probe.begin")" -v e="$(cat "$S/run/probe.end")" 'NR > b && NR <= e && /Publish Violation|Subscription Violation/ { n++ } END { print n + 0 }' "$S/logs/nats.log")
   assert probe_window_holds_the_deliberate_violations '[ "$window" -ge "$expected" ]' "violations in the probe window: $window, expected at least $expected (two refused subscriptions and one refused publish per identity)"
+
+  info "step 5: the 8 MiB ceiling, the notification ack wait (R4-08) and the idle notification subject (R4-11)"
+  local oversize rc31=0 rc30=0
+  oversize=$(python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" oversize "$S/nk/edge.nkey" cmd.content.capture.requested.v1 9437184 2>"$EV/oversize.err")
+  echo "$oversize" >"$EV/oversize.json"
+  assert broker_refuses_a_publish_above_max_payload '[ "$(jq -r .refused <<<"$oversize")" = true ]' "$oversize"
+  conf_dispatcher_variant dispatcher-ack31 31 || return
+  conf_dispatcher_variant dispatcher-ack30 30 || return
+  python3 -I "$NATIVE_ROOT/lib/envrun.py" "$S/conf/dispatcher-ack31.env" "$S/bin/ratatoskr-telegram-dispatcher" check-config >"$EV/dispatcher-check-config-31.out" 2>&1 || rc31=$?
+  python3 -I "$NATIVE_ROOT/lib/envrun.py" "$S/conf/dispatcher-ack30.env" "$S/bin/ratatoskr-telegram-dispatcher" check-config >"$EV/dispatcher-check-config-30.out" 2>&1 || rc30=$?
+  assert dispatcher_check_config_refuses_an_ack_wait_of_31 '[ "$rc31" != 0 ] && grep -Eqi "ack_wait|ack wait|ratatoskr_telegram_notifications" "$EV/dispatcher-check-config-31.out"' "rc=$rc31: $(head -c 240 "$EV/dispatcher-check-config-31.out" | tr "\n" " ")"
+  assert dispatcher_check_config_accepts_an_ack_wait_of_30 '[ "$rc30" = 0 ]' "rc=$rc30: $(head -c 240 "$EV/dispatcher-check-config-30.out" | tr "\n" " ")"
+  python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" stream "$S/nk/edge.nkey" ratatoskr_events 'evt.platform.notification.>' >"$EV/notification-subjects.json" 2>&1
+  assert nothing_is_published_to_the_notification_subject '[ "$(jq -r ".subjects // {} | length" "$EV/notification-subjects.json" 2>/dev/null || echo error)" = 0 ]' "R4-11: nothing in the fleet raises a notification; the dispatcher's durable stays idle"
+  assert the_notification_durable_has_nothing_pending '[ "$(pending ratatoskr_telegram_notifications)" = 0 ]' "pending + ack-pending: $(pending ratatoskr_telegram_notifications)"
 }

@@ -7,7 +7,8 @@ usage:
   natsprobe.py messages SEED STREAM SUBJECT                      one JSON line per message on that exact subject: producer, tenant, aggregate
   natsprobe.py acl SEED PREFIX FOREIGN_PREFIX STREAM DURABLE  F0 inbox and publish probes (STREAM and DURABLE may be empty), prints one JSON line
   natsprobe.py tombstone EDGE_SEED SEED PREFIX PRODUCER TENANT ARCHIVE_ID CONVERSATION_ID   publish one conversation tombstone envelope
-  natsprobe.py report SEED PREFIX TENANT OPERATION_ID PRODUCER   publish one platform.operation.reported.v1 with that envelope producer; TENANT is user:<uuid>"""
+  natsprobe.py report SEED PREFIX TENANT OPERATION_ID PRODUCER   publish one platform.operation.reported.v1 with that envelope producer; TENANT is user:<uuid>
+  natsprobe.py oversize SEED SUBJECT BYTES                    declare a publish of BYTES bytes (the header only, no payload follows) and print whether the broker refused it as a Maximum Payload Violation"""
 import base64, json, socket, time, uuid
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -160,6 +161,21 @@ def publish_refused(seed_path, subject, inbox):
         c.close()
 
 
+def oversize_refused(seed_path, subject, size):
+    """The broker checks the declared size when it parses the PUB line, so the header alone shows whether `size` is above its max_payload; no payload is sent, which the flow labels."""
+    c = Client(seed_path)
+    try:
+        c.f.write(f"PUB {subject} {size}\r\n".encode())
+        c.s.settimeout(3)
+        try:
+            line = c.f.readline().decode().strip()
+        except OSError:
+            line = ""
+        return {"refused": "Maximum Payload" in line, "reply": line}
+    finally:
+        c.close()
+
+
 def _uuid7():
     raw = bytearray(uuid.uuid4().bytes)
     raw[0:6] = int(time.time() * 1000).to_bytes(6, "big")
@@ -246,5 +262,7 @@ if __name__ == "__main__":
         print(publish_tombstone(*sys.argv[2:9]))
     elif cmd == "report":
         print(publish_report(*sys.argv[2:7]))
+    elif cmd == "oversize":
+        print(json.dumps(oversize_refused(sys.argv[2], sys.argv[3], int(sys.argv[4]))))
     else:
         raise SystemExit(__doc__)

@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 # F7 GitHub analysis loop (Edge, GitHub, Knowledge; R2-08). Sourced by run.sh; defines the flow, runs nothing.
 #
-# Provenance: written new for this harness. The GitHub service, its originating `track` action and the Knowledge side of the loop were never run in a native smoke before (Round 2 recorded F7 as never run). The track body is the shape of services/catalog/tests/action_support (mode, target, confirmation_evidence_ref, idempotency_key). Run through run.sh as committed: NO.
+# Provenance: written new for this harness. The GitHub service, its originating `track` action and the Knowledge side of the loop were never run in a native smoke before (Round 2 recorded F7 as never run). The track body is the shape of services/catalog/tests/action_support (mode, target, confirmation_evidence_ref, idempotency_key). Round 4 added the completed closure, the failed closure and the PAT leg. Run through run.sh as committed: NO.
 
 FLOW_ID=f7
 FLOW_TITLE="GitHub analysis loop: track action, request on the bus, README fetch, completed or failed fact, observer, bounded provider calls"
@@ -11,8 +11,9 @@ FLOW_PORTS="$INFRA_PORTS 8091 9081 8092 9095 $FAKE_GITHUB_PORT $FAKE_OPENROUTER_
 FLOW_REPOS="platform knowledge github"
 FLOW_EVIDENCE="not run before this harness"
 FLOW_HONESTY=(
-  "faked: the GitHub API is a loopback fake (fixtures/fake_github.py, RATATOSKR__PROVIDER__BASE_URL, a key the example does not state but DEVELOPMENT.md documents); OpenRouter is a loopback fake that does not answer the repository family"
-  "labelled: because the fake OpenRouter answers 400 for a repository-analysis prompt, the loop is expected to close with a FAILED fact consumed by GitHub (the plan accepts a failed fact from a fixture provider as evidence); a completed fact would need a provider that answers that family"
+  "faked: the GitHub API is a loopback fake (fixtures/fake_github.py, RATATOSKR__PROVIDER__BASE_URL, a key the example does not state but DEVELOPMENT.md documents); OpenRouter is a loopback fake (fixtures/fake_openrouter.py) that answers the repository family with a schema-valid analysis grounded in the README the prompt carries, so no analysis text is a live provider result"
+  "labelled: the loop must close with a COMPLETED fact consumed by GitHub; the failed closure is a separate leg that switches the fake OpenRouter to 401 (RUNDIR/fake-fail) before the observer queues a second request, and a failed closure alone never counts as the loop working"
+  "seeded: the GitHub account row of the PAT leg (the way services/catalog/tests/repository_api.rs creates it); the PAT is a synthetic string and never leaves the machine"
   "seeded: two users and their browser sessions (fixtures/platform-seed.sql)"
   "deviation: RATATOSKR__WATCH__OBSERVE_INTERVAL_SECONDS=10 (the example states 3600), and RATATOSKR__PROVIDER__TIMEOUT_MS=1000 for the stalled-provider leg"
   "not exercised: a real GitHub token, OAuth, star and revoke against GitHub"
@@ -53,18 +54,37 @@ flow_run() {
   assert request_names_the_fetched_readme '[ "$(q ratatoskr "select source_revision #>> '"'"'{readme,state}'"'"' from github_catalog.repository_analysis_requests limit 1")" = present ]'
   untilt '[ "$(python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" messages "$S/nk/edge.nkey" ratatoskr_events evt.knowledge.repository_analysis.requested.v1 | wc -l | tr -d " ")" -ge 1 ]' 60
   assert request_event_is_on_the_stream '[ "$(python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" messages "$S/nk/edge.nkey" ratatoskr_events evt.knowledge.repository_analysis.requested.v1 | wc -l | tr -d " ")" -ge 1 ]'
-  untilt '[ "$(q ratatoskr "select status from github_catalog.repository_analysis_requests limit 1")" != queued ] && [ "$(q ratatoskr "select status from github_catalog.repository_analysis_requests limit 1")" != published ]' 120
+  untilt '[ "$(q ratatoskr "select status from github_catalog.repository_analysis_requests order by created_at limit 1")" = completed ]' 180
   assert knowledge_fetched_the_readme_with_the_shared_secret '[ "$(jq -s "[.[] | select(.path | endswith(\"/readme\"))] | length" "$S/logs/fake-github.jsonl")" -ge 1 ]' "README requests seen by the fake provider"
-  assert loop_closed_with_a_terminal_fact_consumed_by_github '[ -n "$(q ratatoskr "select terminal_at from github_catalog.repository_analysis_requests limit 1")" ]' "status=$(q ratatoskr "select status || '/' || coalesce(failure_code, '') from github_catalog.repository_analysis_requests limit 1"); a failed fact from the fixture provider is acceptable evidence and is labelled"
+  assert loop_closed_with_a_completed_fact_consumed_by_github '[ "$(q ratatoskr "select status from github_catalog.repository_analysis_requests order by created_at limit 1")" = completed ] && [ -n "$(q ratatoskr "select analysis_result_ref from github_catalog.repository_analysis_requests order by created_at limit 1")" ]' "status=$(q ratatoskr "select status || '/' || coalesce(failure_code, '') from github_catalog.repository_analysis_requests order by created_at limit 1")"
+  assert completed_request_has_a_link_for_the_owner '[ "$(q ratatoskr "select count(*) from github_catalog.repository_analysis_links where owner_ref = '"'"'user:$U1'"'"'")" = 1 ]'
+  assert fake_provider_answered_the_repository_family '[ "$(jq -s "[.[] | select(.family == \"repository\" and .answered == true)] | length" "$S/logs/fake-openrouter.jsonl")" -ge 1 ]' "provider calls: $(jq -sc "map(.family)" "$S/logs/fake-openrouter.jsonl")"
+  assert completed_analysis_is_visible_through_knowledges_read_api '[ "$(curl -s "127.0.0.1:8091/internal/search?tenant=user:$U1&q=Scripted" | jq "[.. | strings | select(contains(\"Scripted repository summary\"))] | length")" -ge 1 ]' "GET /internal/search for the analysis summary of the fake provider"
+
+  info "PAT registration (R4-09): an account row, reconnect-pat with the PAT on standard input, the provider is the loopback fake"
+  local account pat_status
+  account=$(python3 -I -c 'import uuid; print(uuid.uuid4())')
+  q ratatoskr "insert into github_catalog.github_accounts (account_id, owner_ref, status) values ('$account', 'user:$U1', 'reauthorization_required')" >/dev/null
+  pat_status=0
+  printf 'ghp_%s\n' "$(printf "%s%s" "$(secret pat)" "$(secret pat2)" | cut -c1-36)" | python3 -I "$NATIVE_ROOT/lib/envrun.py" "$S/conf/github.env" "$S/bin/ratatoskr-github-catalog" reconnect-pat "$account" >"$EV/reconnect-pat.out" 2>&1 || pat_status=$?
+  assert reconnect_pat_exits_zero '[ "$pat_status" = 0 ]' "exit $pat_status: $(head -c 200 "$EV/reconnect-pat.out")"
+  assert provider_saw_get_user_with_a_bearer '[ "$(jq -s "[.[] | select(.path == \"/user\" and .auth == \"present\")] | length" "$S/logs/fake-github.jsonl")" -ge 1 ]' "requests to the fake: $(jq -sc "map(.path)" "$S/logs/fake-github.jsonl")"
+  assert pat_never_appears_in_the_command_output '[ "$(grep -c "ghp_" "$EV/reconnect-pat.out")" = 0 ]'
+  info "NOT RUN: the account-erasure transport of GitHub stays excluded (R4-13)"
 
   info "the observer queues a second request only after a change"
   local requests_before
   requests_before=$(q ratatoskr "select count(*) from github_catalog.repository_analysis_requests")
   sleep 25
   assert unchanged_poll_queues_none '[ "$(q ratatoskr "select count(*) from github_catalog.repository_analysis_requests")" = "$requests_before" ]'
+  : >"$S/run/fake-fail"
   printf 'The description changed after the first analysis\n' >"$S/run/github-description"
   untilt '[ "$(q ratatoskr "select count(*) from github_catalog.repository_analysis_requests")" -gt "$requests_before" ]' 60
   assert changed_description_queues_a_second_request '[ "$(q ratatoskr "select count(*) from github_catalog.repository_analysis_requests")" -gt "$requests_before" ]'
+  info "the failed closure: the fake provider answers 401, so the second request must end failed, never stay pending"
+  untilt '[ "$(q ratatoskr "select status from github_catalog.repository_analysis_requests order by created_at desc limit 1")" = failed ]' 240
+  assert second_request_closes_failed_when_the_provider_refuses '[ "$(q ratatoskr "select status from github_catalog.repository_analysis_requests order by created_at desc limit 1")" = failed ] && [ -n "$(q ratatoskr "select failure_code from github_catalog.repository_analysis_requests order by created_at desc limit 1")" ]' "status=$(q ratatoskr "select status || '/' || coalesce(failure_code, '') from github_catalog.repository_analysis_requests order by created_at desc limit 1")"
+  rm -f "$S/run/fake-fail"
 
   info "a stalled provider does not hang the catalog"
   svc_stop github

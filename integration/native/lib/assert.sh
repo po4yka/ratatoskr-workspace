@@ -13,17 +13,18 @@ ev_init() {
 }
 
 # assert NAME 'shell condition' [detail]
+# The condition is evaluated in the caller's scope, so every local of this function carries the `_assert_` prefix: a caller variable named `name`, `cond`, `detail` or `line` stays visible to its own condition.
 assert() {
-  local name=$1 cond=$2 detail=${3:-} line
-  if eval "$cond"; then
+  local _assert_name=$1 _assert_cond=$2 _assert_detail=${3:-} _assert_line
+  if eval "$_assert_cond"; then
     PASS_COUNT=$((PASS_COUNT + 1))
-    line="ASSERT $name: PASS $detail"
+    _assert_line="ASSERT $_assert_name: PASS $_assert_detail"
   else
     FAIL_COUNT=$((FAIL_COUNT + 1))
-    line="ASSERT $name: FAIL $detail"
+    _assert_line="ASSERT $_assert_name: FAIL $_assert_detail"
   fi
-  printf '%s\n' "$line"
-  printf '%s\n' "$line" >>"${EV:?ev_init first}/asserts.txt"
+  printf '%s\n' "$_assert_line"
+  printf '%s\n' "$_assert_line" >>"${EV:?ev_init first}/asserts.txt"
 }
 
 # The deviation of a flow that is not a failure, for example a hop that was not exercised.

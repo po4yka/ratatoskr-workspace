@@ -13,7 +13,7 @@ PORT, LOG, FILES = int(sys.argv[1]), sys.argv[2], sys.argv[3]
 LOCK = threading.Lock()
 SEQ = [0]
 MESSAGE_ID = [100]
-BOT = {"id": 700100200, "is_bot": True, "first_name": "Ratatoskr", "username": "ratatoskr_smoke_bot", "can_join_groups": True, "can_read_all_group_messages": False, "supports_inline_queries": False}
+BOT = {"id": 700100200, "is_bot": True, "first_name": "Ratatoskr", "username": "ratatoskr_smoke_bot", "can_join_groups": True, "can_read_all_group_messages": False, "supports_inline_queries": False, "can_connect_to_business": False, "has_main_web_app": False}
 
 
 class Handler(http.server.BaseHTTPRequestHandler):

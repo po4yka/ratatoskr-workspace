@@ -78,8 +78,22 @@ service's own tests do. `bus_durables.rs` fails when a fixed durable of `ratatos
 durables, the Telegram notification durable and the two AI-archive projections) lacks its name and
 filter as a row there, or when the owning repository's tracked `.rs` files do not hold the name and
 the filter as string literals; a mutation test proves the scan reports a renamed durable. It is a
-text scan: it cannot see a literal assembled at run time, and says nothing about ack wait,
-`max_deliver` or the stream.
+text scan: it cannot see a literal assembled at run time, and says nothing about `max_deliver` or the
+stream. Its ack-wait test, `service_ack_wait_constants_agree_with_edges_durable_table` (XR-021 round
+4), reads the wait Edge's row gives each durable (a `.with_ack_wait_seconds(N)` call, else the standard
+30) and fails when it differs from the constant the service states (`INGEST_ACK_WAIT_SECONDS` and
+`CHANNEL_RECAP_ACK_WAIT_SECONDS` in Knowledge, `NOTIFICATION_ACK_WAIT_SECONDS` in Telegram) or from the
+value CONTRACTS S04 fixes (120 for the four Knowledge ingest durables, 30 for the recap and the
+notification durable). It cannot see a constant that is computed, a wait set through a differently
+named builder, or a service that ignores its own constant; a mutation test changes one literal on each
+side. It failed first for Telegram, which stated no constant before round 4.
+`schema_in_place.rs` (round 4) fails when a tracked `schema.sql` of any repository holds an
+`ALTER TABLE` that adds a column, with the file and the line, because while the development status
+holds a schema change edits the one current definition in place. A constraint addition, the way a
+foreign key that closes a cycle between two tables is written in X, Instagram and Vault, is allowed.
+It is a text scan: a semicolon inside a string literal or a dollar-quoted body would cut a statement
+short, and it cannot see a column that application code adds at start-up. It failed first against the
+round 3 ChatGPT pin with the seven statements that the pin carried.
 
 `contracts_pin.rs` fails when the `Cargo.lock` of any Rust repository resolves a `ratatoskr-*` git
 package of the contracts repository to a commit other than the `contracts_sha` the XR-021 changeset
@@ -106,7 +120,12 @@ machine-dependent harness that builds the services natively, runs them under the
 the checked-in PostgreSQL provisioning on the production loopback ports, and drives eight flows
 through Edge. It is not a CI gate and nothing in CI runs it; `integration/tests/native_smoke_contract_test.sh`
 checks only the scripts. The results recorded for XR-021 round 3 came from by-hand scripts, not from
-`run.sh`, and none of the committed flows has been run through `run.sh`. What it cannot show is
+`run.sh`, and none of the committed flows has been run through `run.sh`; the round 4 results were by
+hand as well. Round 4 fixed what a read of the harness found (an `assert` that shadowed the caller's
+`name`, a fake Bot API that the webhook refused to start against, F3 assertions that one two-line
+message satisfied, an F7 that accepted a failed fact), and the contract test now fails on each, but it
+starts no service, so it shows the scripts agree with their fixtures and not that a flow passes. What
+it cannot show is
 stated in `integration/native/README.md` and in the changeset: real MTProto acquisition, live X,
 Meta, Threads, OpenRouter and Telegram responses, the Export Agent's keychain and Swift client, TLS
 through `cloudflared`, systemd sandboxing, the Raspberry Pi's glibc and page-size behaviour, and

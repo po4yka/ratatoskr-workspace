@@ -230,8 +230,9 @@ conf_github() {
 }
 
 # Telegram: webhook and dispatcher share one role and one signing key. The Bot API base URL points at the loopback fake bot, and the Platform base URL at the recording tap in front of Edge (the one deviation of flow F3, so the request the webhook sends can be read).
-conf_telegram() {
-  local common=(
+# The settings the webhook and the dispatcher share, in the global array TELEGRAM_COMMON, and the secret files they read.
+telegram_common() {
+  TELEGRAM_COMMON=(
     "--set RATATOSKR__DATABASE__URL=$(db_url ratatoskr_telegram)"
     "--set RATATOSKR__BOT_API__TOKEN_FILE=$S/keys/bot-token"
     "--set RATATOSKR__PLATFORM__ASSERTION_SIGNING_KEY_FILE=$S/keys/telegram-signing-key"
@@ -240,13 +241,24 @@ conf_telegram() {
   )
   [[ -f "$S/keys/bot-token" ]] || (umask 077 && printf 'smoke-%s' "$(secret bottoken)" >"$S/keys/bot-token")
   [[ -f "$S/keys/webhook-secret" ]] || (umask 077 && secret webhooksecret >"$S/keys/webhook-secret")
-  render_conf telegram webhook.conf.example webhook "${common[@]}" \
+}
+
+conf_telegram() {
+  telegram_common
+  render_conf telegram webhook.conf.example webhook "${TELEGRAM_COMMON[@]}" \
     "--set RATATOSKR__ADMIN__BIND=127.0.0.1:9467" \
     "--set RATATOSKR__ACCESS__OWNER_TELEGRAM_USER_ID=900700601" \
     "--set RATATOSKR__WEBHOOK__SECRET_TOKEN_FILE=$S/keys/webhook-secret" \
     "--set RATATOSKR__INGESTION__BLOB_ROOT=$S/blobs/telegram"
-  render_conf telegram dispatcher.conf.example dispatcher "${common[@]}" \
+  conf_dispatcher_variant dispatcher 30
+}
+
+# conf_dispatcher_variant NAME ACK_WAIT_SECONDS: the dispatcher's configuration as shipped, with only the notification ack wait changed, rendered to $S/conf/NAME.env. Flow F0 uses it to show that check-config refuses a wait other than Edge's fixed 30 (R4-08).
+conf_dispatcher_variant() {
+  telegram_common
+  render_conf telegram dispatcher.conf.example "$1" "${TELEGRAM_COMMON[@]}" \
     "--set RATATOSKR__ADMIN__BIND=127.0.0.1:9468" \
+    "--set RATATOSKR__NOTIFICATION_BUS__ACK_WAIT_SECONDS=$2" \
     "--set RATATOSKR__NOTIFICATION_BUS__CREDENTIALS_FILE=$(nkey telegram)"
 }
 

@@ -19,7 +19,7 @@ integration/native/run.sh f0 f1 f2            # run flows one at a time, in the 
 integration/native/run.sh --prune             # remove what earlier runs left under the state directory
 ```
 
-The state directory is `$RATATOSKR_SMOKE_DIR`, default `$HOME/.cache/ratatoskr-smoke/XR-021-r3`. It must be an absolute path outside the workspace checkout, and `--prune` only touches a directory that carries the `.ratatoskr-smoke-dir` marker the smoke wrote. The evidence summary of each flow goes to the gitignored `evidence/XR-021-r3/<flow>/`: `asserts.txt`, `result.txt` with the verdict, the hops that were stubbed, seeded or not exercised, and every configuration deviation from the shipped examples, plus redacted request and response records. Databases, blobs, staging, keys and rendered configs hold secrets and are deleted when a flow ends; logs and the redacted evidence stay. F1 keeps its databases, blobs, keys and the NATS store for F6, which needs the facts F1 produced.
+The state directory is `$RATATOSKR_SMOKE_DIR`, default `$HOME/.cache/ratatoskr-smoke/XR-021-r4`. It must be an absolute path outside the workspace checkout, and `--prune` only touches a directory that carries the `.ratatoskr-smoke-dir` marker the smoke wrote. The evidence summary of each flow goes to the gitignored `evidence/XR-021-r4/<flow>/`: `asserts.txt`, `result.txt` with the verdict, the hops that were stubbed, seeded or not exercised, and every configuration deviation from the shipped examples, plus redacted request and response records. Databases, blobs, staging, keys and rendered configs hold secrets and are deleted when a flow ends; logs and the redacted evidence stay. F1 keeps its databases, blobs, keys and the NATS store for F6, which needs the facts F1 produced.
 
 Prerequisites: `nats-server` 2.10 or later, `initdb`, `pg_ctl`, `psql` and `pg_config` for PostgreSQL 17 with the pgvector files installed (the extension is not trusted, so Knowledge's `role.sql` creates it as the administrator), `cargo` with the toolchains the repositories pin, `python3` with the `cryptography` package, `jq`, `curl`, `lsof`, `rg` and `git`, at least 12 GiB free on the volume that holds the state directory, and every port of the flow free. Docker is not needed.
 
@@ -29,16 +29,26 @@ Builds use each repository's shipped release profile. `CARGO_PROFILE_RELEASE_DEB
 
 | Flow | What it shows | Run through `run.sh` as committed |
 | --- | --- | --- |
-| F0 | Provisioning: every `role.sql` as written, every role connects unprivileged, the durables of S04, the 8 MiB limit, the inbox ACL probes of R3-01 with the real seeds | not run |
+| F0 | Provisioning: every `role.sql` as written, every role connects unprivileged, the durables of S04, the 8 MiB limit (and the broker's refusal of a declared 9 MiB publish), the inbox ACL probes of R3-01 with the real seeds, the dispatcher's `check-config` for the notification ack wait of 31 and 30 seconds, the idle notification subject | not run |
 | F1 | AI-archive upload through Edge to the real ChatGPT and Claude receivers: sessions, ceilings, restart and resume, the 403 for an unmapped user, a receiver that is down, the cumulative series F6 needs | not run |
 | F2 | Knowledge ingestion: a PDF blob capture and a ChatGPT archive fact, searched through Edge; the negatives, a NATS outage and the size legs | not run |
-| F3 | Telegram to Platform with the real webhook and dispatcher binaries against a fake Bot API: the assertion-key command, the session exchange, the static replies | not run |
+| F3 | Telegram to Platform with the real webhook and dispatcher binaries against a fake Bot API: the assertion-key command, the session exchange, the static replies, the same PDF plain and then forwarded, a redelivered update, the loss of the Platform session | not run |
 | F4 | Channel digests: subscription set, run deadline, recap with a faulted acquisition hop, the read hop through Edge, the schedule owner check | not run |
-| F5 | Social captures for X, Instagram and Threads, the lane each operation was dispatched to, cross-lane report authority, public-resolution outcomes | not run |
+| F5 | Social captures for X, Instagram and Threads, the lane each operation was dispatched to, cross-lane report authority, public-resolution outcomes, a Threads permalink with an escaped query | not run |
 | F6 | Privacy deletion and tombstone delivery over F1's data, for both providers, with tombstone resilience and a concurrency leg | not run |
-| F7 | The GitHub analysis loop: the track action, the request on the bus, the README fetch, the observer, bounded provider calls | not run |
+| F7 | The GitHub analysis loop: the track action, the request on the bus, the README fetch, a COMPLETED fact consumed by GitHub, a failed closure when the provider refuses, PAT registration against the fake GitHub, the observer, bounded provider calls | not run |
 
 The recorded Round 3 smoke results (changeset `XR-021-fleet-cross-repo-fixes`, block `round_3`) came from by-hand scripts kept outside the repository, under `.workspaces/XR-021/smoke/`. The flows here are ported from those scripts where they existed (F0 to F2 and F4, and parts of F3, F5 and F6) and written new where they did not (the inbox probes, the Telegram webhook and dispatcher, the lane-authority legs, Claude's deletion, the resilience and concurrency legs of F6, and F7). Each flow file says which. None has been run through `run.sh`; the first run is where its assertions meet the services for the first time, and a failed assertion there is either a defect in the owning repository, to be reported with the file and line, or a mistake in the flow, to be fixed here.
+
+## Round 4
+
+Round 4 fixed what the first honest read of the harness found (the shadowed `name` in `assert`, the `getMe` fields of the fake Bot API, the F3 assertions that a single two-line message could satisfy, the F7 closure that accepted a failed fact) and added legs for the Round 4 fixes. Each fix has a check in `native_smoke_contract_test.sh`. The round 4 state directory and evidence root are `XR-021-r4`.
+
+The Round 4 smoke runs recorded in the changeset (`round_4.native_smoke`) were by-hand runs from scripts kept under `.workspaces/XR-021/smoke/`, as in Round 3. No flow has been run through `run.sh` as committed, so every row of the table above still says not run, and a leg below that is written here has never met a service.
+
+Legs in the flow files, written and not yet run: F0 (the declared 9 MiB publish, `check-config` of the dispatcher with an ack wait of 31 and of 30, nothing on `evt.platform.notification.>` and nothing pending on the dispatcher's durable), F3 (the same PDF plain and then forwarded, the status of every capture call read from the tap, replies counted by Bot API method, a redelivered update, the loss of the Platform session), F5 (the escaped Threads query and a non-ASCII query byte), F7 (the completed closure, the failed closure, the PAT registration).
+
+Legs in the Round 4 plan that are NOT in the flow files: F1 (the Claude knowledge file, the corrupt archive, the repeated key, the 401 stand-in on 8097, the Swift client), F2 (the Claude fact, the large facts, the Knowledge outage, the non-envelope message), F3 (a bare URL then forwarded, which needs a loopback page the extractor may fetch), F4 (the scheduler occurrence), F5 (the browser extension's client module, the Knowledge leg for a deleted post), F6 (survivor content, the owner after a mapping change, the crash window, the ordering). The RED runs against the Round 3 heads of claude, knowledge, telegram and threads were not made; the legs name the expected failure in a comment.
 
 ## What is faked, seeded or not exercised
 

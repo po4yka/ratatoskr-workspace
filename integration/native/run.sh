@@ -7,7 +7,7 @@
 #   run.sh --prune                remove what earlier runs left under $RATATOSKR_SMOKE_DIR (nothing else)
 #   run.sh FLOW [FLOW...]         run flows one at a time, in the order given
 #
-# This is a manual, machine-dependent run, not a CI gate. State lives in $RATATOSKR_SMOKE_DIR (default $HOME/.cache/ratatoskr-smoke/XR-021-r3); evidence summaries go to the gitignored evidence/XR-021-r3/<flow>/. See README.md.
+# This is a manual, machine-dependent run, not a CI gate. State lives in $RATATOSKR_SMOKE_DIR (default $HOME/.cache/ratatoskr-smoke/XR-021-r4); evidence summaries go to the gitignored evidence/XR-021-r4/<flow>/. See README.md.
 
 set -uo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

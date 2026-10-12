@@ -14,6 +14,20 @@
 //! (the services verify those at startup and the native smoke reads them from `jsz`). The mutation
 //! test at the bottom proves that the scan reports a renamed durable.
 //!
+//! Ack waits (XR-021 CONTRACTS R4-05 and R4-08) are the one property of a durable that the scan
+//! above leaves out, and a service that states a different wait than Edge's table refuses to
+//! verify the durable at start-up. `service_ack_wait_constants_agree_with_edges_durable_table`
+//! reads the constant each service states (`INGEST_ACK_WAIT_SECONDS` and
+//! `CHANNEL_RECAP_ACK_WAIT_SECONDS` in Knowledge, `NOTIFICATION_ACK_WAIT_SECONDS` in Telegram) and
+//! the ack wait in Edge's row: the text from the quoted durable name to the next
+//! `FixedConsumerSpec::standard(` or the end of the declaration, where a
+//! `.with_ack_wait_seconds(N)` call sets `N` and its absence means the standard 30. The Telegram
+//! notification durable is declared through two named constants, so its row is found by the
+//! `TELEGRAM_NOTIFICATION_CONSUMERS` array that holds it. Limitation: a text scan again. It cannot
+//! see a constant that is computed (`30 * 4`), a wait set through a differently named builder, or
+//! a service that ignores its own constant; each service's start-up verification and the native
+//! smoke (`jsz` after Edge provisions the durables) cover the running behaviour.
+//!
 //! Real matches at the round 2 pins are recorded in the changeset `XR-021-fleet-cross-repo-fixes`.
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
@@ -290,6 +304,161 @@ fn owner_problems(sources: &BTreeMap<&str, String>, durables: &[Durable]) -> Vec
     problems
 }
 
+/// One ack wait the owning service states as a constant, and the durables it must agree with.
+#[derive(Debug, Clone, Copy)]
+struct AckWaitRule {
+    /// The repository whose tracked `.rs` files declare the constant.
+    owner: &'static str,
+    /// The `pub const NAME: u64` the service states.
+    constant: &'static str,
+    /// The durable whose row in Edge's table must carry the same wait, and where the row starts.
+    durable: &'static str,
+    /// The text in Edge's table that starts the durable's row.
+    anchor: &'static str,
+    /// The wait the contract (CONTRACTS S04) fixes for this durable.
+    contract_seconds: u64,
+}
+
+const fn ack_rule(
+    owner: &'static str,
+    constant: &'static str,
+    durable: &'static str,
+    contract_seconds: u64,
+) -> AckWaitRule {
+    AckWaitRule {
+        owner,
+        constant,
+        durable,
+        anchor: durable,
+        contract_seconds,
+    }
+}
+
+const ACK_WAIT_RULES: [AckWaitRule; 6] = [
+    ack_rule(
+        "knowledge",
+        "INGEST_ACK_WAIT_SECONDS",
+        "ratatoskr_knowledge_documents",
+        120,
+    ),
+    ack_rule(
+        "knowledge",
+        "INGEST_ACK_WAIT_SECONDS",
+        "ratatoskr_knowledge_social_sources",
+        120,
+    ),
+    ack_rule(
+        "knowledge",
+        "INGEST_ACK_WAIT_SECONDS",
+        "ratatoskr_knowledge_ai_archive",
+        120,
+    ),
+    ack_rule(
+        "knowledge",
+        "INGEST_ACK_WAIT_SECONDS",
+        "ratatoskr_knowledge_repository_requests",
+        120,
+    ),
+    ack_rule(
+        "knowledge",
+        "CHANNEL_RECAP_ACK_WAIT_SECONDS",
+        "ratatoskr_knowledge_channel_recap",
+        30,
+    ),
+    AckWaitRule {
+        anchor: "TELEGRAM_NOTIFICATION_CONSUMERS: [",
+        ..ack_rule(
+            "telegram",
+            "NOTIFICATION_ACK_WAIT_SECONDS",
+            "ratatoskr_telegram_notifications",
+            30,
+        )
+    },
+];
+
+/// The standard ack wait of `FixedConsumerSpec::standard`.
+const STANDARD_ACK_WAIT_SECONDS: u64 = 30;
+
+/// The number that follows `prefix` in `text`, digit separators allowed.
+fn number_after(text: &str, prefix: &str) -> Option<u64> {
+    let start = text.find(prefix)? + prefix.len();
+    let digits = text
+        .get(start..)?
+        .trim_start()
+        .chars()
+        .take_while(|c| c.is_ascii_digit() || *c == '_')
+        .filter(char::is_ascii_digit)
+        .collect::<String>();
+    digits.parse().ok()
+}
+
+/// The ack wait Edge's table gives the row that starts at `anchor`.
+fn table_ack_wait(table: &str, anchor: &str) -> Option<u64> {
+    let start = table.find(anchor)? + anchor.len();
+    let rest = table.get(start..)?;
+    let end = [rest.find("FixedConsumerSpec::standard("), rest.find(';')]
+        .into_iter()
+        .flatten()
+        .min()
+        .unwrap_or(rest.len());
+    let row = rest.get(..end)?;
+    Some(number_after(row, ".with_ack_wait_seconds(").unwrap_or(STANDARD_ACK_WAIT_SECONDS))
+}
+
+/// Disagreements between the stated constants, Edge's table and the contract, one line each.
+fn ack_wait_problems(table: &str, sources: &BTreeMap<&str, String>) -> Vec<String> {
+    let mut problems = Vec::new();
+    for rule in ACK_WAIT_RULES {
+        let source = sources.get(rule.owner).map_or("", String::as_str);
+        let Some(stated) = number_after(source, &format!("const {}: u64 =", rule.constant)) else {
+            problems.push(format!(
+                "`{}` has no `const {}: u64 = <seconds>` in a tracked .rs file",
+                rule.owner, rule.constant
+            ));
+            continue;
+        };
+        let Some(edge) = table_ack_wait(table, rule.anchor) else {
+            problems.push(format!(
+                "Platform's {PLATFORM_TABLE} has no row for `{}`",
+                rule.durable
+            ));
+            continue;
+        };
+        if stated != edge {
+            problems.push(format!(
+                "`{}` states {} = {stated} seconds but Edge provisions `{}` with {edge}",
+                rule.owner, rule.constant, rule.durable
+            ));
+        }
+        if edge != rule.contract_seconds {
+            problems.push(format!(
+                "Edge provisions `{}` with {edge} seconds but CONTRACTS S04 fixes {}",
+                rule.durable, rule.contract_seconds
+            ));
+        }
+    }
+    problems
+}
+
+fn ack_wait_sources() -> BTreeMap<&'static str, String> {
+    let manifest = committed_manifest();
+    let mut owners = ACK_WAIT_RULES
+        .iter()
+        .map(|rule| rule.owner)
+        .collect::<Vec<_>>();
+    owners.sort_unstable();
+    owners.dedup();
+    owners
+        .into_iter()
+        .map(|owner| {
+            (
+                owner,
+                tracked_rust_sources(&require_checkout(&manifest, owner)),
+            )
+        })
+        .collect()
+}
+
 fn all_durables() -> Vec<Durable> {
     DOMAIN.iter().chain(OTHER.iter()).copied().collect()
 }
@@ -406,4 +575,65 @@ fn the_owner_scan_reports_a_missing_literal() {
         "const N: &str = \"a_durable\"; const F: &str = \"evt.a.v1\";".to_owned(),
     );
     assert!(owner_problems(&sources, &[durable]).is_empty());
+}
+
+#[test]
+fn service_ack_wait_constants_agree_with_edges_durable_table() {
+    let problems = ack_wait_problems(&platform_table_text(), &ack_wait_sources());
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn the_ack_wait_scan_reports_a_changed_constant_and_a_changed_table_row() {
+    let table = platform_table_text();
+    let sources = ack_wait_sources();
+    assert!(
+        ack_wait_problems(&table, &sources).is_empty(),
+        "the unmodified checkout must pass before the mutation means anything"
+    );
+
+    let mut changed = sources.clone();
+    let knowledge = changed.get_mut("knowledge").expect("knowledge sources");
+    let mutated = knowledge.replace(
+        "const CHANNEL_RECAP_ACK_WAIT_SECONDS: u64 = 30;",
+        "const CHANNEL_RECAP_ACK_WAIT_SECONDS: u64 = 31;",
+    );
+    assert_ne!(
+        &mutated, knowledge,
+        "the mutation did not change the source"
+    );
+    *knowledge = mutated;
+    let problems = ack_wait_problems(&table, &changed);
+    assert!(
+        problems
+            .iter()
+            .any(|line| line.contains("CHANNEL_RECAP_ACK_WAIT_SECONDS = 31")),
+        "{problems:?}"
+    );
+
+    let retimed = table.replacen(
+        ".with_ack_wait_seconds(120)",
+        ".with_ack_wait_seconds(121)",
+        1,
+    );
+    assert_ne!(retimed, table, "the mutation did not change the table");
+    let problems = ack_wait_problems(&retimed, &sources);
+    assert!(
+        problems
+            .iter()
+            .any(|line| line.contains("ratatoskr_knowledge_documents")),
+        "{problems:?}"
+    );
+}
+
+#[test]
+fn the_ack_wait_row_reader_reads_the_chain_and_the_default() {
+    let table = "FixedConsumerSpec::standard(E, \"a\", \"f\")\n.with_ack_wait_seconds(120),\nFixedConsumerSpec::standard(E, \"b\", \"g\"),\n];";
+    assert_eq!(table_ack_wait(table, "\"a\""), Some(120));
+    assert_eq!(table_ack_wait(table, "\"b\""), Some(30));
+    assert_eq!(table_ack_wait(table, "\"missing\""), None);
+    assert_eq!(
+        number_after("const X: u64 = 1_20;", "const X: u64 ="),
+        Some(120)
+    );
 }

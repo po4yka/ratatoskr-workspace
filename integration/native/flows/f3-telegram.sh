@@ -31,6 +31,15 @@ post_update() {
 bot_replies_after() { jq -rs --argjson seq "$1" '[.[] | select(.seq > $seq and (.method | ascii_downcase | IN("sendmessage","editmessagetext")))] | map(.request.text // "") | .[]' "$S/logs/fake-bot.jsonl"; }
 bot_seq() { jq -s 'map(.seq) | max // 0' "$S/logs/fake-bot.jsonl" 2>/dev/null || echo 0; }
 
+# bot_calls_after SEQ METHOD: how many Bot API calls of that method (any case) the fake recorded after SEQ. Calls are counted by method, never by lines of text: one message with two lines is one call.
+bot_calls_after() { jq -rs --argjson seq "$1" --arg method "$2" '[.[] | select(.seq > $seq and ((.method | ascii_downcase) == $method))] | length' "$S/logs/fake-bot.jsonl"; }
+# reply_sequence_after SEQ: one "method:first 80 characters of the text" line per reply call after SEQ, in call order.
+reply_sequence_after() { jq -rs --argjson seq "$1" '[.[] | select(.seq > $seq and ((.method | ascii_downcase) | IN("sendmessage","editmessagetext")))] | map((.method | ascii_downcase) + ":" + ((.request.text // "") | gsub("\n"; " ") | .[0:80])) | .[]' "$S/logs/fake-bot.jsonl"; }
+tap_seq() { jq -s 'map(.seq) | max // 0' "$S/logs/tap.jsonl" 2>/dev/null || echo 0; }
+# capture_statuses TAP_SEQ: the status of every /v1/captures* call the tap recorded after TAP_SEQ, in order, space separated. A retry, a conflict or a refusal shows here; the reply the sender saw does not.
+capture_statuses() { jq -rs --argjson seq "${1:-0}" '[.[] | select(.seq > $seq and (.path | startswith("/v1/captures"))) | .status | tostring] | join(" ")' "$S/logs/tap.jsonl"; }
+terminal_operations() { q ratatoskr "select count(*) from operations.operations where status in ('succeeded','partially_succeeded','failed')"; }
+
 flow_run() {
   infra_fresh || { assert infra_up 'false' "PostgreSQL or NATS did not start"; return; }
   info "step 1: the assertion key comes from the webhook's own command"
@@ -71,40 +80,82 @@ flow_run() {
   assert edge_reports_the_telegram_mini_app_available '[ "$(code -X POST -H "Content-Type: application/json" --data "{\"assertion\":\"x\"}" "$EDGE/v1/sessions/telegram")" != 404 ]' "a malformed assertion must be refused, not unrouted"
 
   info "step 2: a PDF from the owner"
-  local seq status
+  local seq tap0 status
   seq=$(bot_seq)
+  tap0=$(tap_seq)
   status=$(post_update 1001 '{"document":{"file_id":"doc1.pdf","file_unique_id":"u1","file_name":"notes.pdf","mime_type":"application/pdf","file_size":1400}}')
   assert pdf_update_accepted_by_the_webhook '[ "$status" = 200 ]' "http=$status"
-  untilt '[ "$(q ratatoskr "select count(*) from operations.operations where status in ('"'"'succeeded'"'"','"'"'partially_succeeded'"'"','"'"'failed'"'"')")" -ge 1 ]' 120
+  untilt '[ "$(terminal_operations)" -ge 1 ]' 120
   local final
   final=$(q ratatoskr "select status from operations.operations order by accepted_at desc limit 1")
   assert pdf_capture_operation_succeeded '[ "$final" = succeeded ]' "$final"
+  assert plain_capture_status_is_202 '[ "$(capture_statuses "$tap0")" = 202 ]' "tap statuses of /v1/captures*: $(capture_statuses "$tap0")"
   assert blob_is_in_the_shared_telegram_root '[ "$(find "$S/blobs/telegram" -type f | wc -l | tr -d " ")" -ge 1 ]'
   assert session_exchange_returned_201 '[ "$(jq -rs "[.[] | select(.path==\"/v1/sessions/telegram\" and .status==201)] | length" "$S/logs/tap.jsonl")" -ge 1 ]' "a real exchange through the tap"
   assert identity_row_written_by_the_first_exchange '[ "$(q ratatoskr "select count(*) from telegram.identities where internal_user_id is not null")" -ge 1 ]'
-  untilt '[ "$(bot_replies_after "$seq" | wc -l | tr -d " ")" -ge 2 ]' 60
-  assert acknowledgement_then_completion_replies '[ "$(bot_replies_after "$seq" | wc -l | tr -d " ")" -ge 2 ]' "replies in order: $(bot_replies_after "$seq" | cut -c1-80 | tr "\n" "|")"
-  bot_replies_after "$seq" >"$EV/replies-pdf.txt"
+  untilt '[ "$(( $(bot_calls_after "$seq" sendmessage) + $(bot_calls_after "$seq" editmessagetext) ))" -ge 2 ]' 60
+  reply_sequence_after "$seq" >"$EV/replies-pdf.txt"
+  assert acknowledgement_is_the_first_reply_and_a_sendmessage '[ "$(head -1 "$EV/replies-pdf.txt" | cut -d: -f1)" = sendmessage ]' "first reply: $(head -1 "$EV/replies-pdf.txt")"
+  assert completion_is_a_later_edit_or_send_with_another_body '[ "$(sed -n 2p "$EV/replies-pdf.txt" | cut -d: -f1)" != "" ] && [ "$(sed -n 2p "$EV/replies-pdf.txt" | cut -d: -f2-)" != "$(sed -n 1p "$EV/replies-pdf.txt" | cut -d: -f2-)" ]' "replies in order: $(tr "\n" "|" <"$EV/replies-pdf.txt")"
+  assert no_reply_is_a_refusal '[ "$(grep -c "Could not save" "$EV/replies-pdf.txt")" = 0 ]'
 
   info "an attachment that is not a PDF"
   seq=$(bot_seq)
   status=$(post_update 1002 '{"photo":[{"file_id":"p1","file_unique_id":"p1u","width":10,"height":10,"file_size":100}]}')
-  untilt '[ "$(bot_replies_after "$seq" | wc -l | tr -d " ")" -ge 1 ]' 60
+  untilt '[ "$(bot_calls_after "$seq" sendmessage)" -ge 1 ]' 60
   local unsupported_body='<b>Unsupported attachment</b>
 Send a PDF document with a text layer; images, video, voice, and audio are not supported yet.'
   assert photo_update_gets_exactly_the_static_unsupported_body '[ "$(bot_replies_after "$seq" | head -c 4000)" = "$unsupported_body" ]' "$(bot_replies_after "$seq" | head -2 | cut -c1-120 | tr "\n" "|")"
+  assert photo_update_creates_no_capture_call '[ "$(capture_statuses "$tap0")" = 202 ]' "tap statuses of /v1/captures* since the first PDF: $(capture_statuses "$tap0")"
 
-  info "a forwarded PDF carries no attachment fact in origin"
+  info "the same PDF forwarded is a second accepted operation, not a refusal (R4-08 plain then forwarded; RED against telegram 81aa9e2 expected: Platform answers 409 for the reused key)"
+  local tap1 ops_before
+  seq=$(bot_seq)
+  tap1=$(tap_seq)
+  ops_before=$(terminal_operations)
   status=$(post_update 1003 '{"forward_date":1787900000,"forward_origin":{"type":"user","date":1787900000,"sender_user":{"id":42,"is_bot":false,"first_name":"Someone"}},"document":{"file_id":"doc1.pdf","file_unique_id":"u1","file_name":"forwarded-secret-name.pdf","mime_type":"application/pdf","file_size":1400}}')
-  untilt '[ "$(jq -rs "[.[] | select(.path==\"/v1/captures/blobs\")] | length" "$S/logs/tap.jsonl")" -ge 2 ]' 90
-  jq -s '[.[] | select(.path=="/v1/captures/blobs")] | last' "$S/logs/tap.jsonl" >"$EV/forwarded-capture-request.json"
+  assert forwarded_update_accepted_by_the_webhook '[ "$status" = 200 ]' "http=$status"
+  untilt '[ "$(terminal_operations)" -ge $((ops_before + 1))  ]' 120
+  jq -s --argjson seq "$tap1" '[.[] | select(.seq > $seq and .path=="/v1/captures/blobs")] | last' "$S/logs/tap.jsonl" >"$EV/forwarded-capture-request.json"
+  assert forwarded_capture_status_is_202 '[ "$(capture_statuses "$tap1")" = 202 ]' "tap statuses of /v1/captures* for the forwarded PDF: $(capture_statuses "$tap1")"
   assert forwarded_request_origin_has_no_attachment_fact '[ "$(jq -r ".request.origin | keys | map(test(\"attach|file\")) | any" "$EV/forwarded-capture-request.json")" = false ] && [ "$(grep -c "forwarded-secret-name" "$EV/forwarded-capture-request.json")" = 0 ]' "origin keys: $(jq -c ".request.origin | keys" "$EV/forwarded-capture-request.json")"
+  untilt '[ "$(bot_calls_after "$seq" sendmessage)" -ge 1 ]' 60
+  reply_sequence_after "$seq" >"$EV/replies-forwarded.txt"
+  assert forwarded_pdf_is_acknowledged_not_refused '[ "$(head -1 "$EV/replies-forwarded.txt" | cut -d: -f1)" = sendmessage ] && [ "$(grep -c "Could not save" "$EV/replies-forwarded.txt")" = 0 ]' "$(tr "\n" "|" <"$EV/replies-forwarded.txt")"
+  assert both_operations_succeeded '[ "$(q ratatoskr "select count(*) from operations.operations where status = '"'"'succeeded'"'"'")" -ge 2 ]'
+  untilt '[ "$(q ratatoskr "select count(*) from knowledge.search_documents")" -ge 1 ]' 90
+  assert knowledge_holds_one_document_for_the_digest '[ "$(q ratatoskr "select count(*) from knowledge.search_documents")" = 1 ]' "rows: $(q ratatoskr "select count(*) from knowledge.search_documents")"
+  info "NOT RUN: a bare URL then the same URL forwarded needs a fetchable page for the extractor's URL lane; no loopback page server is part of this harness yet"
+
+  info "the same update delivered twice converges on one operation"
+  local tap2
+  ops_before=$(q ratatoskr "select count(*) from operations.operations")
+  tap2=$(tap_seq)
+  status=$(post_update 1001 '{"document":{"file_id":"doc1.pdf","file_unique_id":"u1","file_name":"notes.pdf","mime_type":"application/pdf","file_size":1400}}')
+  sleep 5
+  assert redelivered_update_is_acknowledged_to_telegram '[ "$status" = 200 ]' "http=$status"
+  assert redelivered_update_creates_no_operation_and_no_capture_call '[ "$(q ratatoskr "select count(*) from operations.operations")" = "$ops_before" ] && [ -z "$(capture_statuses "$tap2")" ]' "operations $ops_before, capture calls: $(capture_statuses "$tap2")"
+
+  info "session loss: the Platform session rows of the sender are deleted while the webhook runs (R4-08)"
+  local deleted tap3 exchange
+  deleted=$(q ratatoskr "delete from identity.sessions where kind = 'telegram_mini_app' and user_id = (select internal_user_id from telegram.identities where telegram_user_id = $OWNER_ID) returning 1" | wc -l | tr -d " ")
+  assert session_rows_deleted '[ "$deleted" -ge 1 ]' "deleted $deleted rows"
+  seq=$(bot_seq)
+  tap3=$(tap_seq)
+  status=$(post_update 1006 '{"document":{"file_id":"doc1.pdf","file_unique_id":"u1","file_name":"notes.pdf","mime_type":"application/pdf","file_size":1400}}')
+  untilt '[ -n "$(jq -rs --argjson seq "$tap3" "[.[] | select(.seq > \$seq and .path==\"/v1/captures/blobs\" and .status==202)] | first // empty" "$S/logs/tap.jsonl")" ]' 90
+  exchange=$(jq -rs --argjson seq "$tap3" '[.[] | select(.seq > $seq and (.path | startswith("/v1/")) and (.path | startswith("/v1/operations") | not)) | "\(.path):\(.status)"] | join(" ")' "$S/logs/tap.jsonl")
+  assert capture_after_session_loss_is_one_401_then_exchange_then_202 'grep -Eq "/v1/captures/blobs:401 /v1/sessions/telegram:201 /v1/captures/blobs:202" <<<"$exchange"' "tap: $exchange"
+  sleep 3
+  reply_sequence_after "$seq" >"$EV/replies-session-loss.txt"
+  assert sender_sees_no_refusal_after_session_loss '[ "$(grep -Ec "Could not save|temporarily unavailable" "$EV/replies-session-loss.txt")" = 0 ]' "$(tr "\n" "|" <"$EV/replies-session-loss.txt")"
+  info "NOT RUN here: a 409 from Platform cannot be provoked once the key describes the body, so the retry-then-unavailable path of a conflict is covered by the Telegram repository tests"
 
   info "Edge stopped before a PDF is sent"
   svc_stop edge
   seq=$(bot_seq)
   status=$(post_update 1004 '{"document":{"file_id":"doc1.pdf","file_unique_id":"u1","file_name":"notes.pdf","mime_type":"application/pdf","file_size":1400}}')
-  untilt '[ "$(bot_replies_after "$seq" | wc -l | tr -d " ")" -ge 1 ]' 180
+  untilt '[ "$(bot_calls_after "$seq" sendmessage)" -ge 1 ]' 180
   local unavailable_body='<b>Ratatoskr is temporarily unavailable</b>
 Your item was not saved. Please send it again in a few minutes.'
   assert edge_down_gets_exactly_the_static_unavailable_body '[ "$(bot_replies_after "$seq" | head -c 4000)" = "$unavailable_body" ]' "$(bot_replies_after "$seq" | head -2 | cut -c1-120 | tr "\n" "|")"

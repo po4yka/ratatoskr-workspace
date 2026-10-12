@@ -29,6 +29,8 @@ capture_plain() {
   call "$name" POST "$EDGE/v1/captures" "$DEV" "$(jq -nc --arg url "$url" '{url:$url}')" "$key"
 }
 
+# threads_canonical_rows OPERATION_ID PERMALINK_TAIL: Threads capture rows of one operation whose canonical URL ends with the tail and holds neither a query nor an escape.
+threads_canonical_rows() { q ratatoskr "select count(*) from threads_archive.captures where operation_id = '$1' and canonical_url like '%$2' and canonical_url not like '%?%' and canonical_url not like '%!%%' escape '!'"; }
 op_of() { jq -r .operation_id "$EV/$1.resp.body"; }
 reporter_of() { q ratatoskr "select coalesce(reporter, '') from operations.operations where operation_id='$1'"; }
 fact_count() { python3 -I "$NATIVE_ROOT/fixtures/natsprobe.py" messages "$S/nk/edge.nkey" ratatoskr_events "$1" | jq -s "[.[] | select($2)] | length"; }
@@ -92,6 +94,23 @@ flow_run() {
   local th_seen
   th_seen=$(watch_statuses "$top" 12)
   assert threads_reaches_queued_capture_queued '[[ "$th_seen" == *queued/capture_queued* ]]' "statuses seen:$th_seen"
+
+  info "Threads: a permalink with an escaped query is accepted and recorded under its canonical permalink (R4-07; RED against threads e3656d0 expected: intake refuses the permalink, no row exists and the operation fails at intake)"
+  local th3 th3op th4 th4op
+  th3=$(capture_social th3 threads "https://www.threads.net/@author/post/AbCd1?xmt=a%3Db" smoke-th3)
+  th3op=$(op_of th3)
+  assert threads_percent_encoded_query_accepted '[ "$th3" = 202 ]' "http=$th3"
+  untilt '[ "$(threads_canonical_rows "$th3op" "/@author/post/AbCd1")" = 1 ]' 60
+  assert threads_records_a_capture_for_the_canonical_permalink '[ "$(threads_canonical_rows "$th3op" "/@author/post/AbCd1")" = 1 ]' "rows for operation $th3op: $(q ratatoskr "select canonical_url from threads_archive.captures where operation_id = '$th3op'")"
+  assert threads_percent_encoded_query_operation_ends_terminal '[[ "$(pollop "$th3op" "$DEV" 120 th3)" =~ ^(failed|partially_succeeded|succeeded)$ ]]' "public resolution is allow-listed to Meta hosts, so a failed or inaccessible end is the expected one and the success leg is NOT RUN"
+  th4=$(capture_social th4 threads "https://www.threads.net/@author/post/AbCd2?q=caf$(printf '\303\251')" smoke-th4)
+  th4op=$(op_of th4)
+  if [[ "$th4" == 202 ]]; then
+    untilt '[ "$(threads_canonical_rows "$th4op" "/@author/post/AbCd2")" = 1 ]' 60
+    assert threads_non_ascii_query_byte_records_the_canonical_permalink '[ "$(threads_canonical_rows "$th4op" "/@author/post/AbCd2")" = 1 ]'
+  else
+    info "a non-ASCII query byte was refused by Edge before the Threads lane (http=$th4): the Threads grammar leg for that byte is NOT RUN"
+  fi
 
   info "the lane each operation was dispatched to is recorded (R3-02)"
   assert x_operations_carry_the_x_lane '[ "$(reporter_of "$xop")" = ratatoskr-x ] && [ "$(reporter_of "$xop2")" = ratatoskr-x ]'

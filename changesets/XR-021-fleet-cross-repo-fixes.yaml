@@ -375,8 +375,7 @@ residual_risks:
   - "The Telegram blob store is content-addressed and deduplicated across users; the guard on POST /v1/captures/blobs is the Telegram session kind, the owner allow-list and the unguessable digest."
   - "The host group ratatoskr-telegram-blobs and the thirteen nkeys do not exist yet; until they do, extractor blob runs fail with blob_unreadable and no identity can authenticate."
   - "The committed native smoke harness (integration/native) has not been run through run.sh, so none of its flows is evidence yet; the round 3 smoke results in round_3.native_smoke come from by-hand scripts outside this repository, cover F1, F2 and F4 only, and F1 failed one assertion."
-  - "ratatoskr-x at 4a32e8ea has a red fleet / invariants check (the fleet scan for committed private keys matches crates/x-core/tests/config.rs); the pin is recorded as it is and the owning repository has to fix the fixture."
-  - "A Claude archive that carries any project knowledge file cannot reach succeeded through the real receipt path (claude crates/claude-archive/src/initial_import.rs:232); an archive with none does."
+  - "Round 4 closed the knowledge-file, survivor-content, ingest-redelivery, false-partial-acquisition, Threads-query, Telegram capture-key and ChatGPT tombstone-owner risks of round 3 (see round_4.amended_residual_risks for the evidence of each); the committed native harness has still not been run through run.sh, and the round 4 smoke results (F1, F2 and F4) come from by-hand scripts."
 verification:
   hosted_ci_of_pinned_heads: every check run on every pinned child commit concluded success when read through the GitHub API on 2026-10-11 (contracts 9, platform 7, extractor 6, knowledge 5, channel-digests 6, github 5, vault 5, x 5, instagram 5, threads 5, chatgpt 6, claude 5, telegram 5, browser-extension 4, export-agent 4)
   red_before_green:
@@ -387,7 +386,7 @@ verification:
   profile_contract_tests: web_operational, export_agent_product and telegram_deployment (against telegram b43c62554b61cd70f89f581887d5903d74cdff5e) PASS; telegram_notification and telegram_library contract tests could not run because they call the Docker API
 composed_integration:
   status: native smoke only
-  native_smoke: see round_2.native_smoke and round_3.native_smoke; the Docker profiles below were not run in any round
+  native_smoke: see round_2.native_smoke, round_3.native_smoke and round_4.native_smoke; the Docker profiles below were not run in any round
   reason: "The Docker API was not reachable from the session that wrote this record. /var/run/docker.sock does not exist; the default colima context socket (/Users/po4yka/.colima/default/docker.sock) exists but refuses connections, and colima status fails with \"error retrieving current runtime: empty value\". No compose project was started and no composed assertion was made."
   profiles:
     export-agent-product: not run (needs Docker, swift, go and a keychain; covers the AI archive path; XPA-020 already records its composed run as pending)
@@ -402,23 +401,23 @@ composed_integration:
   claim: none; the specs and the child repositories' own broker and database tests are the evidence for each hop, and no end-to-end composed claim is made. Round 2 adds a native, Docker-free run of two flows whose results and unexercised hops are under round_2.native_smoke; neither upgrades this claim.
 pinned_snapshot:
   contracts: 5426cf3096733d714c59b02ec41e946fdedcd94d
-  platform: 075c7efca80adad938843faf7ae194a35386d55f
+  platform: 1624d037f3bf8b682d16ed5b273e5a82d1c3fe24
   extractor: b44ba81637ff8979f9e3ad4ebbea967335f6bd6b
-  knowledge: 542cd6998deaa7228dbdf1fe9d48bfb99a639ad8
-  channel-digests: cdbf87fbbc757d445c27c4e72950e755af29690e
-  github: 2bc979d27db9c82b5e347294cd48665769d4ecea
+  knowledge: 4bf28ddce1fd0247c2e41e3d417ec572fcf11308
+  channel-digests: a0ee415a3342ff4da30ec9085fa6a23661c4cc8a
+  github: cc8c78d70880f68e3985ef437867a7b8146619d4
   vault: 24573faf20882f3c55c47664c84f0b1458f8dff9
-  x: 4a32e8eaa39771a2926d6932ff08f84848d7ce8a
+  x: f57fdda0e2d3ded31c0a387364506ab301a8ca7a
   instagram: 79ae7767178b9a57a6a2a6e0f43a6218fcf4e88a
-  threads: e3656d08da406537cd63c143d3dba5520e1aa43a
-  chatgpt: d994f8b7a05436d0cdc81de51f608c601d70a8ac
-  claude: 49baae26bea34ecf3d87018ab8a2b96275ba12e3
-  telegram: 81aa9e2116ea9e61faad5da594dd3ae28df0dc46
+  threads: ba00a1e2114d2b59e7a93526e423ba4c6ccc12b8
+  chatgpt: 78b3dfa0dede9b7d9cd23e17ce64836eec2a11df
+  claude: 6f27d836a3670554866b50da3636cd0410a65f04
+  telegram: 04c25a5346df1acf95fa01f82bb984053026fafd
   browser-extension: 0aceedd44d2c9448c817cf6464fa6ea81917fd1c
   export-agent: 1009f2992a51e5a6ff54724d3a3bf762e1c30243
   mobile: 67646d3ec6f50a458b59ec50ccea0cec29981e98
   web: 3c30f15f8d78d116aaf726e4ae085e8d2f317ea5
-  workspace_lock_sha256: e251a7d9c12ec5ffd1e65825433ec5d030945d4ab8d6c0827df7e08bd3984bd5
+  workspace_lock_sha256: 628df2aa9a521e34b8d065c94606e6545ef9475991a38e333bdcc2ffb2e989e4
 round_2:
   goal: Fix the defects that independent verifiers found by tracing each flow through the round 1 code (Edge upstream listeners, operation report authority, publisher health and outbox failure classes, channel-digest terminal states, tenant deletion of recap state, the blob registration and erasure race, GitHub origination, X provider deletion, operator examples, permalink hosts, profile ACLs), record the behaviour as an OpenSpec change, add the harness checks that stop the first and last kind of drift, and advance the pins.
   contract_source: .omc/plans/XR-021/CONTRACTS.md sections R2-01 to R2-19 (a local planning file, not committed). CONTRACTS_SHA stays ad16855c4e7f3d52cd118274faa3b8f3ab4da576 for every repository except chatgpt and claude, which pin 5426cf3096733d714c59b02ec41e946fdedcd94d, a contracts commit that adds a test and no crate source (see residual_risks).
@@ -1072,3 +1071,268 @@ round_3:
     - "claude crates/claude-archive/src/initial_import.rs:232 (reported by the F1 smoke): the receipt import calls ArchiveCompletenessReport::from_ingest(archive_id, &parsed, &[]) with an EMPTY outcomes slice, and nothing in production code calls ProjectKnowledgeIngestor::ingest (crates/claude-archive/src/project_knowledge.rs:71; the only callers are tests, and lib.rs:86 re-exports it). Every project knowledge file therefore counts as knowledge_file_missing_bytes even when the archive carries the bytes inline with a matching sha256 (crates/claude-archive/src/completeness.rs:118-121). Observed: a Claude archive with one knowledge file with correct bytes and sha256 ends partially_succeeded, completeness assets_partial, gap_count 1 (operation 01a12cc2-76a1-7fe3-a46d-30969ba43bdc). A Claude archive that contains any knowledge file can never reach succeeded; an archive with none does. Severity medium: the positive capability is only half wired."
     - "chatgpt schema.sql:313-319 and schema.sql:343-346 (also schema.sql:75-76), reported by the F1 smoke: migration-style ALTER TABLE ... ADD COLUMN IF NOT EXISTS statements follow the CREATE TABLE in the one current schema definition, against the 'no migrations, edit the schema in place' development status. On a fresh database the columns already exist (inbox_events.tenant_id and export_id are in the CREATE TABLE at schema.sql:335-336), so every start logs 42 'column ... already exists, skipping' INFO notices (14 distinct, repeated). Severity low: noise plus dead migration code."
     - "x crates/x-core/tests/config.rs (found by reading the hosted CI of the pinned heads): the fleet / invariants check of ratatoskr-x failed on 4a32e8ea with 'crates/x-core/tests/config.rs contains a private key', the fleet scan for committed PEM private keys matching a fixture added for RATATOSKR__PUBLIC_CAPTURE__EXTRA_CA_FILE. The owning repository has to change the fixture (generate it at run time or use a certificate, not a key); this repository does not edit it."
+round_4:
+  goal: "Fix the defects that the Round 3 native smokes and the independent verifiers found and that were re-verified against current origin/main on 2026-10-12: Claude project knowledge files never ingested on the production import and Claude survivor content after a privacy deletion, the ChatGPT tombstone owner following the live mapping, Knowledge dead-lettering a retryable ingest delivery after five deliveries, a false partial acquisition for a deep channel history, Threads refusing a percent-encoded query, the Telegram capture key, session recovery and notification ack wait, the ChatGPT migration-style ALTER statements, and the native harness defects the first honest read found. Record the behaviour in the spec store, add two harness checks, and advance nine pins."
+  contract_source: ".omc/plans/XR-021/CONTRACTS.md sections R4-01 to R4-13 (a local planning file, not committed). CONTRACTS_SHA stays ad16855c4e7f3d52cd118274faa3b8f3ab4da576 for every repository. The contracts repository received no round 4 commit that changes a contract: its origin/main moved to 460057a61542320805167116eca556b26df312f3, which updates one CI action in .github/workflows/contracts.yml, and the workspace keeps pinning 5426cf3096733d714c59b02ec41e946fdedcd94d. The round 4 smokes ran against 460057a."
+  openspec: "openspec/changes/xr-021-fleet-round-4 (NOT archived: task 6.1, running a flow through run.sh, and task 9.1 are open). xr-021-fleet-round-3 is NOT archived either: its task 1.7 is closed by round 4 (x f57fdda is green) but task 5.2 (no committed native flow has been run through run.sh) and task 9.1 stay open. Round 4 restates round 3 requirement text in two MODIFIED deltas, so round 3 must be archived first."
+  hosted_ci_of_pinned_heads: "read through the GitHub API on 2026-10-12: every check run concluded success on platform 6, knowledge 5, channel-digests 5, github 5, threads 5, telegram 5, claude 5, chatgpt 5 and x 5 (fleet / invariants, openspec / specs, zizmor / audit, deny and gate; platform adds linux/arm64 artifact). The heads that did not move keep the results recorded under round_3."
+  repositories:
+    - id: ratatoskr-platform
+      head: 1624d037f3bf8b682d16ed5b273e5a82d1c3fe24
+      previous_head: 075c7efca80adad938843faf7ae194a35386d55f
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "6 of 6 check runs succeeded"
+      commits:
+        - "1624d037f3bf8b682d16ed5b273e5a82d1c3fe24 docs(nats): state that nothing raises a notification yet [R4-11]"
+    - id: ratatoskr-knowledge
+      head: 4bf28ddce1fd0247c2e41e3d417ec572fcf11308
+      previous_head: 542cd6998deaa7228dbdf1fe9d48bfb99a639ad8
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "5 of 5"
+      commits:
+        - "8a5b17a6606d29ac02b6ac8bccf56e7d543296c7 feat(knowledge): redeliver retryable ingest failures without a budget [R4-05]"
+        - "25336f518dc84c32d2713f6b599d541df1c7544a refactor(knowledge)!: drop the write-only ingest_failures table [R4-05]"
+        - "3adfc893bdd7b0a2cc290eab922792457f2f3c58 fix(knowledge): a provider outage never exhausts a run's call budget [R4-05]"
+        - "4bf28ddce1fd0247c2e41e3d417ec572fcf11308 fix(knowledge): redeliver a spend-budget refusal instead of rejecting it [R4-05]"
+    - id: ratatoskr-channel-digests
+      head: a0ee415a3342ff4da30ec9085fa6a23661c4cc8a
+      previous_head: cdbf87fbbc757d445c27c4e72950e755af29690e
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "5 of 5"
+      commits:
+        - "2d8f646b636d1211570e93e125141da7bad5a183 docs(openspec): propose window-bounded acquisition for XR-021 round 4 [R4-06]"
+        - "5fc8b156ec759b557b8ab6d3b3224c819a8b079c fix(acquisition): stop the page walk at the window start [R4-06]"
+        - "a0ee415a3342ff4da30ec9085fa6a23661c4cc8a docs: say when acquisition_incomplete is set and when it is not [R4-06]"
+    - id: ratatoskr-github
+      head: cc8c78d70880f68e3985ef437867a7b8146619d4
+      previous_head: 2bc979d27db9c82b5e347294cd48665769d4ecea
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "5 of 5"
+      commits:
+        - "cc8c78d70880f68e3985ef437867a7b8146619d4 fix(catalog): honour the configured provider origin in operator commands [R4-09]"
+    - id: ratatoskr-threads
+      head: ba00a1e2114d2b59e7a93526e423ba4c6ccc12b8
+      previous_head: e3656d08da406537cd63c143d3dba5520e1aa43a
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "5 of 5"
+      commits:
+        - "cabc284f82967a67deafe1ba5e3f350a931818e3 fix(threads-archive): validate only the authority and path of a permalink [R4-07]"
+        - "ba00a1e2114d2b59e7a93526e423ba4c6ccc12b8 test(threads-archive): record a capture whose permalink has an escaped query [R4-07]"
+    - id: ratatoskr-telegram
+      head: 04c25a5346df1acf95fa01f82bb984053026fafd
+      previous_head: 81aa9e2116ea9e61faad5da594dd3ae28df0dc46
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "5 of 5"
+      commits:
+        - "89ef8032dbd84a2e4b8953d1120f659c62b307b7 docs(openspec): plan XR-021 round 4 capture key, session and ack wait [R4-08]"
+        - "189f41d742d230962b9940bef6ebe488dad2794b fix(webhook): derive the capture idempotency key from the request body [R4-08]"
+        - "69903a38641f5a2e3c5c6cd4bea84cdb24393c81 fix(webhook): treat a Platform conflict on a capture as transient [R4-08]"
+        - "8f22967815b46566e76ad9d71fb76f583f0b04fc fix(webhook): drop a rejected Platform credential and retry the capture once [R4-08]"
+        - "1f003aaef31b240d1bc3a685e0ae58a5cb22ba74 fix(core): require a notification ack wait of exactly 30 seconds [R4-08]"
+        - "5bc0f64ebb7a4cda45d63c76aca701d7d416e6b9 test(webhook): satisfy the indexing and unnecessary-wrap lints in key tests [R4-08]"
+        - "04c25a5346df1acf95fa01f82bb984053026fafd docs(openspec): archive xr-021-r4-capture-key-session-and-ack-wait [R4-08]"
+    - id: ratatoskr-claude
+      head: 6f27d836a3670554866b50da3636cd0410a65f04
+      previous_head: 49baae26bea34ecf3d87018ab8a2b96275ba12e3
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "5 of 5"
+      commits:
+        - "b7c3d66f2891e06b4fc1dd9b1bea0924cc85ce0d docs(openspec): plan the knowledge-file import and survivor content [R4-02,R4-03]"
+        - "3f7042a55ae0f0db98f04c5f37001c9301bc0257 fix(import): ingest project knowledge files on the production import [R4-02]"
+        - "c32668b24db08f39d77e9cd6d90ec441a2cfffbb fix(import): register knowledge-file blobs under the digest lock [R4-02]"
+        - "15da857f6cde303d3db633057baaec90f8e2a258 refactor(test): split the knowledge erase-race test to pass clippy [R4-02]"
+        - "3e09a15f9961a1cb253f409f07fa89db29dd627f feat(import): record the version each export presented of a record [R4-03]"
+        - "b8da9e2a6714d1c9585e43bcc5d4a0a6e94a9279 fix(privacy): restore survivors to a version a retained export holds [R4-03]"
+        - "462163003d22b2e2368cbcb40ee2b0c819b0ed9d docs: describe knowledge-file ingest and restored survivors [R4-02,R4-03]"
+        - "7c97e2fd905c1dde70eae8bcded3513e8e04fff5 fix(privacy): rebuild conversations whose history holds a deleted part [R4-03]"
+        - "adde2665e7af93e68d73ca426a2412e70fde7b5a docs(openspec): tick the gate task of the round 4 knowledge and survivor change [R4-02,R4-03]"
+        - "3982b32886cf0682ad207f66069bb0360db869a2 fix(privacy): scope the survivor restore to the request's accounts [R4-03]"
+        - "6f27d836a3670554866b50da3636cd0410a65f04 docs: state the Knowledge gap and the replaced source blob honestly [R4-02,R4-03]"
+    - id: ratatoskr-chatgpt
+      head: 78b3dfa0dede9b7d9cd23e17ce64836eec2a11df
+      previous_head: d994f8b7a05436d0cdc81de51f608c601d70a8ac
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "5 of 5"
+      note: "This head is not in the list of round 4 heads the workspace writer was handed, which omitted chatgpt; it is origin/main of ratatoskr-chatgpt, carries the round 4 commits below, and is the head the round 4 smokes ran against."
+      commits:
+        - "c948d8726ca47f58e67b25b5bdd663baa128ca13 docs(openspec): plan the R4 schema fold and tombstone owner change [R4-04,R4-10]"
+        - "0160f74ca4f972eed2acbd35130b4888b85e143a fix(schema): drop the migration-style ALTER TABLE statements [R4-10]"
+        - "de37c15feca7e98a36d0811838e46d37496c7fb9 fix(deletion): send tombstones to the owner the archive was announced under [R4-04]"
+        - "cb288556ddc2096c7933af3f14bf84ebaef6cbab docs: say a deletion uses the owner the archive was announced under [R4-04]"
+        - "78b3dfa0dede9b7d9cd23e17ce64836eec2a11df docs(openspec): archive xr-021-r4-schema-and-tombstone-owner [R4-04,R4-10]"
+    - id: ratatoskr-x
+      head: f57fdda0e2d3ded31c0a387364506ab301a8ca7a
+      previous_head: 4a32e8eaa39771a2926d6932ff08f84848d7ce8a
+      pull_requests: none, pushed directly to main under the repository owner authorization
+      hosted_ci: "5 of 5 (the round 3 pin 4a32e8e had a red fleet / invariants check)"
+      commits:
+        - "f57fdda0e2d3ded31c0a387364506ab301a8ca7a test(x-core): keep the test CA certificate in its own fixture [no R4 id: repairs the round 3 pin whose fleet / invariants check was red]"
+  repositories_without_round_4_work:
+    - id: ratatoskr-contracts
+      reason: "no contract changes in round 4; origin/main gained one CI-action update (460057a) that touches no contract file, and the pin stays at 5426cf3"
+    - id: ratatoskr-extractor
+      reason: "no round 4 section names it; its blob and report fixes were round 3, and the round 4 Knowledge ingest smoke ran against b44ba81"
+    - id: ratatoskr-vault
+      reason: "no round 4 section names it"
+    - id: ratatoskr-instagram
+      reason: "no round 4 section names it; the lane check and the success legs of public resolution (allow-listed to Meta hosts) need credentials"
+    - id: ratatoskr-browser-extension
+      reason: "no round 4 section names it; the dead linked_article.extraction_failed mapping and the Dependabot job are recorded as exclusions"
+    - id: ratatoskr-export-agent
+      reason: "no round 4 section names it; the Swift client and keychain pairing stay an owner-run step"
+    - id: ratatoskr-mobile
+      reason: "unchanged"
+    - id: ratatoskr-web
+      reason: "unchanged"
+  breaks:
+    - "Claude: schema.sql gains export_observations.content_digest and the entity_versions table, the parsed Conversation and Message types derive Serialize and Deserialize, the production import now ingests project knowledge files (a retryable storage error keeps the run in its state), and a privacy deletion rebuilds surviving projects and conversations from retained versions. A database is recreated from the edited schema (development status: no migration)."
+    - "ChatGPT: schema.sql loses seven ALTER TABLE ... ADD COLUMN IF NOT EXISTS statements (the CREATE TABLE statements already declared every column), and the owner of a deletion's tombstones is the owner the archive's own facts named, no longer the live PLATFORM_ACCOUNTS mapping."
+    - "Knowledge: the knowledge.ingest_failures table is removed, and a retryable ingest failure of the documents, social and AI-archive families is redelivered without a delivery budget (the repository family keeps its bounded budget); a new counter knowledge_ingest_redeliveries_total is exposed on the operator listener."
+    - "Telegram: the capture idempotency key has a new derivation (capture.v2 over sender, route path and the exact request body), a Platform conflict on a capture is a transient class, a rejected Platform credential is dropped and exchanged once, and RATATOSKR__NOTIFICATION_BUS__ACK_WAIT_SECONDS must be exactly 30 (the dispatcher refuses any other value)."
+    - "Threads: a permalink with a percent-encoded or non-ASCII query or fragment is accepted (the grammar applies to the authority and the path only); one that was refused is now captured."
+    - "channel-digests: acquisition stops at the first page that reaches before the window, so a deep history behind a satisfied window is no longer partial, and a quiet channel with a deep history completes as an empty success instead of failing with channel_digest.provider_unavailable."
+    - "Workspace: the native harness state directory and evidence root are XR-021-r4 (they were XR-021-r3), and lib/assert.sh locals carry the _assert_ prefix."
+  exclusions:
+    - item: "Platform emitting evt.platform.notification.raised.v1"
+      reason: "a product decision; nothing in the fleet raises a notification, so the Telegram notification durable stays idle; R4-11 documents the expectation in Platform's NATS README"
+    - item: "The fleet-wide account-erasure transport (identity.account.erasure_requested consumers and acknowledgements in every service, including GitHub's)"
+      reason: "a feature of its own"
+    - item: "Image OCR in Telegram"
+      reason: "refusal-only by design, issue 16 filed"
+    - item: "Live calls to real X, Meta, Threads, OpenRouter and Telegram MTProto services, including Instagram's classify_response calibration and the success legs of Instagram and Threads public resolution"
+      reason: "the endpoints are allow-listed to Meta hosts on purpose and the calls need credentials"
+    - item: "The late detection of an unmapped user, the 404 for a receiver that is not ready, the Knowledge readiness latch, the dormant X bookmark and compliance lane, the channel-digest reaper limits and the missing pagination cursors, the events-stream retention and consumer-lag alert, systemd units for the services that ship only an example, the Telegram Docker profiles without a PDF scenario, the domain listeners 8093 to 8095, the Dependabot job of the browser extension, the dead linked_article.extraction_failed mapping in the extension, and the stale mobile/README.md pin sentence"
+      reason: "pre-existing items unrelated to the seven flows, each accepted or a contract change, as listed in R4-13 (3); the Knowledge readiness latch loses no fact after R4-05"
+    - item: "Ports and listeners (R4-01)"
+      reason: "decision A confirmed a third time: services bind the ports Edge routes to; no S05 row changes and docs/DEPLOYMENT_TARGET.md is unchanged"
+  workspace_changes:
+    openspec: openspec/changes/xr-021-fleet-round-4
+    docs: "docs/QUALITY_GATES.md (the two new checks, what each cannot see, and what the native harness fixes do and do not show), integration/native/README.md (per flow whether it was run through run.sh as committed: none; the Round 4 section lists the written legs and the legs that are not written)"
+    harness_tests:
+      - "harness/crates/workspace-core/tests/schema_in_place.rs (new)"
+      - "harness/crates/workspace-core/tests/bus_durables.rs (extended: service_ack_wait_constants_agree_with_edges_durable_table and two tests of the scan)"
+      - "harness/crates/workspace-cli/tests/committed_snapshot.rs (EXPECTED_PINS advanced to the nine round 4 heads)"
+    integration:
+      - "integration/tests/native_smoke_contract_test.sh (extended with the R4-12 cases)"
+      - "integration/native/lib/assert.sh, lib/nats.sh, lib/services.sh, lib/common.sh, run.sh, fixtures/fake_bot_api.py, fixtures/fake_openrouter.py, fixtures/natsprobe.py, flows/f0-topology.sh, f3-telegram.sh, f5-social-captures.sh, f7-github-analysis.sh and README.md"
+    manifest: workspace.toml unchanged
+    not_done: "Running any committed native flow through run.sh (task 6.1 of the OpenSpec change stays open). Legs of the round 4 plan that are not written in the flow files: F1 (Claude knowledge file, corrupt archive, repeated key, the 401 stand-in on 8097, the Swift client), F2 (a Claude fact in Knowledge, large facts, the Knowledge outage, the non-envelope message), F3 (a bare URL then forwarded), F4 (the scheduler occurrence), F5 (the browser extension's client module, the Knowledge leg for a deleted post), F6 (survivor content, the owner after a mapping change, the crash window, the ordering). The RED runs against the round 3 heads of claude, knowledge, telegram and threads were not made."
+  harness_results:
+    red_before_green:
+      schema_in_place: "no_schema_adds_a_column_after_creating_a_table failed against the round 3 pins for the stated reason: it reported chatgpt/schema.sql:75, 312, 314, 316, 318, 343 and 345, the seven statements, and nothing else; the other three tests of the file passed, including the constraint additions of X, Instagram and Vault. It passes at the round 4 pins."
+      bus_durables: "service_ack_wait_constants_agree_with_edges_durable_table failed against the round 3 pins because telegram has no const NOTIFICATION_ACK_WAIT_SECONDS: u64; every Knowledge row already agreed with Edge's table. It passes at the round 4 pins, and its mutation test (31 seconds in the recap constant, 121 in a Knowledge row of Edge's table) reports both."
+      native_smoke_contract_test: "run as separate cases, each failing for its stated reason before its fix: the previous state directory named in run.sh, lib/common.sh and the README; assert shadowing name, cond, detail and line; assert_s04_durables against the previous assert.sh and nats.sh (every durable_* line FAIL); the getMe body missing can_connect_to_business and has_main_web_app; F3 counting replies with wc -l; the fake OpenRouter answering 400 to a repository-analysis prompt."
+    final_gate: "cd harness: cargo fmt --all -- --check clean, cargo clippy --workspace --all-targets --all-features --locked -- -D warnings clean, cargo test --workspace --all-features --locked 80 tests in 21 test binaries all passed (schema_in_place 4, bus_durables 8, and port_allocation, edge_upstreams, bus_acl, contracts_pin, postgres_roles and shared_secrets green at the round 4 pins)"
+    workspace_commands: ws manifest check valid, ws lock check current, ws status clean, ws doctor healthy
+    openspec: openspec validate --all --strict passed with xr-021-fleet-round-3 and xr-021-fleet-round-4 open
+    profile_contract_tests_run: "web_operational_profile_test.sh, no_unauthenticated_broker_test.sh, nats_conf_test.sh, export_agent_product_profile_test.sh, telegram_library_profile_test.sh, telegram_notification_profile_test.sh and telegram_deployment_profile_test.sh (against telegram 04c25a5346df1acf95fa01f82bb984053026fafd) PASS as written. A Docker API (colima) was reachable on this run, so the three tests that start a sentinel container ran against it with no stand-in docker command; no compose profile was started."
+    native_smoke_contract_test_run: "native_smoke_contract_test.sh PASS with shellcheck installed (it starts no service and builds nothing; the machine's default python3 has no cryptography package, so it ran with /opt/homebrew/bin first on PATH)"
+    could_not_run: "the composed Docker profiles (web-operational, export-agent-product, telegram-notification, telegram-library) and every committed flow of integration/native through run.sh; no composed claim is made"
+  native_smoke:
+    note: "The three smoke runs below were performed by other agents before this record was written, with by-hand scripts kept under .workspaces/XR-021/smoke/ (ai for F1, cdr4 for F4, kr for F2; not in this repository), on the production loopback ports with PostgreSQL on 127.0.0.1:54329, against the round 4 heads recorded above (platform 1624d03, knowledge 4bf28dd, channel-digests a0ee415, claude 6f27d83, chatgpt 78b3dfa, extractor b44ba81, export-agent 1009f29, contracts 460057a). Their results are transcribed as reported and nothing is upgraded. None was run through integration/native/run.sh, so none is a result of the committed flow files."
+    flows:
+      - flow: "F1 AI-archive upload (export-agent-style HTTP calls into Platform Edge on 8080 and 9464, forwarded to the real ChatGPT receipt listener 8096 and Claude 8097, receipt reported back to the terminal operation state)"
+        ran: true
+        passed: true
+        as_reported: "ran true, passed true. scenario.py SUMMARY pass=71 fail=0 (the first attempt with the default python3 failed with ModuleNotFoundError for cryptography and was re-run with /opt/homebrew/bin/python3; no state was affected)."
+        real_hops: "ratatoskr-edge, ratatoskr-chatgpt-archive, ratatoskr-claude-archive, nats-server and PostgreSQL 17 on every hop; shipped release profile, --locked, CARGO_INCREMENTAL=0, no LINKEDIT retry; the five clones were clean before and after; Edge and both importers ready in 2 seconds"
+        passed_assertions:
+          - "26 durables present with the S04 filters, ack waits (30 s, 120 s for the four ratatoskr_knowledge_* ingest durables, 300 s for browser_worker) and max_deliver (12 on extractor_capture and browser_worker, -1 elsewhere); NATS max_payload 8388608 and jetstream max_storage 8589934592 kept; the rendered NATS file differed from the deployed one only by host, the monitoring bind, store_dir and the nkey lines"
+          - "s1 surface: both receivers answer capabilities 200 with no-store, /metrics is 404 on the receipt ports, the receipt route is 404 on the operator ports, Edge ready 200"
+          - "s2 pairing through the real POST /v1/devices/pairing-codes and /v1/devices/pair for U1 and U2 (201, 201); Edge capabilities fresh for both providers"
+          - "s3 uploads through Edge: chatgpt conversations-only succeeded, chatgpt full (with asset) succeeded, chatgpt 4-chunk 223 KB succeeded, chatgpt asset-missing partially_succeeded with ai_archive.import.incomplete, claude complete (one knowledge file with correct inline bytes) succeeded with no warnings, claude no-files succeeded, claude reference-only partially_succeeded with the incomplete warning, a corrupt zip failed with chatgpt.archive.invalid; accounts rows were created by the first receipt in both schemas. This flips the one assertion round 3 failed (upload.claude.claude-complete_succeeded)."
+          - "s4 unmapped user U2: finalize 403 chatgpt.account.unmapped and claude.account.unmapped, the operation failed with platform.ai_archive.delivery_failed, Edge staging removed, pairing still worked"
+          - "s5 receiver down: finalize 503 edge.upstream_unavailable with chatgpt stopped by its pid file, the operation stayed accepted, and the same finalize after the restart returned 200 stored and the operation succeeded"
+          - "s6 direct receipt: octet-stream 400 error envelope, Authorization header 401, GET 405 JSON"
+          - "s7 ceilings: declared size above 2 GiB 413, chunk of 16 MiB + 1 413, chunk of exactly 16 MiB 200"
+          - "s8 Edge restart mid-upload: resumption status showed chunk 0, the remaining chunks and finalize returned 200 and the operation succeeded; the same key and bytes returned the same operation; the same bytes with a new key created a second operation (01a12eb4-d704..., left accepted and abandoned); the corrupt zip failed again"
+          - "s9 NATS connz: 3 connections before and after 60 seconds idle"
+          - "s10 facts: evt.ai_archive.archive.imported 7, conversation.added 7 and project.added 6 on ratatoskr_events, all with tenant user:U1 and the producers ratatoskr-chatgpt and ratatoskr-claude; platform_ai_archive_{chatgpt,claude}_projection pending 0 and ack-pending 0; ratatoskr_knowledge_ai_archive held 20 pending because Knowledge was not started in this flow"
+          - "s11 NATS log: 0 Publish, Subscription or Authorization Violation lines"
+          - "s12 SIGKILL of Edge mid-upload: Edge down, restarted, the status showed chunks [0,1], the remaining chunks and finalize returned 200 and the operation succeeded; a corrupt claude zip failed with claude.archive.invalid"
+          - "extra: a claude zip whose knowledge file has a wrong sha256 ended partially_succeeded with ai_archive.import.incomplete; project_sources rows: knowledge-ok blob_ref set, locally_backed_up true, the blob file sha256 equals content_hash; knowledge-ref no blob and false; knowledge-bad blob_ref set and false; completeness_reports complete x2 and assets_partial x1 for the first three claude imports"
+        failed_assertions: []
+        faked_or_seeded: "The export agent was simulated by a Python client making the same HTTP calls (pairing, prepare, open, chunk PUT, status, finalize, poll); the Swift AgentCore and the macOS keychain pairing were NOT RUN. Seeded: two identity.users and two browser sessions (sha256 of random credentials); the device credentials came from the real pairing endpoints. The archives are synthetic ZIPs. No external provider was involved or faked. Edge started from the shipped edge.conf.example with deviations (admin bind 127.0.0.1:9464, staging path, random digest secret, database URL and password, nkey path, the IDENTITY__ASSERTION_KEY line removed as the documented Telegram opt-out)."
+        not_exercised: "Knowledge, the extractor and the 8091 to 8095 and 8098 routes (Edge was ready with those upstreams absent); the Round 4 RED run against the old claude head 49baae2 (no RED run); the large-fact legs (2 MiB and 6 MiB); a 9 MiB max_payload publish probe; the optional 8097 401 stand-in leg."
+        cleanup: "services stopped only through their pid files; no pkill or killall; databases, NATS store, nkeys, rendered configuration, blobs, staging, binaries and target directories deleted; ports released; free disk unchanged (190 GiB); logs and redacted evidence kept"
+      - flow: "F4 Channel digests (Edge public API, NATS under the deployed ACL, the channel-digests API and worker, Knowledge recap with a loopback fake OpenRouter, terminal operation), plus the scheduler occurrence leg"
+        ran: true
+        passed: true
+        as_reported: "ran true, passed true; defects none. legA 7 of 7, legRun1 4 of 4, legRun2 10 of 10, legNeg 6 of 6, legRun3 2 of 2, and the best-effort scheduler leg passed. Release builds with --locked, the shipped profile, CARGO_INCREMENTAL=0, no LINKEDIT retry: ratatoskr-edge, render-nats-config, ratatoskr-knowledge-service, ratatoskr-channel-digests-api, ratatoskr-channel-digests-worker, ratatoskr-scheduler and the legb helper."
+        passed_assertions:
+          - "26 durables present with the S04 filters, ack waits and max_deliver, identical to the round 3 table; max_payload 8388608 and max_storage 8589934592 confirmed from /varz and /jsz"
+          - "legA: no bearer 401; PUT subscription through Edge 202 and the operation succeeded; idempotent replay returned the same operation; the Edge to API 8098 read hop listed smoke_alpha; another owner saw an empty list"
+          - "schedule registration: operations.schedules held daily-digest, audit schedule.registration allowed=1; a worker restarted with a random owner produced audit denied=1, the Edge log class schedule_owner_unknown=1 and still one schedules row; Knowledge /ready stayed 200 while the digest API was stopped for 10 seconds"
+          - "legRun1: POST /v1/channel-digests/runs 202; early status queued at awaiting_acquisition; the operation ended failed with channel_digest.run_deadline_exceeded (60 second deadline)"
+          - "legRun2 (faulted acquisition): the worker accepted the run from the bus, the helper committed a manifest of two synthetic posts, Knowledge fetched the manifest from API 8098 and called the fake OpenRouter once with two revision refs (bearer present, model openai/gpt-oss-20b), the operation succeeded and completed with outcome=completed and citation_count=2 readable through Edge; another owner 404; no bearer 401"
+          - "legNeg: noncanonical username 400, bad desired_state 400, missing Idempotency-Key 400, key reuse with a different body 409, run replay returned the same operation, bad language 400"
+          - "legRun3: the fake answered 401, the operation failed with channel_digest.recap.provider_unavailable (retryable true), the run row was failed with provider_unavailable, knowledge.channel_recap_runs showed completed=1 and failed=1"
+          - "scheduler leg: ratatoskr-scheduler started from scheduler.conf.example (admin 127.0.0.1:9466, ready 200) with the worker cron '* * * * *' and owner U1; the log read schedule pass due=1 published=1; the durable ratatoskr_channel_digest_schedule_occurrences showed delivered=1, ack_floor=1, pending=0; digest_runs got a trigger=scheduled run for U1; Edge held a channel_digest.schedule.occurrence operation succeeded at fanned_out; the scheduled run later ended failed with deadline_exceeded because the provider was down, with no operation reporting it (the accepted R4-13 design limit)"
+          - "NATS log: 0 Publish, Subscription or Authorization Violation lines after all legs; no ERROR or panic lines in the edge, api, worker or knowledge logs, the worker WARNs were provider_unavailable only"
+        failed_assertions: []
+        faked_or_seeded: "OpenRouter is a loopback fake (the documented RATATOSKR__PROVIDER__OPENROUTER__BASE_URL seam), so the recap text is not a live provider result; Knowledge's scripted provider mode was not used (refused under the deployed ACL by design); MTProto acquisition was faulted and the manifest was committed by the helper built from the service's own ManifestBuilder and DigestCoordinator; users and sessions were seeded by SQL; a mksession.py synthetic encrypted provider session was generated; configuration deviations from the shipped examples: database host and port 54329 with random passwords, paths under the smoke directory, Edge admin bind 127.0.0.1:9464, the Edge IDENTITY__ASSERTION_KEY line removed, worker RUN_DEADLINE_SECONDS=60, a dummy API_HASH, schedule owner U1, the scheduler leg cron '* * * * *', the scheduler database URL and admin bind 127.0.0.1:9466, and the Knowledge OPENROUTER BASE_URL appended."
+        not_exercised: "Partial and deep-history window-bounded acquisition (R4-06, channel-digests 5fc8b15) NOT RUN natively because MTProto cannot be faked without credentials; the repository tests are the only evidence. Telegram, Knowledge ingest and other flows. No RED run against the old heads."
+        process_note: "The first attempt to apply 02-grants.sql used -d postgres by mistake and failed with schema platform_ingest missing; the rerun with -d ratatoskr succeeded. A mistake of the by-hand run, not a defect."
+      - flow: "F2 Knowledge ingestion (Edge blob capture, the extractor's real PDF extraction, evt.content.document.extracted.v1, Knowledge, search through Knowledge's read API on 8091 and Edge /v1/library/search; plus a ChatGPT ai_archive upload through Edge, the chatgpt receipt on 8096, evt.ai_archive.>, Knowledge, search)"
+        ran: true
+        passed: true
+        as_reported: "ran true, passed true. The final run (run.out) was pass=48 fail=0. The first full run had 37 passes and 11 failures, every failure a mistake of the by-hand harness (a missing fx directory, a stale ingest_failures row-count assertion that became 'the table is absent' after R4-05, and a python cryptography import replaced by openssl), none a service. The structured result handed to this record ended in a truncated defects entry ('No functiona'); no functional defect was reported in the transcript."
+        passed_assertions:
+          - "services_connect_as_their_own_roles: four distinct roles, 0 superuser ratatoskr_* roles; Edge admin ready, public 8080 listening, nats_max_payload 8388608 and max_storage 8589934592"
+          - "S04 durables as Edge provisioned them: ratatoskr_extractor_capture 30 s and 12, ratatoskr_knowledge_documents, _social_sources and _ai_archive 120 s, platform_ai_archive_chatgpt_projection 30 s; knowledge, extractor and chatgpt ready on 9081, 9088 and 9085; the operator ports serve no domain routes (404)"
+          - "Hop A (document): a seeded Mini App session, POST 8080/v1/captures/blobs with the extractor's text-two-pages.pdf fixture returned 202, the operation succeeded with result_kind content.document and tenant user:<U1>, a knowledge.search_documents row appeared, GET 8080/v1/library/search?q=deterministic returned 'Direct Extraction Fixture' (snippet '<b>deterministic</b> prose for the parser'), Knowledge 8091 /internal/search returned the same document, tenant U2 got 0 results, an unauthenticated Edge search was 401, ratatoskr_knowledge_documents pending 0, the extractor outbox fully published"
+          - "Hop B (ai_archive fact): real pairing (201, 201), POST /v1/ai-archives/chatgpt 202, upload open 201, chunk PUT 200, finalize 200 stored, the operation succeeded, a knowledge.ai_archive_object_inbox row appeared, Edge library search for 'zanzibar' returned the conversation 'Zanzibar spice trade planning' and the project 'Zanzibar logistics project', Knowledge 8091 returned both titles, tenant U2 got 0, and the earlier PDF stayed searchable"
+          - "Drain and bus: ratatoskr_knowledge_ai_archive, ratatoskr_knowledge_documents and platform_ai_archive_chatgpt_projection pending 0, chatgpt outbox_events all published, the knowledge.ingest_failures table absent (R4-05), 0 Publish, Subscription or Authorization Violation lines in nats.log"
+        failed_assertions: []
+        faked_or_seeded: "OpenRouter only, as a loopback Python stand-in on 127.0.0.1:57997 through Knowledge's documented RATATOSKR__PROVIDER__OPENROUTER__BASE_URL seam (3 calls answered: article, project, conversation; scripted JSON, no real provider output). Seeded: the Mini App principal (SQL) and the extractor's PDF placed in the Telegram blob root as a Telegram-owned blob (Telegram itself was not run). Throwaway: Edge's Telegram assertion public key. Deviations: database host and port 54329 and passwords, paths under the smoke directory, nkey paths, Edge admin bind 127.0.0.1:9464, channel-digest, github and reader secrets random, the chatgpt PLATFORM_ACCOUNTS user id, Knowledge channel_recap.enabled true to false, a dummy Knowledge OpenRouter key and the added BASE_URL."
+        not_exercised: "X, Instagram and Threads social facts (the social half was covered by the ai_archive fact only), the Claude importer, the scheduler, the outage legs, the large-fact legs, the RED runs against the old heads. The platform integration/native run.sh harness was NOT used (it targets the pinned submodules, not these clones)."
+        harness_mistakes_not_defects: "BSD-vs-GNU and tooling mistakes of the by-hand scripts: no cryptography module in the default python3 (replaced by an openssl ed25519 public key for Edge's throwaway Telegram assertion key), no fx directory for the ChatGPT fixture, and the stale ingest_failures assertion. A first run was aborted after the cryptography failure and its teardown deleted bin/, so all four binaries were built a second time."
+      - flow: "F0 Topology and provisioning"
+        ran: false
+        passed: not run
+        reason: "No result was reported for round 4 and the committed flow has not been run. Steps 1 to 3 and 5 of the old F0 were observed inside the F1, F2 and F4 runs (Edge ready, the S04 durables, the 8 MiB limit, the role files of chatgpt, claude, knowledge and channel-digests run as written). The inbox ACL probes with the real seeds, the declared 9 MiB publish, the dispatcher check-config legs and the role files of telegram, x, instagram, threads, vault and github were NOT RUN by anyone. Not upgraded."
+      - flow: "F3 Telegram to Platform (webhook and dispatcher as shipped, a fake Bot API)"
+        ran: false
+        passed: not run
+        reason: "No result was reported for round 4 and the committed flow has not been run. The plain-then-forwarded, session-loss and strengthened-assertion legs written in the flow file have never met a service. Not upgraded."
+      - flow: "F5 Social captures (X, Instagram, Threads, cross-lane report authority)"
+        ran: false
+        passed: not run
+        reason: "No result was reported for round 4 and the committed flow has not been run; the escaped Threads query leg has never met a service. Not upgraded."
+      - flow: "F6 Privacy deletion and tombstone delivery"
+        ran: false
+        passed: not run
+        reason: "No result was reported for round 4 and the committed flow has not been run; the survivor content, owner-after-mapping-change, crash window and ordering legs are not written. The R4-03 and R4-04 behaviour is evidenced by the repository tests only. Not upgraded."
+      - flow: "F7 GitHub analysis loop"
+        ran: false
+        passed: not run
+        reason: "No result was reported for round 4 and the committed flow has not been run; the completed closure, the failed closure and the PAT registration legs written in the flow file have never met a service. Not upgraded."
+    what_it_cannot_show: "Real MTProto acquisition (so the partial-acquisition and deep-history paths), live X, Meta, Threads and OpenRouter responses (the success legs of Instagram and Threads, the quality of a recap), the Export Agent's macOS keychain pairing and Swift client, the browser extension's live behaviour, Telegram's real webhook delivery and Bot API, TLS termination by cloudflared, systemd sandboxing and the host's group permissions on the Telegram blob root, the container reachability of NATS (host: 0.0.0.0), the Raspberry Pi's glibc and 16 KiB page-size behaviour, and anything that needs more than single-machine loopback."
+    environment_findings:
+      - "df showed 188 to 190 GiB free before each build (the floor is 6 GiB) and every production port was free by lsof before each run."
+      - "The shipped release profile built every binary; CARGO_PROFILE_RELEASE_DEBUG=0 was not set and the LINKEDIT retry never triggered."
+      - "The machine's default python3 has no cryptography package; /opt/homebrew/bin/python3 has it. The committed native harness requires it (README prerequisites) and its contract test needs it on PATH."
+  amended_residual_risks:
+    removed:
+      - "A Claude archive that carries any project knowledge file cannot reach succeeded (R4-02). Evidence: the F1 by-hand run reported claude complete succeeded with no warning and the blob digest equal to content_hash; the repository's knowledge_file_import tests and its green hosted checks are the other evidence."
+      - "Claude survivor content after a privacy deletion (R4-03). Evidence: the Claude repository tests and their green hosted checks only; the F6 native leg is not written and F6 was not run."
+      - "Knowledge permanently dropping a retryable ingest delivery after five deliveries (R4-05). Evidence: the F2 by-hand run found the knowledge.ingest_failures table absent and every durable drained; the outage leg was NOT RUN natively, and the real-broker tests of ratatoskr-knowledge are the evidence."
+      - "channel-digests reporting a deep history as a partial acquisition and failing a quiet channel with deep history (R4-06). Evidence: the repository tests with PostgreSQL and a scripted provider only; real MTProto acquisition cannot be run natively."
+      - "Threads refusing a link with a percent-encoded query (R4-07). Evidence: the Threads repository tests; the F5 leg is written and has never been run."
+      - "The ChatGPT tombstone owner following the live mapping (R4-04). Evidence: the ChatGPT repository tests; the F6 leg is not written."
+      - "The Telegram duplicate refusal for a PDF sent plain then forwarded, and the loss of every capture of a sender whose Platform session was revoked (R4-08). Evidence: the Telegram repository tests; the F3 legs are written and have never been run."
+      - "The migration-style ALTER TABLE statements in ChatGPT's schema.sql (R4-10). Evidence: schema_in_place.rs failed with the seven statements at the round 3 pin and passes at the round 4 pin."
+      - "ratatoskr-x at 4a32e8e had a red fleet / invariants check. Closed by x f57fdda, whose five hosted checks succeeded."
+    kept:
+      - "The events stream drops its oldest messages when full (1 GiB or 7 days), so a very deep backlog could drop a repository-analysis request that GitHub already marked published; a GitHub re-queue sweep and a consumer-lag alert are follow-ups for the owner."
+      - "X can still read the operation-report metadata of every tenant through ratatoskr_x_extractor_reports, and evt.platform.operation.reported.v1 is still one subject trusted by its envelope producer."
+      - "GitHub's revocation probe note: a 404 on DELETE /applications/{client_id}/grant is accepted as already revoked only after GET /user with the same token answers 401."
+      - "Instagram's response classification is a starting point to correct against recorded live fixtures; X and Meta credentials are external dependencies."
+      - "The Telegram blob store is content-addressed and deduplicated across users; the guard on POST /v1/captures/blobs is the Telegram session kind, the owner allow-list and the unguessable digest."
+      - "The host prerequisites: the ratatoskr-telegram-blobs group and the thirteen nkeys do not exist yet, and Knowledge's role file must be run by a PostgreSQL administrator because pgvector is not a trusted extension."
+      - "Knowledge's /ready latches storage readiness at startup; ingest redelivers during a database outage after R4-05, so no fact is lost. An accepted note, revisit only if an operator needs the signal."
+    added:
+      - "The committed native smoke harness has still not been run through run.sh, so none of its flows is evidence yet; the round 4 smoke results come from by-hand scripts outside this repository and cover F1, F2 and F4 only. The legs the flow files gained in round 4 (F0, F3, F5, F7) have never met a service."
+      - "The scheduled channel-digest run that fails in the reaper or on a provider failure has no operation to report it (R4-13 design limit, shown by the F4 scheduler leg)."
+      - "A Platform notification is raised by nothing, so the Telegram dispatcher is expected to stay ready and idle (R4-11 documents it; the producer is excluded)."
+  remaining_defects: []

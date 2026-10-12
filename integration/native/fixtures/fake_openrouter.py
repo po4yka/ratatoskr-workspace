@@ -2,7 +2,7 @@
 
 usage: fake_openrouter.py PORT LOGFILE RUNDIR
 
-It answers schema-valid, evidence-grounded JSON for the families Knowledge asks about: an article paragraph, an AI-archive conversation, an AI-archive project, and a channel-digest recap (which cites each revision reference found in the request). Every request is appended to LOGFILE as one JSON line (path, model, family, answered; never a credential). When the file RUNDIR/fake-fail exists it answers 401 to everything, which is how a flow makes the provider fail permanently."""
+It answers schema-valid, evidence-grounded JSON for the families Knowledge asks about: an article paragraph, an AI-archive conversation, an AI-archive project, a repository (the README the prompt carries between README_BEGIN and README_END, or the full name when there is none; the body is the RepositoryAnalysis schema of knowledge/crates/knowledge/src/family_analysis.rs) and a channel-digest recap (which cites each revision reference found in the request). Every request is appended to LOGFILE as one JSON line (path, model, family, answered; never a credential). When the file RUNDIR/fake-fail exists it answers 401 to everything, which is how a flow makes the provider fail permanently."""
 import http.server
 import json
 import os
@@ -22,6 +22,12 @@ def answer(user: str, whole: str):
             "notable_items": [],
             "warnings": [],
         }, "channel_recap"
+    if "family: repository" in user:
+        readme = re.search(r"README_BEGIN\n(.*)README_END", user, re.S)
+        lines = [line.strip() for line in (readme.group(1) if readme else "").splitlines() if line.strip()]
+        full_name = re.search(r"^full_name: (.*)$", user, re.M)
+        excerpt = (lines[0] if lines else (full_name.group(1) if full_name else "repository"))[:200]
+        return {"summary": "Scripted repository summary: " + excerpt, "topics": ["scripted"], "evidence_excerpt": excerpt, "readme_evidence": "present" if lines else "absent"}, "repository"
     if "family: ai_archive_project" in user:
         title = re.search(r"^title: (.*)$", user, re.M)
         text = title.group(1) if title else "project"

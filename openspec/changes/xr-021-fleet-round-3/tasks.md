@@ -8,7 +8,7 @@ Dependency order. Every child repository pushed its round 3 commits directly to 
 - [x] 1.4 `ratatoskr-channel-digests` at `cdbf87fbbc757d445c27c4e72950e755af29690e`. Hosted CI: 5 of 5.
 - [x] 1.5 `ratatoskr-github` at `2bc979d27db9c82b5e347294cd48665769d4ecea`. Hosted CI: 6 of 6.
 - [x] 1.6 `ratatoskr-vault` at `24573faf20882f3c55c47664c84f0b1458f8dff9`. Hosted CI: 5 of 5.
-- [ ] 1.7 `ratatoskr-x` at `4a32e8eaa39771a2926d6932ff08f84848d7ce8a`. NOT GREEN: 4 of 5 check runs succeeded and `fleet / invariants` failed, because the fleet scan for committed private keys matches `crates/x-core/tests/config.rs` (a test fixture added for `EXTRA_CA_FILE`). Reported as a defect of the owning repository; this repository does not edit it. The pin is recorded as it is.
+- [x] 1.7 `ratatoskr-x` at `4a32e8eaa39771a2926d6932ff08f84848d7ce8a` was NOT GREEN: 4 of 5 check runs succeeded and `fleet / invariants` failed, because the fleet scan for committed private keys matched `crates/x-core/tests/config.rs` (a test fixture added for `EXTRA_CA_FILE`). Round 4 repaired it in the owning repository: `f57fdda0e2d3ded31c0a387364506ab301a8ca7a` ("keep the test CA certificate in its own fixture") moves the certificate to `tests/fixtures/extra-ca.crt`, the workspace pin is `f57fdda`, and its hosted checks read through the GitHub API on 2026-10-12 are 5 of 5 succeeded (`fleet / invariants`, `openspec / specs`, `zizmor / audit`, `deny`, `gate`).
 - [x] 1.8 `ratatoskr-instagram` at `79ae7767178b9a57a6a2a6e0f43a6218fcf4e88a`. Hosted CI: 5 of 5.
 - [x] 1.9 `ratatoskr-threads` at `e3656d08da406537cd63c143d3dba5520e1aa43a`. Hosted CI: 5 of 5.
 - [x] 1.10 `ratatoskr-chatgpt` at `d994f8b7a05436d0cdc81de51f608c601d70a8ac`. Hosted CI: 5 of 5.
@@ -36,7 +36,7 @@ Dependency order. Every child repository pushed its round 3 commits directly to 
 ## 5. The native smoke harness
 
 - [x] 5.1 `integration/native/` (`run.sh`, `lib/`, flows F0 to F7, `fixtures/`) and `integration/tests/native_smoke_contract_test.sh`. NOT test first: the harness was ported from the by-hand scripts and its contract test written after it. The test was shown able to fail by mutating the scripts (a `pkill`, a write under `/tmp`, an unknown binary name, a shellcheck warning, a `kill` of an unrecorded pid).
-- [ ] 5.2 NOT DONE: running any flow through `run.sh`. None of the committed flows has been run as committed. The Round 3 smoke results in the changeset came from the by-hand scripts under `.workspaces/XR-021/smoke/`, which are not part of this repository.
+- [ ] 5.2 NOT DONE: running any flow through `run.sh`. None of the committed flows has been run as committed, in round 3 or in round 4. The round 3 and round 4 smoke results in the changeset came from the by-hand scripts under `.workspaces/XR-021/smoke/`, which are not part of this repository. Round 4 fixed the defects that a read of the harness found (the shadowed `name` in `assert`, the `getMe` fields of the fake Bot API, the weak F3 assertions, the F7 closure that accepted a failed fact) and checked them with the contract test, which starts no service; that is not a run.
 
 ## 6. Documentation
 
@@ -54,4 +54,4 @@ Dependency order. Every child repository pushed its round 3 commits directly to 
 
 ## 9. Archive
 
-- [ ] 9.1 PARTLY DONE: `xr-021-fleet-cross-repo-fixes` and then `xr-021-fleet-round-2` were archived in that order on 2026-10-12 (every task ticked, hosted CI of 4df2b20 green), and `openspec validate --archived` passes. This change is NOT archived: tasks 1.7 and 5.2 are open, and an archive with an unticked task is the false close `openspec validate --archived` exists to refuse.
+- [ ] 9.1 PARTLY DONE: `xr-021-fleet-cross-repo-fixes` and then `xr-021-fleet-round-2` were archived in that order on 2026-10-12 (every task ticked, hosted CI of 4df2b20 green), and `openspec validate --archived` passes. This change is NOT archived: task 5.2 is open (task 1.7 was closed by round 4), and an archive with an unticked task is the false close `openspec validate --archived` exists to refuse. `xr-021-fleet-round-4` restates this change's text in two MODIFIED deltas and must be archived after it.

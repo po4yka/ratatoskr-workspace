@@ -78,11 +78,11 @@ S04_DURABLES=(
 
 # Asserts that every durable of the S04 table exists with its filter, ack wait and max_deliver, and writes durables.tsv.
 assert_s04_durables() {
-  local row name filter wait max
+  local row durable_name durable_filter durable_wait durable_max
   jsz | jq -r '.account_details[].stream_detail[].consumer_detail[]? | [.stream_name, .name, .config.filter_subject, (.config.ack_wait/1e9|floor|tostring), (.config.max_deliver|tostring), (.config.ack_policy|tostring)] | @tsv' >"$EV/durables.tsv"
   for row in "${S04_DURABLES[@]}"; do
-    IFS='|' read -r name filter wait max <<<"$row"
-    assert "durable_$name" '[ "$(dur "$name")" = "$filter $wait $max" ]' "$(dur "$name")"
+    IFS='|' read -r durable_name durable_filter durable_wait durable_max <<<"$row"
+    assert "durable_$durable_name" '[ "$(dur "$durable_name")" = "$durable_filter $durable_wait $durable_max" ]' "$(dur "$durable_name")"
   done
   assert durable_render_awaits_is_ack_none '[ "$(awk -F"\t" "\$2==\"ratatoskr_extractor_render_awaits\" {print \$6}" "$EV/durables.tsv")" = none ]' "$(awk -F'\t' '$2=="ratatoskr_extractor_render_awaits" {print $6}' "$EV/durables.tsv")"
   assert kv_bucket_browser_worker_completions '[ "$(curl -s "$NATS_MON/jsz?streams=true" | jq "[.account_details[].stream_detail[].name] | index(\"KV_browser_worker_completions\") != null")" = true ]'
