@@ -102,13 +102,11 @@ ratatoskr-workspace/
 │   ├── integrations/
 │   │   ├── telegram/
 │   │   └── channel-digests/
-│   ├── clients/
-│   │   ├── web/
-│   │   ├── mobile/
-│   │   ├── browser-extension/
-│   │   └── export-agent/
-│   └── legacy/
-│       └── ratatoskr/
+│   └── clients/
+│       ├── web/
+│       ├── mobile/
+│       ├── browser-extension/
+│       └── export-agent/
 ├── harness/
 ├── agent-kit/
 ├── changesets/

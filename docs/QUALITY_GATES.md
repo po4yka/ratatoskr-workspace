@@ -29,8 +29,8 @@ wrong an hour later is that it was a count: the drift check below discovers the 
 is why it needed no edit when the seventeenth repository appeared, and why this document is the only
 thing here that did.
 
-The retired first-generation client of the same name is a separate thing entirely — a local archive
-with no Git remote, sharing no history with the repository counted above.
+The retired first-generation client of the same name is a separate thing entirely. It had no Git
+remote, shared no history with the repository counted above, and its local archive has been deleted.
 
 ## Workspace snapshot gate
 

@@ -64,10 +64,9 @@ repos/
     └── export-agent/
 ```
 
-The legacy `ratatoskr` backend and its web client are retired. They are kept only as local
-read-only archives, they have no Git remote, and they are not pinned in this workspace. The
-`ratatoskr-web` repository name is reused by the new web client and shares no history with the
-retired one.
+The legacy `ratatoskr` backend and its web client are retired. Their local archives, which had no
+Git remote, have been deleted, and they are not pinned in this workspace. The `ratatoskr-web`
+repository name is reused by the new web client and shares no history with the retired one.
 
 Three files jointly define workspace state:
 
