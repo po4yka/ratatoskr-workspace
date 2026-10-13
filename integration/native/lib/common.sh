@@ -100,13 +100,26 @@ source_note() {
   printf '\n'
 }
 
+# smoke_ref_commit DIR: the commit $SMOKE_REF names in the repository at DIR. A remote-tracking ref (origin/main) is checked against the remote with git ls-remote and refused while it lags, because the submodule object stores are fetched only by hand and a stale ref would otherwise run an old commit without a word.
+smoke_ref_commit() {
+  local dir=$1 commit full remote live
+  commit=$(git -C "$dir" rev-parse --verify --quiet "$SMOKE_REF^{commit}") || smoke_die "$dir has no $SMOKE_REF; fetch it first"
+  full=$(git -C "$dir" rev-parse --symbolic-full-name "$SMOKE_REF" 2>/dev/null || true)
+  if [[ "$full" == refs/remotes/*/* ]]; then
+    remote=${full#refs/remotes/}
+    live=$(git -C "$dir" ls-remote --exit-code "${remote%%/*}" "refs/heads/${remote#*/}" | cut -f1) || smoke_die "cannot read ${remote#*/} from ${remote%%/*} for $dir"
+    [[ "$live" == "$commit" ]] || smoke_die "$SMOKE_REF in $dir is ${commit:0:7} but ${remote%%/*} has ${live:0:7}; run git -C $dir fetch ${remote%%/*}"
+  fi
+  printf '%s' "$commit"
+}
+
 # src_prepare REPO_ID...: exports $SMOKE_REF of each repository into $S/src (a no-op without a ref). The export is made from the submodule's object store with git archive, so neither the working tree nor any ref of the submodule changes.
 src_prepare() {
   [[ -n "$SMOKE_REF" ]] || return 0
   local repo dir commit
   for repo in "$@"; do
     dir=$(repo_dir "$repo")
-    commit=$(git -C "$(baseline_dir "$repo")" rev-parse --verify "$SMOKE_REF^{commit}") || smoke_die "repository $repo has no $SMOKE_REF; fetch it first"
+    commit=$(smoke_ref_commit "$(baseline_dir "$repo")") || exit 2
     if [[ "$(cat "$dir/.smoke-commit" 2>/dev/null)" == "$commit" ]]; then
       continue
     fi

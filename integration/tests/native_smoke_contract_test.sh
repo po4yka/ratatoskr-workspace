@@ -500,4 +500,23 @@ decoded = base64.b32decode(public)
 assert crc16(decoded[:-2]) == int.from_bytes(decoded[-2:], "little")
 ' "$native/fixtures" || fail "natsprobe.py does not round-trip an nkey seed"
 
+# --- a remote-tracking RATATOSKR_SMOKE_REF is refused while it lags the remote (XR-021 round 6) ---------------------
+git init -q --bare --initial-branch=main "$scratch/upstream.git"
+git -C "$scratch" clone -q upstream.git seen 2>/dev/null
+git -C "$scratch/seen" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q --allow-empty -m one
+git -C "$scratch/seen" push -q origin HEAD:main
+git -C "$scratch" clone -q upstream.git ahead
+git -C "$scratch/ahead" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q --allow-empty -m two
+git -C "$scratch/ahead" push -q origin HEAD:main
+git -C "$scratch/seen" fetch -q origin
+git -C "$scratch/seen" update-ref refs/remotes/origin/main "$(git -C "$scratch/seen" rev-parse origin/main~1)"
+status=0
+(SMOKE_REF=origin/main smoke_ref_commit "$scratch/seen" >/dev/null 2>&1) || status=$?
+[[ "$status" != 0 ]] || fail "src_prepare accepts origin/main that lags the remote"
+git -C "$scratch/seen" fetch -q origin
+fresh=$(SMOKE_REF=origin/main smoke_ref_commit "$scratch/seen") || fail "src_prepare refuses a current origin/main"
+[[ "$fresh" == "$(git -C "$scratch/ahead" rev-parse HEAD)" ]] || fail "src_prepare resolves origin/main to the wrong commit"
+pinned=$(git -C "$scratch/seen" rev-parse origin/main~1)
+[[ "$(SMOKE_REF=$pinned smoke_ref_commit "$scratch/seen")" == "$pinned" ]] || fail "src_prepare refuses a commit id"
+
 printf 'native smoke contract: PASS\n'

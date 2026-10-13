@@ -43,6 +43,12 @@ Dependency order. Every child repository pushed its Round 6 commits to `main` un
 - [x] 8.1 Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` and `cargo test --workspace --all-features --locked` in `harness/`, `./ws manifest check`, `./ws lock check`, `./ws status`, `./ws doctor`, `openspec validate --all --strict`, `git diff --check`, and the integration contract tests that do not need Docker.
 - [x] 8.2 Publish and confirm the hosted CI of the pushed commits: 6c1bc36, 11cc17d, 05f8293 and 17b208aae21f8be9cdb34d4e9baae7da7a4fd9e2 were pushed to `origin/main` as a plain fast-forward on 2026-10-13, and the six check runs of 17b208a (fleet / invariants, openspec / specs, zizmor / audit, deny, snapshot, release-artifact-selftest / artifact) concluded success. The commit that records this result is checked the same way and named in the changeset.
 
+## 8a. Follow-up of the round 6 verifiers
+
+- [x] 8a.1 `integration/tests/native_smoke_contract_test.sh` gains a leg with a scratch remote whose `origin/main` copy lags the remote; it fails because `smoke_ref_commit` does not exist and `src_prepare` would run the stale commit.
+- [x] 8a.2 `integration/native/lib/common.sh` resolves `RATATOSKR_SMOKE_REF` through `smoke_ref_commit`, which checks a remote-tracking ref with `git ls-remote` and stops the run while it lags; the leg passes and shellcheck reports nothing new.
+- [x] 8a.3 `docs/fleet-map.html` rows for 8094 and 8095 read `routed` and name `ratatoskr-social` and `ratatoskr-ai-archive`, as `docs/DEPLOYMENT_TARGET.md` does (documentation, no test).
+
 ## 9. Archive
 
 - [ ] 9.1 NOT DONE: `xr-021-fleet-round-5` is archived first, and its task 6.2 is open, so this change cannot be archived before it. This change is archived only when every task is ticked; tasks 5.2 and 9.1 are open. An archive with an unticked task is the false close that `openspec validate --archived` exists to refuse.
