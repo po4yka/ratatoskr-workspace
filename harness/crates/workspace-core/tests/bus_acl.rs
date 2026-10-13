@@ -8,6 +8,17 @@
 //! with its limitation stated there), and twelve vendored copies, one per non-Edge identity, must
 //! equal their stanza.
 //!
+//! XR-021 round 5 (R5-11, R5-12) moved the table to 23 service durables and added three publish
+//! rights: KNOWLEDGE publishes `evt.knowledge.deletion.acknowledged.v1`, CHATGPT and CLAUDE publish
+//! `cmd.platform.stream_erasure.requested.v1`, and nobody else may publish any of the three
+//! (`the_deletion_publish_rights_belong_to_exactly_their_stanzas`). Invariant 7: no stanza but EDGE
+//! may publish a `$JS.API.STREAM.` subject, because stream erasure is Edge's alone. Sanity run on
+//! the real sample (`platform` at `3275d52`, `deploy/nats/ratatoskr.conf`): the literal rule
+//! "starts with `$JS.API.STREAM.`" also catches
+//! `$JS.API.STREAM.INFO.KV_browser_worker_completions` in the `EXTRACTOR_BROWSER_WORKER` stanza,
+//! which opens its own completion bucket and mutates nothing, so the check allows exactly the
+//! stream-info subjects of a `KV_` bucket and nothing else under that prefix.
+//!
 //! The splitter is plain text on purpose. The comparison is on what a reviewer read (comments,
 //! whitespace and the nkey token ignored), so it must not depend on a NATS parser's idea of
 //! meaning. A stanza is a brace block that opens at the start of a file or right after `[` or
@@ -15,17 +26,18 @@
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
 
+#[path = "support/acl.rs"]
+mod acl;
 #[path = "support/checkout.rs"]
 mod checkout;
 #[path = "support/inbox_wiring.rs"]
 mod inbox_wiring;
 
+use acl::{Stanza, allow_list, platform_stanzas, stanzas};
 use checkout::{committed_manifest, require_checkout};
 use inbox_wiring::{Sources, inbox_wiring_problem, sources_of};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-
-const PLACEHOLDER_PREFIX: &str = "UREPLACE_ME_WITH_THE_PUBLIC_NKEY_OF_RATATOSKR_";
 
 const IDENTITIES: [&str; 13] = [
     "EDGE",
@@ -109,7 +121,7 @@ const COMMANDS: &str = "ratatoskr_commands";
 const EVENTS: &str = "ratatoskr_events";
 
 /// `(stream, durable, owning identity)`: the ACL owner column of the fixed-durable table.
-const DURABLE_OWNERS: [(&str, &str, &str); 22] = [
+const DURABLE_OWNERS: [(&str, &str, &str); 27] = [
     (EVENTS, "ratatoskr_telegram_notifications", "TELEGRAM"),
     (COMMANDS, "ratatoskr_x_browser_capture", "X"),
     (COMMANDS, "ratatoskr_instagram_browser_capture", "INSTAGRAM"),
@@ -156,6 +168,24 @@ const DURABLE_OWNERS: [(&str, &str, &str); 22] = [
         "CHANNEL_DIGESTS",
     ),
     (EVENTS, "ratatoskr_extractor_render_awaits", "EXTRACTOR"),
+    (EVENTS, "ratatoskr_chatgpt_deletion_acks", "CHATGPT"),
+    (EVENTS, "ratatoskr_claude_deletion_acks", "CLAUDE"),
+    (EVENTS, "ratatoskr_x_deletion_acks", "X"),
+    (EVENTS, "ratatoskr_instagram_deletion_acks", "INSTAGRAM"),
+    (EVENTS, "ratatoskr_threads_deletion_acks", "THREADS"),
+];
+
+/// R5-11 and R5-12: `(subject, identities that may publish it)`. The set must match exactly.
+const PUBLISH_RIGHTS: [(&str, &[&str]); 3] = [
+    ("evt.knowledge.deletion.acknowledged.v1", &["KNOWLEDGE"]),
+    (
+        "cmd.platform.stream_erasure.requested.v1",
+        &["CHATGPT", "CLAUDE"],
+    ),
+    (
+        "evt.ai_archive.subject.tombstoned.v1",
+        &["CHATGPT", "CLAUDE"],
+    ),
 ];
 
 /// Subjects (or prefixes) no identity other than EDGE may be able to publish.
@@ -166,156 +196,28 @@ const FORBIDDEN_PREFIXES: [&str; 4] = [
     "$JS.API.STREAM.CREATE",
     "$JS.API.STREAM.UPDATE",
 ];
+/// Invariant 7 (R5-12): the one subject under `$JS.API.STREAM.` a non-Edge stanza may publish is the
+/// read-only info of a KV bucket's stream, which a client needs to open the bucket.
+const STREAM_API_PREFIX: &str = "$JS.API.STREAM.";
 const FORBIDDEN_FRAGMENTS: [&str; 2] = ["STREAM.MSG.GET.ratatoskr_", "DIRECT.GET.ratatoskr_"];
-
-#[derive(Debug)]
-struct Stanza {
-    /// Identity name, taken from the nkey placeholder.
-    name: String,
-    placeholder: String,
-    /// Comment-free text of the whole stanza.
-    text: String,
-}
-
-impl Stanza {
-    /// Whitespace-free text with the nkey token removed: what two copies are compared on.
-    fn normalized(&self) -> String {
-        self.text
-            .replace(&self.placeholder, "")
-            .split_whitespace()
-            .collect()
-    }
-}
-
-/// Removes `#` comments, leaving quoted strings alone.
-fn strip_comments(source: &str) -> String {
-    let mut output = String::with_capacity(source.len());
-    for line in source.lines() {
-        let mut in_string = false;
-        for character in line.chars() {
-            match character {
-                '"' => {
-                    in_string = !in_string;
-                    output.push(character);
-                }
-                '#' if !in_string => break,
-                _ => output.push(character),
-            }
-        }
-        output.push('\n');
-    }
-    output
-}
-
-/// The identity name and filler of a placeholder, split at the last underscore.
-fn identity_of(placeholder: &str) -> String {
-    let rest = placeholder
-        .strip_prefix(PLACEHOLDER_PREFIX)
-        .unwrap_or_else(|| panic!("nkey `{placeholder}` does not use the placeholder grammar"));
-    let (name, filler) = rest
-        .rsplit_once('_')
-        .unwrap_or_else(|| panic!("placeholder `{placeholder}` has no filler segment"));
-    assert!(
-        !filler.is_empty() && filler.chars().all(|c| c == 'X'),
-        "placeholder `{placeholder}` filler `{filler}` is not one or more X"
-    );
-    assert!(
-        !name.is_empty() && name.chars().all(|c| c.is_ascii_uppercase() || c == '_'),
-        "placeholder `{placeholder}` name `{name}` is not [A-Z_]+"
-    );
-    name.to_owned()
-}
-
-fn stanzas(source: &str) -> Vec<Stanza> {
-    let text = strip_comments(source);
-    let characters = text.chars().collect::<Vec<_>>();
-    let mut found = Vec::new();
-    let mut previous: Option<char> = None;
-    let mut index = 0;
-    while let Some(&character) = characters.get(index) {
-        let opens_stanza = character == '{' && matches!(previous, None | Some('[' | ','));
-        if opens_stanza {
-            let mut depth = 0_usize;
-            let mut in_string = false;
-            let mut end = index;
-            for (offset, &inner) in characters.iter().enumerate().skip(index) {
-                match inner {
-                    '"' => in_string = !in_string,
-                    '{' if !in_string => depth += 1,
-                    '}' if !in_string => {
-                        depth -= 1;
-                        if depth == 0 {
-                            end = offset;
-                            break;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            assert!(end > index, "unbalanced braces in a NATS stanza");
-            let body = characters
-                .iter()
-                .skip(index)
-                .take(end - index + 1)
-                .collect::<String>();
-            let placeholder = body
-                .split_once("nkey:")
-                .and_then(|(_, rest)| rest.split_whitespace().next())
-                .unwrap_or_else(|| panic!("stanza has no nkey: {body}"))
-                .trim_matches(',')
-                .to_owned();
-            found.push(Stanza {
-                name: identity_of(&placeholder),
-                placeholder,
-                text: body,
-            });
-            index = end + 1;
-            previous = Some('}');
-            continue;
-        }
-        if !character.is_whitespace() {
-            previous = Some(character);
-        }
-        index += 1;
-    }
-    found
-}
-
-/// The quoted strings of the first `[...]` that follows `marker` and then `allow:` in `text`.
-fn allow_list(text: &str, marker: &str) -> Vec<String> {
-    let Some((_, after_marker)) = text.split_once(marker) else {
-        return Vec::new();
-    };
-    let Some((_, after_allow)) = after_marker.split_once("allow:") else {
-        return Vec::new();
-    };
-    let Some((_, after_open)) = after_allow.split_once('[') else {
-        return Vec::new();
-    };
-    let Some((list, _)) = after_open.split_once(']') else {
-        return Vec::new();
-    };
-    list.split('"')
-        .enumerate()
-        .filter(|(position, _)| position % 2 == 1)
-        .map(|(_, piece)| piece.to_owned())
-        .collect()
-}
-
-fn platform_stanzas() -> Vec<Stanza> {
-    let manifest = committed_manifest();
-    let root = require_checkout(&manifest, "platform");
-    let path = root.join("deploy/nats/ratatoskr.conf");
-    let source = fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
-    stanzas(&source)
-}
 
 fn owner_of(identity: &str) -> &'static str {
     let Some((_, owner)) = OWNERS.iter().find(|(name, _)| *name == identity) else {
         panic!("identity `{identity}` has no owner repository");
     };
     owner
+}
+
+/// `$JS.API.STREAM.INFO.KV_<bucket>` and nothing else under the stream API prefix.
+fn is_kv_stream_info(subject: &str) -> bool {
+    subject
+        .strip_prefix("$JS.API.STREAM.INFO.KV_")
+        .is_some_and(|bucket| {
+            !bucket.is_empty()
+                && bucket
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
 }
 
 fn is_allowed_wildcard(subject: &str) -> bool {
@@ -464,6 +366,12 @@ fn non_edge_stanzas_obey_the_permission_invariants() {
             {
                 problems.push(format!("{} may publish `{subject}`", stanza.name));
             }
+            if subject.starts_with(STREAM_API_PREFIX) && !is_kv_stream_info(&subject) {
+                problems.push(format!(
+                    "{} may publish `{subject}`, a stream API subject only EDGE may hold (invariant 7)",
+                    stanza.name
+                ));
+            }
             if !is_allowed_wildcard(&subject) {
                 problems.push(format!(
                     "{} holds the wildcard `{subject}`, which is not an ack, KV direct-get or KV subject",
@@ -516,6 +424,87 @@ fn non_edge_stanzas_obey_the_permission_invariants() {
     }
 
     assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// The identities whose stanza allows publishing exactly `subject`.
+fn publishers_of(found: &[Stanza], subject: &str) -> BTreeSet<String> {
+    found
+        .iter()
+        .filter(|stanza| {
+            allow_list(&stanza.text, "publish:")
+                .iter()
+                .any(|allowed| allowed == subject)
+        })
+        .map(|stanza| stanza.name.clone())
+        .collect()
+}
+
+#[test]
+fn the_deletion_publish_rights_belong_to_exactly_their_stanzas() {
+    let found = platform_stanzas();
+    let mut problems = Vec::new();
+    for (subject, expected) in PUBLISH_RIGHTS {
+        let actual = publishers_of(&found, subject);
+        let wanted = expected
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect::<BTreeSet<_>>();
+        if actual != wanted {
+            problems.push(format!(
+                "`{subject}` may be published by {actual:?}, expected exactly {wanted:?}"
+            ));
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn no_stanza_but_edge_publishes_under_the_stream_api_except_a_kv_info() {
+    let found = platform_stanzas();
+    let mut offenders = Vec::new();
+    for stanza in found.iter().filter(|stanza| stanza.name != "EDGE") {
+        for subject in allow_list(&stanza.text, "publish:") {
+            if subject.starts_with(STREAM_API_PREFIX) && !is_kv_stream_info(&subject) {
+                offenders.push(format!("{} may publish `{subject}`", stanza.name));
+            }
+        }
+    }
+    assert!(offenders.is_empty(), "{}", offenders.join("\n"));
+    assert!(
+        found.iter().any(|stanza| stanza.name == "EDGE"
+            && allow_list(&stanza.text, "publish:")
+                .iter()
+                .any(|allowed| allowed == "$JS.API.>")),
+        "EDGE must keep `$JS.API.>`, the one grant that reaches STREAM.MSG.DELETE"
+    );
+}
+
+#[test]
+fn the_stream_api_rule_reports_a_message_delete_and_allows_a_kv_info() {
+    assert!(is_kv_stream_info(
+        "$JS.API.STREAM.INFO.KV_browser_worker_completions"
+    ));
+    assert!(!is_kv_stream_info("$JS.API.STREAM.INFO.ratatoskr_events"));
+    assert!(!is_kv_stream_info(
+        "$JS.API.STREAM.MSG.DELETE.ratatoskr_events"
+    ));
+    assert!(!is_kv_stream_info("$JS.API.STREAM.INFO.KV_"));
+
+    let mutated = r#"{ nkey: UREPLACE_ME_WITH_THE_PUBLIC_NKEY_OF_RATATOSKR_CHATGPT_XXXXXX
+        permissions: { publish: { allow: ["$JS.API.STREAM.MSG.DELETE.ratatoskr_events", "evt.ai_archive.subject.tombstoned.v1"] } } }"#;
+    let parsed = stanzas(mutated);
+    let [chatgpt] = parsed.as_slice() else {
+        panic!("one stanza expected");
+    };
+    let offenders = allow_list(&chatgpt.text, "publish:")
+        .into_iter()
+        .filter(|subject| subject.starts_with(STREAM_API_PREFIX) && !is_kv_stream_info(subject))
+        .collect::<Vec<_>>();
+    assert_eq!(offenders, ["$JS.API.STREAM.MSG.DELETE.ratatoskr_events"]);
+    assert_eq!(
+        publishers_of(&parsed, "evt.ai_archive.subject.tombstoned.v1"),
+        BTreeSet::from(["CHATGPT".to_owned()])
+    );
 }
 
 fn inbox_prefix_of(identity: &str) -> &'static str {

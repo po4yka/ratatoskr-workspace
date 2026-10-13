@@ -36,7 +36,7 @@ Dependency order. Every child repository pushed its round 3 commits directly to 
 ## 5. The native smoke harness
 
 - [x] 5.1 `integration/native/` (`run.sh`, `lib/`, flows F0 to F7, `fixtures/`) and `integration/tests/native_smoke_contract_test.sh`. NOT test first: the harness was ported from the by-hand scripts and its contract test written after it. The test was shown able to fail by mutating the scripts (a `pkill`, a write under `/tmp`, an unknown binary name, a shellcheck warning, a `kill` of an unrecorded pid).
-- [ ] 5.2 NOT DONE: running any flow through `run.sh`. None of the committed flows has been run as committed, in round 3 or in round 4. The round 3 and round 4 smoke results in the changeset came from the by-hand scripts under `.workspaces/XR-021/smoke/`, which are not part of this repository. Round 4 fixed the defects that a read of the harness found (the shadowed `name` in `assert`, the `getMe` fields of the fake Bot API, the weak F3 assertions, the F7 closure that accepted a failed fact) and checked them with the contract test, which starts no service; that is not a run.
+- [x] 5.2 Run the committed flows through `run.sh`. Done in round 5 (see `xr-021-fleet-round-5` task 6.1): every flow F0 to F7 was run through `integration/native/run.sh` as committed (workspace commit `4d95fa7`) and ended `PASS`. They ran against the round 5 heads of the children, not the round 3 pins, so no flow ever ran against the round 3 snapshot itself; the round 3 and round 4 smoke results in the changeset still come from the by-hand scripts under `.workspaces/XR-021/smoke/`, which are not part of this repository, and the changeset says so.
 
 ## 6. Documentation
 
@@ -54,4 +54,4 @@ Dependency order. Every child repository pushed its round 3 commits directly to 
 
 ## 9. Archive
 
-- [ ] 9.1 PARTLY DONE: `xr-021-fleet-cross-repo-fixes` and then `xr-021-fleet-round-2` were archived in that order on 2026-10-12 (every task ticked, hosted CI of 4df2b20 green), and `openspec validate --archived` passes. This change is NOT archived: task 5.2 is open (task 1.7 was closed by round 4), and an archive with an unticked task is the false close `openspec validate --archived` exists to refuse. `xr-021-fleet-round-4` restates this change's text in two MODIFIED deltas and must be archived after it.
+- [x] 9.1 `xr-021-fleet-cross-repo-fixes` and then `xr-021-fleet-round-2` were archived in that order on 2026-10-12 (every task ticked, hosted CI of 4df2b20 green). This change was archived on 2026-10-13, before `xr-021-fleet-round-4`, which restates its text in two MODIFIED deltas, once task 5.2 was closed by the round 5 run of the committed flows and task 1.7 had been closed by round 4. `openspec validate --archived` passes.

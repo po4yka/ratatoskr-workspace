@@ -37,7 +37,7 @@ Dependency order. Every child repository pushed its round 4 commits directly to 
 
 ## 6. The native smoke is run
 
-- [ ] 6.1 NOT DONE: running any flow through `integration/native/run.sh` as committed. The round 4 native smokes (AI-archive upload, channel digests, Knowledge ingestion) passed from by-hand scripts under `.workspaces/XR-021/smoke/` and are recorded in the changeset with the hops they faked, seeded or did not exercise. F0, F3, F5, F6 and F7 were not run by any means in round 4. Until a flow is run through `run.sh`, this task stays open.
+- [x] 6.1 Run the committed flows through `integration/native/run.sh`. Done in round 5 (see `xr-021-fleet-round-5` task 6.1): every flow F0 to F7 ran as committed (workspace commit `4d95fa7`) and ended `PASS`, so the legs that this change wrote in the flow files (F0 declared 9 MiB publish, dispatcher `check-config` at 31 and 30, idle notification subject; F3 plain then forwarded, redelivered update, Platform session loss; F5 escaped Threads query; F7 completed and failed closure, PAT registration) have now met a service. They ran against the round 5 heads of the children, not the round 4 pins. The round 4 by-hand smokes (AI-archive upload, channel digests, Knowledge ingestion) are still recorded in the changeset as by-hand results, and the Round 4 legs that were never written and stayed NOT RUN are listed in `integration/native/README.md` and the round 5 record.
 
 ## 7. The pins advance and the round is recorded
 
@@ -51,4 +51,4 @@ Dependency order. Every child repository pushed its round 4 commits directly to 
 
 ## 9. Archive
 
-- [ ] 9.1 NOT DONE: `xr-021-fleet-round-3` is archived first and then this change, each only when every task is ticked. Round 3 keeps task 5.2 open and this change keeps task 6.1 open, so neither is archived; an archive with an unticked task is the false close that `openspec validate --archived` exists to refuse. The order matters: this change restates round 3 requirement text in two MODIFIED deltas.
+- [x] 9.1 `xr-021-fleet-round-3` was archived first, on 2026-10-13, and then this change, once task 6.1 was closed by the round 5 run of the committed flows; the order matters because this change restates round 3 requirement text in two MODIFIED deltas. `openspec validate --archived` passes.

@@ -28,6 +28,15 @@
 //! a service that ignores its own constant; each service's start-up verification and the native
 //! smoke (`jsz` after Edge provisions the durables) cover the running behaviour.
 //!
+//! Round 5 (R5-11) added five rows, `ratatoskr_{chatgpt,claude,x,instagram,threads}_deletion_acks`,
+//! all on the same filter. Platform declares that filter once as the constant
+//! `DELETION_ACKNOWLEDGED_SUBJECT` and names the constant in each row, so the row matcher also
+//! resolves a bare identifier through a `const NAME: &str = "value";` in the same text. Sanity run
+//! on the real sample, `platform` at `3275d52`, `crates/eventing/src/stream.rs`: the five rows
+//! resolve to `evt.knowledge.deletion.acknowledged.v1`, and renaming the constant's value makes all
+//! five report. The count of 23 service rows is checked against the length in
+//! `DOMAIN_CONSUMERS: [FixedConsumerSpec; 23]`, so a row added to one side only is reported.
+//!
 //! Real matches at the round 2 pins are recorded in the changeset `XR-021-fleet-cross-repo-fixes`.
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
@@ -56,6 +65,9 @@ struct Durable {
     platform_row: bool,
 }
 
+/// The subject Knowledge publishes when it has applied or refused a deletion fact (R5-11).
+const DELETION_ACKNOWLEDGED: &str = "evt.knowledge.deletion.acknowledged.v1";
+
 const fn durable(name: &'static str, filter: &'static str, owner: &'static str) -> Durable {
     Durable {
         name,
@@ -66,8 +78,8 @@ const fn durable(name: &'static str, filter: &'static str, owner: &'static str) 
     }
 }
 
-/// The 18 service-owned entries of CONTRACTS S04 (`DOMAIN_CONSUMERS`).
-const DOMAIN: [Durable; 18] = [
+/// The 23 service-owned entries of CONTRACTS S04 (`DOMAIN_CONSUMERS`), as amended by R5-11.
+const DOMAIN: [Durable; 23] = [
     durable(
         "ratatoskr_extractor_capture",
         "cmd.content.capture.requested.v1",
@@ -154,6 +166,27 @@ const DOMAIN: [Durable; 18] = [
         "channel-digests",
     ),
     durable(
+        "ratatoskr_chatgpt_deletion_acks",
+        DELETION_ACKNOWLEDGED,
+        "chatgpt",
+    ),
+    durable(
+        "ratatoskr_claude_deletion_acks",
+        DELETION_ACKNOWLEDGED,
+        "claude",
+    ),
+    durable("ratatoskr_x_deletion_acks", DELETION_ACKNOWLEDGED, "x"),
+    durable(
+        "ratatoskr_instagram_deletion_acks",
+        DELETION_ACKNOWLEDGED,
+        "instagram",
+    ),
+    durable(
+        "ratatoskr_threads_deletion_acks",
+        DELETION_ACKNOWLEDGED,
+        "threads",
+    ),
+    durable(
         "ratatoskr_extractor_render_awaits",
         "evt.content.render.>",
         "extractor",
@@ -202,14 +235,29 @@ const OTHER: [Durable; 6] = [
     },
 ];
 
-/// Consumers that only Platform creates, outside the table: Edge's own projection and the schedule
-/// registration consumer that `consumer::run` creates. They are scanned in Platform's sources by
+/// Consumers that only Platform creates, outside the table: Edge's own projection, the schedule
+/// registration consumer and the stream erasure consumer (R5-12) that `consumer::run` creates. They are scanned in Platform's sources by
 /// name only.
-const PLATFORM_ONLY: [&str; 2] = ["platform_edge_projection", "platform_schedule_registration"];
+const PLATFORM_ONLY: [&str; 3] = [
+    "platform_edge_projection",
+    "platform_schedule_registration",
+    "platform_stream_erasure",
+];
 
 const PLATFORM_TABLE: &str = "crates/eventing/src/stream.rs";
 
-/// Whether `source` holds a table row with this durable name followed by this filter.
+/// The string value of `const NAME: &str = "value";` (any visibility) in `source`.
+fn string_constant(source: &str, name: &str) -> Option<String> {
+    let needle = format!("const {name}: &str");
+    let at = source.find(&needle)? + needle.len();
+    let rest = source.get(at..)?.trim_start().strip_prefix('=')?;
+    let rest = rest.trim_start().strip_prefix('"')?;
+    Some(rest.split('"').next()?.to_owned())
+}
+
+/// Whether `source` holds a table row with this durable name followed by this filter. The filter
+/// is a quoted literal, or a bare identifier that `source` declares as a `&str` constant with the
+/// same value (R5-11 names one constant in five rows).
 fn table_has_row(source: &str, name: &str, filter: &str) -> bool {
     let quoted_name = format!("\"{name}\"");
     let quoted_filter = format!("\"{filter}\"");
@@ -225,7 +273,18 @@ fn table_has_row(source: &str, name: &str, filter: &str) -> bool {
         let rest = rest
             .strip_prefix("filter_subject:")
             .map_or(rest, str::trim_start);
-        rest.starts_with(&quoted_filter)
+        if rest.starts_with(&quoted_filter) {
+            return true;
+        }
+        let identifier = rest
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+            .collect::<String>();
+        !identifier.is_empty()
+            && identifier
+                .chars()
+                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+            && string_constant(source, &identifier).is_some_and(|value| value == filter)
     })
 }
 
@@ -555,6 +614,40 @@ fn the_row_matcher_accepts_both_row_forms_and_rejects_a_misplaced_filter() {
     assert!(table_has_row(structured, "a_durable", "evt.a.v1"));
     assert!(!table_has_row(swapped, "a_durable", "evt.a.v1"));
     assert!(!table_has_row(elsewhere, "a_durable", "evt.a.v1"));
+}
+
+#[test]
+fn the_row_matcher_resolves_a_named_filter_constant_and_rejects_a_different_value() {
+    let table = "const SHARED: &str = \"evt.shared.v1\";\nFixedConsumerSpec::standard(E, \"one\", SHARED),\nFixedConsumerSpec::standard(E, \"two\", SHARED),";
+    assert!(table_has_row(table, "one", "evt.shared.v1"));
+    assert!(table_has_row(table, "two", "evt.shared.v1"));
+    assert!(!table_has_row(table, "one", "evt.other.v1"));
+    let undeclared = "FixedConsumerSpec::standard(E, \"one\", SHARED),";
+    assert!(!table_has_row(undeclared, "one", "evt.shared.v1"));
+    let lowercase = "const shared: &str = \"evt.shared.v1\";\nrow(E, \"one\", shared),";
+    assert!(!table_has_row(lowercase, "one", "evt.shared.v1"));
+}
+
+#[test]
+fn the_service_table_length_equals_the_durables_the_harness_lists() {
+    let table = platform_table_text();
+    let declared = number_after(&table, "DOMAIN_CONSUMERS: [FixedConsumerSpec;")
+        .expect("DOMAIN_CONSUMERS declares its length");
+    assert_eq!(
+        declared,
+        DOMAIN.len() as u64,
+        "Platform's DOMAIN_CONSUMERS has {declared} rows, the harness lists {}",
+        DOMAIN.len()
+    );
+    let mutated = table.replace(
+        &format!("DOMAIN_CONSUMERS: [FixedConsumerSpec; {declared}]"),
+        "DOMAIN_CONSUMERS: [FixedConsumerSpec; 0]",
+    );
+    assert_ne!(mutated, table, "the mutation did not change the table");
+    assert_eq!(
+        number_after(&mutated, "DOMAIN_CONSUMERS: [FixedConsumerSpec;"),
+        Some(0)
+    );
 }
 
 #[test]

@@ -52,7 +52,7 @@ cd ..
 
 Fixture tests prove diagnostics and non-mutation; the committed-snapshot test proves the exact 16
 IDs, paths, audited gitlink SHAs, nonempty pinned-object evidence, clean baselines, and lock freshness.
-Seven further tests in `harness/crates/workspace-core/tests/` read the pinned submodules, so they
+Further tests in `harness/crates/workspace-core/tests/` read the pinned submodules, so they
 stay red between a child merge and the pin advance, by design. `port_allocation.rs` fails when the
 `## Ports` table of `docs/DEPLOYMENT_TARGET.md` lists a port twice or omits a documented listener, and
 when a repository's `deploy/**/*.example` or `.env.example` binds a port that is not in the table or
@@ -74,7 +74,7 @@ the operator listener, by a deploy example of the owning repository, and when a 
 in neither the implemented group nor the allow-list of routes without a service (vault 8093, social
 8094, ai-archive 8095). It cannot see that the service really serves the route on that listener; the
 service's own tests do. `bus_durables.rs` fails when a fixed durable of `ratatoskr-platform`'s
-`crates/eventing/src/stream.rs` table (the eighteen service-owned ones, the three social capture
+`crates/eventing/src/stream.rs` table (the twenty-three service-owned ones, the three social capture
 durables, the Telegram notification durable and the two AI-archive projections) lacks its name and
 filter as a row there, or when the owning repository's tracked `.rs` files do not hold the name and
 the filter as string literals; a mutation test proves the scan reports a renamed durable. It is a
@@ -94,6 +94,51 @@ foreign key that closes a cycle between two tables is written in X, Instagram an
 It is a text scan: a semicolon inside a string literal or a dollar-quoted body would cut a statement
 short, and it cannot see a column that application code adds at start-up. It failed first against the
 round 3 ChatGPT pin with the seven statements that the pin carried.
+
+XR-021 round 5 added four checks and changed two. Every one of them is a text scan of pinned files and
+says what it cannot see.
+
+- `bus_durables.rs` lists the twenty-three service durables, the five new ones being
+  `ratatoskr_{chatgpt,claude,x,instagram,threads}_deletion_acks`. Platform names their shared filter
+  once, as the constant `DELETION_ACKNOWLEDGED_SUBJECT`, so the row matcher now resolves a bare
+  upper-case identifier through a `const NAME: &str = "value";` in the same text, and a separate test
+  fails when the length that `DOMAIN_CONSUMERS` declares differs from the list. It still cannot see the
+  ack wait of the five new durables: the services state theirs as a `Duration`, not as the `u64`
+  constant the ack-wait test reads, and Edge gives them the standard 30.
+- `bus_acl.rs` lists the same durables with their owners, checks that KNOWLEDGE alone may publish
+  `evt.knowledge.deletion.acknowledged.v1` and that CHATGPT and CLAUDE alone may publish
+  `cmd.platform.stream_erasure.requested.v1`, and adds invariant 7: no stanza but EDGE may publish a
+  subject that starts with `$JS.API.STREAM.`. The literal rule of the contract also catches
+  `$JS.API.STREAM.INFO.KV_browser_worker_completions` in the browser worker's stanza, which opens its
+  own completion bucket and changes nothing, so the check allows the stream info of a `KV_` bucket and
+  nothing else under that prefix. It does not read what Edge's `$JS.API.>` permits; the real-broker
+  matrix in `ratatoskr-platform` and flow F0 do.
+- `tombstone_acks.rs` fails when the set of stanzas allowed to publish
+  `evt.ai_archive.subject.tombstoned.v1` or `evt.social.source.removed.v1` differs from the set of
+  services that have a `*_deletion_acks` durable in Edge's table, in either direction. It cannot see
+  that a service consumes its durable or records the acknowledgement; the producers' broker tests and
+  flow F6 do. A mutation test renames one durable in a copy of the table.
+- `alert_rules.rs` fails when a series in an `expr:` of `ratatoskr-bus-alerts.rules.yml` is neither a
+  constant of Platform's `crates/telemetry/src/metrics.rs` nor covered by the file's own documented list
+  of producer-side suffixes, and when an alert lacks `for`, `labels.severity` or `annotations.summary`.
+  It is a line scan, not a YAML or PromQL parser (the harness takes no parser dependency, and
+  `deny.toml` allows three licences and denies duplicate versions), so a PromQL function outside its
+  word list shows up as an unknown series and fails, the safe direction. It does not prove that the
+  file parses (flow F0 parses it with the selected interpreter's YAML library or Ruby), that a threshold
+  is sensible, or that the producers export the series the last alert names.
+- `base_urls.rs` fails when a key that points one fleet service at another (twenty are listed: the
+  Knowledge README and digest-source origins, the channel-digests Knowledge origin, the Telegram Platform
+  origin, Platform's channel-digests and route listeners, and the receivers' listeners) names a port other
+  than the one `docs/DEPLOYMENT_TARGET.md` gives that service. The list is written down, not discovered:
+  a new key that points at another service has to be added by hand. It passed from the first run (it
+  closes a coverage gap, R4 verdict 2) and carries a mutation test as its red.
+
+Four of them were run red against the round 4 pins before the pins advanced, each for the reason it
+states: `bus_durables.rs` failed four tests (Platform's rows and `platform_stream_erasure`, the five owner
+literals, the declared length of 18, and the unmodified-table precondition of the mutation test),
+`bus_acl.rs` two (no consumer-info permission for the five durables, no holder of the two new publish
+rights), `tombstone_acks.rs` two and `alert_rules.rs` three (the rule file did not exist). `base_urls.rs`
+and the invariant 7 test passed against the round 4 pins and rely on their mutation tests.
 
 `contracts_pin.rs` fails when the `Cargo.lock` of any Rust repository resolves a `ratatoskr-*` git
 package of the contracts repository to a commit other than the `contracts_sha` the XR-021 changeset
@@ -118,13 +163,15 @@ were not run for XR-021 round 2 or 3; their static contract tests ran with a stu
 broker without a rendered configuration. The multi-service run is `integration/native/`: a manual,
 machine-dependent harness that builds the services natively, runs them under the deployed ACL with
 the checked-in PostgreSQL provisioning on the production loopback ports, and drives eight flows
-through Edge. It is not a CI gate and nothing in CI runs it; `integration/tests/native_smoke_contract_test.sh`
-checks only the scripts. The results recorded for XR-021 round 3 came from by-hand scripts, not from
-`run.sh`, and none of the committed flows has been run through `run.sh`; the round 4 results were by
-hand as well. Round 4 fixed what a read of the harness found (an `assert` that shadowed the caller's
-`name`, a fake Bot API that the webhook refused to start against, F3 assertions that one two-line
-message satisfied, an F7 that accepted a failed fact), and the contract test now fails on each, but it
-starts no service, so it shows the scripts agree with their fixtures and not that a flow passes. What
+through Edge. It is not a CI gate and nothing in CI runs it;
+`integration/tests/native_smoke_contract_test.sh` checks only the scripts. The results recorded for
+XR-021 rounds 3 and 4 came from by-hand scripts, not from `run.sh`. In round 5 every flow F0 to F7 was
+run through `run.sh` as committed (workspace commit `4d95fa7`), one at a time, against the `origin/main`
+of each child, which are the commits the round 5 pins record, and each ended `PASS`; the README gives
+the assertion counts. That is the first evidence the committed flows work, with the limits the README
+and the changeset state: the new legs were not run against the round 4 heads, so none of them is shown
+to fail without its fix; the contract test starts no service, so it shows the scripts agree with their
+fixtures and not that a flow passes. What
 it cannot show is
 stated in `integration/native/README.md` and in the changeset: real MTProto acquisition, live X,
 Meta, Threads, OpenRouter and Telegram responses, the Export Agent's keychain and Swift client, TLS
