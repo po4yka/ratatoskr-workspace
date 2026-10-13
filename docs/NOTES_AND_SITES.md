@@ -297,7 +297,9 @@ SITE-027 adds `platform_site_events`.
   and `sites.release.build`.
 - Error codes named so far: `notes.channel_mismatch`, `notes.write.conflict`,
   `notes.write.disabled`, `notes.write.transformed` (a warning), `notes.write.partially_applied`,
-  `notes.connection.not_found`, `sites.site_not_found`, `sites.page_not_found`,
+  `notes.connection.not_found`, `notes.connection.vault_already_connected`,
+  `notes.connection.cleanup_failed`, `notes.request.unauthenticated`, `notes.request.invalid`,
+  `notes.service.unavailable`, `sites.site_not_found`, `sites.page_not_found`,
   `sites.asset_not_found`, `sites.slug_collision`, `sites.publication_suspended`,
   `platform.manifest_digest_stale`, `platform.site_hostname_taken` and
   `edge.capability_not_granted`.
@@ -307,7 +309,7 @@ SITE-027 adds `platform_site_events`.
 
 | Prefix | Owner | Route class (ADR-0015 of Platform) |
 |---|---|---|
-| `/v1/notes/connections`, `.../{id}/changes` | notes | `control`; the connect body is never persisted at Edge |
+| `/v1/notes/connections` (`POST` connects, 202), `.../{id}` (`DELETE` disconnects, 204), `.../{id}/changes` | notes | `control`; the connect body is never persisted at Edge |
 | `/v1/notes/connections/{id}/blobs` | notes | `transfer` |
 | `/v1/notes/connections/{id}/writes` | Edge publishes the write command | `control` |
 | `/v1/notes/connections/{id}/write-mode` | notes | `control` |

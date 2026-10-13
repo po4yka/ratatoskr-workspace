@@ -294,8 +294,8 @@ dependency_order:
   - [ratatoskr-platform, ratatoskr-extractor, ratatoskr-knowledge, ratatoskr-channel-digests, ratatoskr-github, ratatoskr-vault, ratatoskr-x, ratatoskr-instagram, ratatoskr-threads, ratatoskr-chatgpt, ratatoskr-claude, ratatoskr-telegram, ratatoskr-browser-extension, ratatoskr-export-agent]
   - ratatoskr-workspace
 contracts:
-  contracts_sha: d98967b7b7ee80442c93ef4657140068955c8f61
-  contracts_sha_history: "Round 1 to Round 4 named ad16855c4e7f3d52cd118274faa3b8f3ab4da576; Round 5 names d98967b7b7ee80442c93ef4657140068955c8f61 (the one wave-1 commit of Round 5: knowledge.deletion_acknowledged and platform.stream_erasure_requested, additive)"
+  contracts_sha: a9289e27bcf53f496b5917889580965d97ff2358
+  contracts_sha_history: "Round 1 to Round 4 named ad16855c4e7f3d52cd118274faa3b8f3ab4da576; Round 5 names d98967b7b7ee80442c93ef4657140068955c8f61 (the one wave-1 commit of Round 5: knowledge.deletion_acknowledged and platform.stream_erasure_requested, additive); OBS-023 moves the fleet to a9289e27bcf53f496b5917889580965d97ff2358 (ratatoskr-notes-contracts and the notes identifiers, additive), so that ratatoskr-notes can join the snapshot"
   change: additive only; no existing wire shape changes
   new_or_extended:
     - "OperationReported::validate"
