@@ -1,5 +1,5 @@
 id: DPL-022
-state: implementing
+state: verified
 goal: Provision the single host from pinned, verified sources with one idempotent Ansible playbook, and publish an attested linux/arm64 artifact for every commit on main of each repository that ships a systemd unit.
 openspec_change: add-deployment-automation
 authorization: The repository owner asked for direct commits on main and a push to the remote, so no pull request is opened; each repository item records its pushed head and its hosted CI.
@@ -53,4 +53,25 @@ verification:
   - the release-artifact-selftest job in ratatoskr-workspace CI
   - each service repository's linux/arm64 artifact job and its first published, attested artifact
   - the Molecule scenario on a native arm64 runner (converge, idempotence, verify)
-evidence: {}
+evidence:
+  platform_commit: ec2251b845a17a60b23dab8fc130338600dff78f
+  extractor_commit: dcc85b7b63d94509bd9f011d78a2fccec895037d
+  telegram_commit: 0b61997a2d5e6b0fa3797789019f7ddfdfac84d3
+  children_hosted_ci: green, with linux/arm64 artifact and release-artifact on each
+  platform_artifact_attestation: verified with gh attestation verify --signer-workflow
+  workspace_pins_commit: f34882a078ed74ea557ccb44419c7486a1ce1911
+  workspace_playbook_commit: ff8bc640fbd1eb8c54367883765ef499aa17a98f
+  workspace_fix_commits:
+    - 2fd759709a0126a028c84a3135e85e26eb65b592  # CI installs ansible.posix for the Molecule create step
+    - 9094f8bdef7364b6ebde4d5d3550127932b26fee  # the converge leaves ratatoskr.target active
+  workspace_hosted_ci: green
+  workspace_runs:
+    workspace_snapshot: https://github.com/po4yka/ratatoskr-workspace/actions/runs/38404215415
+    fleet: https://github.com/po4yka/ratatoskr-workspace/actions/runs/38404215208
+    openspec: https://github.com/po4yka/ratatoskr-workspace/actions/runs/38404215542
+    zizmor: https://github.com/po4yka/ratatoskr-workspace/actions/runs/38404215460
+  molecule: green on ubuntu-24.04-arm (create, converge, idempotence with zero changes, verify)
+  required_checks_added: [molecule, release-artifact-selftest / artifact]
+  required_checks_open: linux/arm64 artifact is not yet required in ratatoskr-extractor and ratatoskr-telegram
+  test_first_order: not kept for groups 6 to 9; tasks.md records it per task
+live_deployment: not_authorized_target_frozen

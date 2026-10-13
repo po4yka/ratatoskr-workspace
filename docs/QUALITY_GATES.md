@@ -310,9 +310,15 @@ and every ruleset was rewritten with the rename.
 
 The ruleset also requires every job of the repository's own `ci.yml`, by the name that job
 publishes: `gate` and `deny` in a Rust repository, `gate`, `deny` and `linux/arm64 artifact` in
-Platform, `gate`, `deny` and `fuzz` in Extractor, the Android and iOS jobs in Mobile, and `deny` and
-`snapshot` in this workspace. That is what makes Dependabot's auto-merge safe: GitHub merges when every REQUIRED check
-passes, so a CI job left out of the list is a job auto-merge does not wait for.
+Platform, `gate`, `deny` and `fuzz` in Extractor, the Android and iOS jobs in Mobile, and `deny`,
+`snapshot`, `release-artifact-selftest / artifact` and `molecule` in this workspace. That is what
+makes Dependabot's auto-merge safe: GitHub merges when every REQUIRED check passes, so a CI job left
+out of the list is a job auto-merge does not wait for.
+
+There is one known gap. DPL-022 gave Extractor and Telegram a `linux/arm64 artifact` job that runs
+on every pull request, and neither ruleset requires it yet. `release-artifact / artifact` is
+deliberately not required in the three service repositories: it runs only on a push to `main`, so a
+pull request never produces it.
 
 Each configured required check is pinned to integration 15368,
 the GitHub Actions application, so a check of the same name from another application cannot satisfy
