@@ -1,0 +1,56 @@
+id: DPL-022
+state: implementing
+goal: Provision the single host from pinned, verified sources with one idempotent Ansible playbook, and publish an attested linux/arm64 artifact for every commit on main of each repository that ships a systemd unit.
+openspec_change: add-deployment-automation
+authorization: The repository owner asked for direct commits on main and a push to the remote, so no pull request is opened; each repository item records its pushed head and its hosted CI.
+repositories:
+  - id: ratatoskr-workspace
+    role: reusable-publishing-workflow-then-playbook-harness-and-pins
+    branch: main
+  - id: ratatoskr-platform
+    role: export-stage-and-publishing-caller
+    branch: main
+  - id: ratatoskr-extractor
+    role: dockerfile-arm64-smoke-and-publishing-caller
+    branch: main
+  - id: ratatoskr-telegram
+    role: dockerfile-arm64-smoke-and-publishing-caller
+    branch: main
+dependency_order:
+  - ratatoskr-workspace  # the reusable workflow only, which the callers pin by SHA
+  - ratatoskr-platform   # owns ratatoskr.target and the schema
+  - [ratatoskr-extractor, ratatoskr-telegram]
+  - ratatoskr-workspace  # pins, playbook, Molecule, harness checks, documentation
+contracts:
+  shared_documents: none
+  change: none
+compatibility:
+  strategy: Additive. The manual runbooks stay valid; the playbook performs the same steps in the same order. A repository that ships no unit is not affected.
+database:
+  strategy: none; the playbook runs the checked-in SQL files as written, in the order postgres-provisioning fixes.
+  migration_artifacts: none
+api:
+  version: 1
+  negotiation: none
+  breaking_change: none
+runtime:
+  supervision: systemd units and ratatoskr.target, unchanged (Platform ADR-0013).
+  artifacts: ghcr.io/po4yka/<repository>:sha-<commit>, OCI artifact type application/vnd.ratatoskr.binaries.v1, with SHA256SUMS, an SPDX SBOM and a build-provenance attestation.
+security:
+  secrets: Generated on the host and never transmitted (database passwords, nkey seeds, the Telegram assertion key); operator-supplied secrets come from an ansible-vault file outside the repository.
+  verification: The controller verifies the attestation and the checksums before a binary reaches the host; the host needs no registry access.
+  freeze: The playbook refuses the real host while docs/DEPLOYMENT_TARGET.md states that the host is frozen.
+privacy: No personal data is touched.
+rollout:
+  - Publish the reusable workflow from ratatoskr-workspace.
+  - Platform, then the extractor and Telegram, call it; each publishes its first artifact on its next push to main.
+  - Advance the workspace pins to those commits, then land the playbook, Molecule, the harness checks and the documentation.
+  - The real host is not touched until the owner lifts the freeze.
+rollback:
+  - Revert each repository's commit. Published artifacts stay and harm nothing; the manual runbooks remain correct.
+verification:
+  - harness tests release_artifact_check.rs, release_artifact_callers.rs and deploy_inventory.rs
+  - the release-artifact-selftest job in ratatoskr-workspace CI
+  - each service repository's linux/arm64 artifact job and its first published, attested artifact
+  - the Molecule scenario on a native arm64 runner (converge, idempotence, verify)
+evidence: {}

@@ -20,3 +20,4 @@ Each ADR contains context, decision drivers, considered options, decision, conse
 ## Accepted
 
 - [ADR-0008](0008-openspec-and-test-first.md): OpenSpec as the planning layer, and a test-first task shape.
+- [ADR-0009](0009-ansible-for-the-single-host.md): Ansible provisions the single host from pinned, attested artifacts.
