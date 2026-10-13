@@ -19,47 +19,47 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "channel-digests",
         "repos/integrations/channel-digests",
-        "a0ee415a3342ff4da30ec9085fa6a23661c4cc8a",
+        "65a5df7a7f1d6c82a1ce6213cacb980897680d58",
     ),
     (
         "chatgpt",
         "repos/ai-archive/chatgpt",
-        "78b3dfa0dede9b7d9cd23e17ce64836eec2a11df",
+        "6e9508764be8f9f876f4ddee611707951459b3a5",
     ),
     (
         "claude",
         "repos/ai-archive/claude",
-        "6f27d836a3670554866b50da3636cd0410a65f04",
+        "272b6833d7207241416c1b8b00012ade4e234f22",
     ),
     (
         "contracts",
         "repos/contracts",
-        "5426cf3096733d714c59b02ec41e946fdedcd94d",
+        "d98967b7b7ee80442c93ef4657140068955c8f61",
     ),
     (
         "export-agent",
         "repos/clients/export-agent",
-        "1009f2992a51e5a6ff54724d3a3bf762e1c30243",
+        "22c14fdc8310b043772cc0ea6874abae575a66b0",
     ),
     (
         "extractor",
         "repos/extractor",
-        "b44ba81637ff8979f9e3ad4ebbea967335f6bd6b",
+        "b5655232c10df6253bab2e9f97e13f913cf21547",
     ),
     (
         "github",
         "repos/github",
-        "cc8c78d70880f68e3985ef437867a7b8146619d4",
+        "80aaa84a4c581336f88e034aeb8799248e010c22",
     ),
     (
         "instagram",
         "repos/social/instagram",
-        "79ae7767178b9a57a6a2a6e0f43a6218fcf4e88a",
+        "171caf11830e786900a7aafe88689f5e87f54b23",
     ),
     (
         "knowledge",
         "repos/knowledge",
-        "4bf28ddce1fd0247c2e41e3d417ec572fcf11308",
+        "577ccc3935ae0620d9952d05a42b7f4da2e18f42",
     ),
     (
         "mobile",
@@ -69,22 +69,22 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "platform",
         "repos/platform",
-        "1624d037f3bf8b682d16ed5b273e5a82d1c3fe24",
+        "3275d523d004787aa5871266b8636dd0b11e74e6",
     ),
     (
         "telegram",
         "repos/integrations/telegram",
-        "04c25a5346df1acf95fa01f82bb984053026fafd",
+        "a8a337ad504e2a7f89a218fa972edcfa6078193e",
     ),
     (
         "threads",
         "repos/social/threads",
-        "ba00a1e2114d2b59e7a93526e423ba4c6ccc12b8",
+        "e8cb95cfb074ae87c01c4fe8dca5f0988f687ba0",
     ),
     (
         "vault",
         "repos/vault",
-        "24573faf20882f3c55c47664c84f0b1458f8dff9",
+        "b810b26b730de840fb2aa3225165d7a677df80a8",
     ),
     (
         "web",
@@ -94,7 +94,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "x",
         "repos/social/x",
-        "f57fdda0e2d3ded31c0a387364506ab301a8ca7a",
+        "cf21321f1286ebaa85181b498cf76a5687211978",
     ),
 ];
 
