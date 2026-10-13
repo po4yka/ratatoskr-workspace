@@ -10,9 +10,9 @@ authorization: The owner authorised direct commits on main for the workspace pla
 repositories:
   - id: ratatoskr-contracts
     role: notes-event-schemas
-    branch: obs-023/notes-vault-connections
+    branch: main@a9289e27bcf53f496b5917889580965d97ff2358
     base: d98967b7b7ee80442c93ef4657140068955c8f61
-    pull_requests: none yet, the branch is local
+    pull_requests: none, pushed directly to main under the repository owner authorization
     commits:
       - "3a22ef0df8cd4e124ebc23931e3b5585bce6c986 test(contractsc): register the notes events and their fixtures before the types"
       - "25a52c547baead254e88a496b3a6d4e2b6b7e9c4 feat(notes-contracts): add the notes vault and file change payloads"
