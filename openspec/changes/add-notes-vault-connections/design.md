@@ -75,9 +75,25 @@ change the
 connection is configured with `ob sync-config --mode pull-only --configs "" --excluded-folders
 <owner list>`, and `--device-name ratatoskr-<connection id>`.
 
-`ratatoskr-notes` does not parse the output of `ob`. It watches the working tree with inotify, with
-a full rescan at start and every 15 minutes, and turns each settled file state into a revision. A
-file is settled when its size and modification time have not changed for 2 seconds.
+`ratatoskr-notes` takes file changes only from the working tree, never from the output of `ob`. It
+watches the tree with inotify, with a full rescan at start and every 15 minutes, and turns each
+settled file state into a revision. A file is settled when its size and modification time have not
+changed for 2 seconds.
+
+Spike 3.2 (`spike/3.2-obsidian-headless.md`, `obsidian-headless` 0.0.14) found that `ob` keeps its
+state under `${XDG_CONFIG_HOME:-$HOME/.config}/obsidian-headless` on Linux. The unit therefore sets
+`XDG_CONFIG_HOME` to the connection's `ob-home`. The client state is plaintext: `auth_token` and
+`sync/<vault id>/config.json`, which holds the derived end-to-end key, both mode 0600. The 0700
+`ob-home` directory and its owner `ratatoskr-notes-sync` are the only protection, so no other
+service user may share that owner.
+
+The spike also found that an expired or revoked login does not stop `ob sync --continuous`. It logs
+`Failed to authenticate:` and retries every 30 seconds for ever. `ob sync` has no `--json` output.
+Therefore the supervisor reads one thing from the unit's journal: the authentication failure line.
+After the line repeats for 5 minutes, the supervisor stops the unit and marks the connection
+`login_expired` (`notes.sync.login_expired`). The owner must then connect again. The supervisor
+reads no other line, and it never takes file content from the log. The version of
+`obsidian-headless` is pinned, because a release can change these lines.
 
 Alternatives:
 - Spawn `ob` as child processes of `ratatoskr-notes`. Rejected: a crash of the service would stop
@@ -103,12 +119,16 @@ its idempotency or audit records, or its logs. The Platform test
    and starts `ratatoskr-notes-login@<connection id>.service`. The unit reads the files with
    `LoadCredential=`, so systemd gives them to the unit in `$CREDENTIALS_DIRECTORY` and no other
    user can read them. `ratatoskr-notes` deletes the files when the unit stops, whatever its result.
-3. the login unit gives the secrets to `ob` on standard input or from a file, when `ob` allows it.
-   The spike (task 3.2) finds out. If `ob` accepts a secret only as argv, the login unit runs as its
-   own system user, `ratatoskr-notes-login`, and the host mounts `/proc` with `hidepid=invisible`,
-   so that no other user can see the process or its command line. The spike measures what
-   `hidepid=invisible` changes for monitoring on the host (the node-exporter, vmagent and the
-   systemd tools) before this fallback is chosen.
+3. the login unit gives the secrets to `ob` on standard input. Spike 3.2 confirmed that when stdin
+   is not a terminal, `ob login` reads the whole of stdin as the account password, and
+   `ob sync-setup` without `--json` reads it as the end-to-end password. Each command reads one
+   value, so the unit runs them as two steps:
+   `ob login --email <email> --mfa <code> < $CREDENTIALS_DIRECTORY/password`, then
+   `ob sync-setup --vault <id> --path <tree> --device-name ratatoskr-<id> < $CREDENTIALS_DIRECTORY/e2e`.
+   The email and the MFA code are in argv. The email is not a secret. The MFA code is a short-lived
+   one-time code and is never stored. No password is ever in argv, so the
+   `hidepid=invisible` fallback is not needed, and the login unit runs as `ratatoskr-notes-sync`,
+   the owner of `ob-home`, which it must write.
 4. after the setup succeeds, keeps only the client state that `ob` writes in `ob-home`. The
    continuous unit needs no password.
 
@@ -122,16 +142,26 @@ its journal and that of its units, and its events) and `connect_body_is_not_pers
 A private PID namespace for the login (`PrivatePIDs=`) is not used: it needs systemd 257, and the
 host runs Debian 12 with systemd 252.
 
-Alternative: keep no ciphertext and ask the owner again when the client state expires. Kept as the
-fallback if the spike shows that `ob` never needs the password again after setup. Then step 1
-stores nothing.
+Alternative: keep no ciphertext and ask the owner again when the client state expires. Spike 3.2
+showed that `ob sync` never needs the password again after setup, so this alternative is now
+possible. The choice waits for spike 3.1, which measures how long a login token lives: if the token
+does not expire in normal use, step 1 stores nothing, and a `login_expired` connection asks the
+owner to connect again. Until 3.1 runs, the ciphertext path stays the plan.
+
+Spike 3.2 also found the undocumented variable `OBSIDIAN_AUTH_TOKEN`, which replaces the token
+file. It is not used, because it is undocumented and could be removed in a later release.
 
 ### D5. The `plugin` channel
 
 The plugin pairs through Platform's pairing flow (ADR-0016) as a registered device of the new kind
 `obsidian_plugin`. It keeps the device credential outside the vault folder, in storage that the
-operating system protects (on desktop, Electron `safeStorage`; on mobile, the mechanism that the
-spike in task 3.5 finds). It never writes the credential into `data.json` or any other file in the
+operating system protects. On desktop, spike 3.5 found `app.secretStorage` in Obsidian 1.14.4
+(`setSecret`, `getSecret`, `deleteSecret`, `isEncryptionAvailable`). It encrypts with Electron
+`safeStorage`, the macOS Keychain format `v10`, into the app profile's Local Storage outside the
+vault, scoped to the vault id. On an older app, the fallback is `remote.safeStorage`, with the
+ciphertext kept through `saveLocalStorage`. `saveData` writes `data.json` inside the vault and is
+never used for the credential. Mobile storage is not measured yet (the iOS part of 3.5 is
+deferred). It never writes the credential into `data.json` or any other file in the
 vault, because the vault itself syncs to other devices and services. If a platform has no protected
 storage, the plugin keeps the credential in memory only, and the owner pairs again after a restart.
 
@@ -159,8 +189,21 @@ The plugin then talks only to Edge:
   `ratatoskr-notes` answers with the paths whose bytes it needs, and turns the difference into
   changes.
 
-The plugin uses the vault API events `create`, `modify`, `rename` and `delete`, so that a rename
-arrives as a rename.
+The plugin uses the vault API events `create`, `modify`, `rename` and `delete`. Spike 3.5 measured
+them on desktop (`spike/obsidian-1.14.4/events.jsonl`):
+
+- A rename inside Obsidian gives one `rename` event with the old path. A folder rename gives one
+  `rename` for the folder and then one `rename` per file inside it. The plugin skips the folder
+  event and sends the file events, so each file moves once.
+- After a rename, Obsidian may rewrite links in other notes. Those arrive as `modify` events and
+  become ordinary `updated` changes.
+- A rename made outside Obsidian, for example in Finder, arrives as `create` for the new path and,
+  about one second later, `delete` for the old path. The plugin pairs the two by content hash
+  within a 3-second window and sends one `renamed` change. Unpaired events are sent as they are.
+- Event paths are NFC, even when the name on disk is NFD. A file that Obsidian creates gets an NFC
+  name on disk, while a file created outside keeps its NFD name. The plugin sends the NFC path, and
+  `ratatoskr-notes` keys files by the NFC path, as in D7.
+- A move to the trash (`vault.trash`) gives the same events as a delete.
 
 ### D6. The `cli` channel
 
@@ -185,16 +228,29 @@ reports changes from the file system, and marks a delete plus create with equal 
 ### D8. The index and link resolution
 
 The index parses Markdown with a CommonMark parser plus the Obsidian extensions: wikilinks,
-embeds, block ids, tags in text and in frontmatter, callouts, and `%% comments %%`. Link resolution
-follows Obsidian: an exact path wins, then a unique file name anywhere in the vault, then the
-shortest path among equal names. Aliases from the `aliases` frontmatter key are recorded but do not
-resolve a link target, as in Obsidian.
+embeds, block ids, tags in text and in frontmatter, callouts, and `%% comments %%`. Spike 3.6
+(`spike/obsidian-1.14.4/`) measured these rules on Obsidian 1.14.4:
 
-The test oracle is a set of golden fixtures. The spike builds a fixture vault, runs
-`obsidian links`, `obsidian backlinks format=json`, `obsidian properties` and `obsidian tags` on it
-with the real app, and commits the outputs to `ratatoskr-notes` under
-`crates/notes-index/tests/fixtures/obsidian-<version>/`. The index tests compare against them. A
-new Obsidian version adds a new fixture directory and does not overwrite the old one.
+- Resolution: an exact path wins, then a file of that name in the linking file's own folder, then a
+  unique name, then the shortest path among equal names. Matching ignores case, `[[Name.md]]`
+  resolves, and partial paths such as `[[2024/Alpha]]` resolve. Markdown links resolve relative to
+  the source, or from the vault root when they start with `/`, and `%20` is decoded.
+- Aliases from the `aliases` key are recorded but never resolve a target.
+- Links and tags inside `%% comments %%` are indexed. Code (inline, fenced, tilde, indented), HTML
+  comments and `$$` math are not. The site release builder still removes comments and the links in
+  them (SITE-025), so this rule does not publish a comment.
+- Paths and link text are NFC. Tags are not normalised: `#café` in NFC and in NFD are two tags.
+- Tags: `#123` is not a tag, `#1a` and `#日本語` are. Only the frontmatter key `tags` counts, and a
+  comma string such as `tags: "a, b"` gives no tags.
+
+The test oracle is a set of golden fixtures from the real engine. The official Obsidian CLI needs
+installer 1.12.7 or later, and the spike machine had installer 1.8.10 with app 1.14.4. So the spike
+took the same data from the engine's metadata cache through a throwaway plugin: `metadata.json`
+holds per file the cache, `resolvedLinks`, `unresolvedLinks`, backlinks and tags. Task 7.1 commits
+the vault and that file to `ratatoskr-notes` under
+`crates/notes-index/tests/fixtures/obsidian-<version>/`. A new Obsidian version adds a new directory
+and does not overwrite the old one. A capture through the CLI may replace the plugin later. It must
+then produce the same data.
 
 ### D9. Knowledge intake
 
@@ -254,13 +310,11 @@ already use plain modes.
 - [Node.js and one `ob` process per connection on the Pi] → The spike measures resident memory of
   one continuous sync with a 1 GiB fixture vault. The unit sets `MemoryMax=` from that measurement
   plus 50 %. `DEPLOYMENT_TARGET.md` records the per-connection budget.
-- [Secrets in argv] → D4 steps 2 and 3. The spike decides which form applies. The notes test
+- [Secrets in argv] → D4 steps 2 and 3. Spike 3.2 chose standard input, so only the one-time MFA
+  code is in argv. The notes test
   `no_secret_in_any_cmdline` asserts that no process of another user can read a secret from
   `/proc/<pid>/cmdline`, and `login_unit_gets_secrets_only_as_credentials` asserts the
   `LoadCredential=` path.
-- [`hidepid=invisible` hides processes from monitoring] → Used only if `ob` needs argv. The spike
-  measures the effect first, and the monitoring role then grants its collectors the `gid=` exemption
-  of the mount option.
 - [The plugin credential leaks through a synced vault] → D5: the credential never enters the vault
   folder, and the plugin test `credential_never_written_to_data_json` checks every file.
 - [The server can read the whole vault, including an end-to-end encrypted one] → This is inherent

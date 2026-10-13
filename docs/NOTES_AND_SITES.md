@@ -50,6 +50,19 @@ the target host before a design depends on them.
   is on), `delete`, `links`, `backlinks`, `properties`, `property:set`, `search`, `sync:history` and
   more. Several commands accept `format=json`.
 
+Spike results so far (2026-10-13; evidence in `openspec/changes/add-notes-vault-connections/spike/`):
+
+- `obsidian-headless` 0.0.14 is `UNLICENSED` (proprietary). It reads the account password and the
+  end-to-end password from standard input, and `ob sync` never needs them again. It keeps its token
+  and the derived key in plaintext files (mode 0600) under `$XDG_CONFIG_HOME/obsidian-headless`. An
+  expired login does not stop `ob sync`, which retries for ever.
+- Obsidian's documentation names server and agent use of Headless Sync. The Terms of Service are
+  silent, so a confirmation from Obsidian support is still open.
+- The engine of Obsidian 1.14.4 indexes links inside `%% comments %%`, prefers a file in the linking
+  file's own folder over the shortest path, and never resolves an alias. On desktop,
+  `app.secretStorage` keeps a plugin secret outside the vault.
+- Not run yet: the 24-hour run and the conflict test with a real Sync account (3.1, 3.3), and iOS.
+
 ## 3. Components
 
 ```
@@ -137,7 +150,7 @@ Rules:
   through that channel is recorded as an acknowledgement, not as a new change.
 - **Rename.** A rename through Ratatoskr rewrites the links in every file that points to the old
   path, with the same rules as Obsidian's "Automatically update internal links". Golden fixtures
-  that the real Obsidian CLI produces are the test oracle for this.
+  that the real Obsidian app produces are the test oracle for this.
 
 ## 6. Sites
 

@@ -77,6 +77,13 @@ inside a code span or a fenced code block SHALL be kept as code.
 - **THEN** the page's code block contains that line unchanged, verified by
   `privacy.rs::comment_marker_in_code_is_kept`
 
+#### Scenario: A link inside a comment makes no edge
+
+- **WHEN** a published page holds `%% see [[Other]] %%`, `Other` is published, and the notes index
+  lists that link (Obsidian counts links inside comments)
+- **THEN** the release holds no outgoing link from that page to `Other` and no backlink on
+  `Other`, verified by `privacy.rs::link_inside_comment_makes_no_edge`
+
 ### Requirement: Only allowlisted frontmatter fields are published
 
 A page SHALL carry only the frontmatter fields on the publication's allowlist. The default

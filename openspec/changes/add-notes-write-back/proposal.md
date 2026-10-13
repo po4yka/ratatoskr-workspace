@@ -39,7 +39,7 @@ rename.
 - Echo suppression: an inbound change with the path and hash of a pending write is that write's
   acknowledgement, not a new change.
 - A rename or a move rewrites every link that pointed to the old path, with the rules of Obsidian's
-  "Automatically update internal links". Golden fixtures that the real Obsidian CLI produces are the
+  "Automatically update internal links". Golden fixtures that the real Obsidian app produces are the
   test oracle.
 - Edge gains `POST /v1/notes/connections/{id}/writes`, `POST /v1/notes/conflicts/{id}/resolution`
   and `PUT /v1/notes/connections/{id}/write-mode` (all class `control`). Every connection starts with
@@ -61,7 +61,7 @@ No item is **BREAKING**: nothing of the notes domain has shipped.
   channel acknowledges or refuses it, and how an echo of Ratatoskr's own write is told apart from a
   new change.
 - `notes-link-rewrite`: which links a rename or a move rewrites, how a write group becomes current,
-  and the golden fixtures from the Obsidian CLI against which the rewrite is tested.
+  and the golden fixtures from the real Obsidian app against which the rewrite is tested.
 
 ### Modified Capabilities
 
@@ -126,5 +126,5 @@ delivered fail with `notes.write.disabled`, and the read path of OBS-023 continu
   device operation queue, idempotency records.
 - New Edge routes under `/v1/notes`.
 - The `sync` channel needs write access to its working tree and changes the Headless client mode.
-- New test corpus: golden link-rewrite fixtures produced by the Obsidian CLI, stored in
+- New test corpus: golden link-rewrite fixtures produced by the real Obsidian app, stored in
   `ratatoskr-notes`.

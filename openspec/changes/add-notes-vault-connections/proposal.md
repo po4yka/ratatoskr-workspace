@@ -18,10 +18,12 @@ Knowledge. Writing back into a vault is `add-notes-write-back` (OBS-024).
 ## What Changes
 
 - A spike runs first and keeps no code. It checks Obsidian Headless on the linux/arm64 host: login
-  with MFA, end-to-end encryption, whether secrets can be given without argv, memory and uptime of
+  with MFA, end-to-end encryption, whether secrets can be given without argv (answered: they go on
+  standard input), memory and uptime of
   `ob sync --continuous`, pull-only mode, and what happens when a file changes during a sync. It
   also checks the Obsidian terms of use for server automation, builds a plugin prototype, and
-  captures golden link fixtures with the Obsidian CLI.
+  captures golden link fixtures from the real Obsidian engine (spike 3.6 used a recording plugin,
+  because the Obsidian CLI needs a newer installer).
 - A new repository, `ratatoskr-notes` (Rust), owns vault connections, the file index, file
   revisions and their bytes. It joins the fleet at `repos/notes`.
 - A vault connection has exactly one channel: `sync`, `plugin` or `cli`. Ratatoskr refuses a second
@@ -48,7 +50,7 @@ Knowledge. Writing back into a vault is `add-notes-write-back` (OBS-024).
   and `evt.notes.file.changed.v1`. A file change carries the NFC path, the change kind, the revision
   hash and a `BlobRef` to the bytes.
 - `ratatoskr-notes` indexes each Markdown file: frontmatter, tags, headings, block ids, aliases,
-  links and embeds, resolved with Obsidian's rules. Golden fixtures from the real Obsidian CLI are
+  links and embeds, resolved with Obsidian's rules. Golden fixtures from the real Obsidian engine are
   the test oracle.
 - Knowledge consumes note changes the same way it consumes social sources: one analysis run per
   file revision, and derived data removed when a file is deleted or its connection is removed.
@@ -141,5 +143,5 @@ repositories can be removed from the fleet by reverting the workspace item.
   `ratatoskr_notes`, the NATS identity `NOTES`, and the paths under
   `/mnt/nvme/ratatoskr/notes/` and `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes/`.
 - A new external dependency: Obsidian Headless is an open beta with no declared license. The
-  design records the exit path if it changes or goes away. If `ob` accepts secrets only as argv,
-  the host also mounts `/proc` with `hidepid=invisible`; the spike measures that first.
+  design records the exit path if it changes or goes away. Spike 3.2 found that `ob` reads both
+  passwords from standard input, so no password enters argv.

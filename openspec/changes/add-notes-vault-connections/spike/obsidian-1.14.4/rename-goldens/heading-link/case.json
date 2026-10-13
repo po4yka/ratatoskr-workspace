@@ -1,0 +1,17 @@
+{
+  "name": "heading-link",
+  "from": "RenameTargets/Headed.md",
+  "to": "RenameTargets/Headed Renamed.md",
+  "settings": {
+    "alwaysUpdateLinks": true,
+    "newLinkFormat": "shortest",
+    "useMarkdownLinks": false
+  },
+  "settle": "resolved",
+  "ms": 999,
+  "changed": [
+    "RenameSources/Uses Headed.md",
+    "RenameTargets/Headed Renamed.md",
+    "RenameTargets/Headed.md"
+  ]
+}

@@ -3,7 +3,7 @@
 ## Purpose
 
 Defines which links in a connected Obsidian vault a rename or a move through Ratatoskr rewrites, how
-the result must match what Obsidian itself does, and the golden fixtures from the real Obsidian CLI
+the result must match what Obsidian itself does, and the golden fixtures from the real Obsidian app
 that decide what "match" means.
 
 ## ADDED Requirements
@@ -70,11 +70,11 @@ name the files that were not applied.
 - **THEN** the two acknowledged files are current, the third keeps its previous revision, and one
   conflict names it, verified by `link_rewrite_atomic.rs::partial_application_fails_with_a_conflict`
 
-### Requirement: Golden fixtures from the Obsidian CLI are the oracle
+### Requirement: Golden fixtures from the real Obsidian app are the oracle
 
 `ratatoskr-notes` SHALL hold golden fixtures, each with a vault before the operation, the operation,
-and the vault after it as the real Obsidian app produced it through `obsidian move` or
-`obsidian rename`, plus the Obsidian version and vault settings. The notes rewrite SHALL produce the
+and the vault after it as the real Obsidian app produced it through `fileManager.renameFile` (the
+call behind `obsidian move` and `obsidian rename`), plus the Obsidian version and vault settings. The notes rewrite SHALL produce the
 "after" vault of every fixture byte for byte.
 
 #### Scenario: The rewrite disagrees with Obsidian

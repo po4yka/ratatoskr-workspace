@@ -18,7 +18,7 @@ because the `fleet-bus-topology` delta modifies the text those two leave.
 ## 2. Planning records
 
 - [x] 2.1 Write the changeset `changesets/OBS-024-notes-write-back.yaml`: affected repositories, task branches, merge order, rollout and rollback as in `design.md`. No test: a planning record. Verify with `./ws manifest check` and `openspec validate add-notes-write-back --strict`.
-- [ ] 2.2 Record in `docs/NOTES_AND_SITES.md` the seventh write operation `resolve_conflict`, the `origin` field, the upload-first rule, the routes `.../writes`, `.../write-mode`, `.../device-operations` and `/v1/notes/conflicts/{id}`, the operation kinds and the two durables. No test: documentation. Verify that the subject, route and durable tables agree with the specs of this change.
+- [x] 2.2 Record in `docs/NOTES_AND_SITES.md` the seventh write operation `resolve_conflict`, the `origin` field, the upload-first rule, the routes `.../writes`, `.../write-mode`, `.../device-operations` and `/v1/notes/conflicts/{id}`, the operation kinds and the two durables. No test: documentation. Verify that the subject, route and durable tables agree with the specs of this change.
 
 ## 3. Contracts (ratatoskr-contracts)
 

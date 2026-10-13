@@ -1,0 +1,9 @@
+{
+  "id": "ratatoskr-spike",
+  "name": "Ratatoskr Spike",
+  "version": "0.0.1",
+  "minAppVersion": "1.0.0",
+  "description": "Throwaway spike plugin. Records metadata, vault events and storage probes.",
+  "author": "spike",
+  "isDesktopOnly": true
+}

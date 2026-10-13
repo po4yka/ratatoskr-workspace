@@ -70,13 +70,14 @@ produces.
 
 The Obsidian login and the cleanup of a connection SHALL run as the oneshot template units
 `ratatoskr-notes-login@<connection id>.service` and `ratatoskr-notes-cleanup@<connection id>.service`.
-Secrets SHALL reach the login unit only as systemd credentials, and SHALL NOT appear in the command
-line of any process that another user can see.
+The account password and the end-to-end password SHALL reach the login unit only as systemd
+credentials, and SHALL NOT appear in the command line of any process. Only the one-time MFA code
+MAY appear in the command line of the login unit.
 
 #### Scenario: The login unit runs
 
 - **WHEN** the login unit runs `ob login` and `ob sync-setup` against a stub `ob` that sleeps, and a process of another user reads `/proc/*/cmdline` during the run
-- **THEN** no marker secret is read, verified by `services/notes/tests/secret_custody.rs::no_secret_in_any_cmdline` in `ratatoskr-notes`
+- **THEN** neither marker password is read, verified by `services/notes/tests/secret_custody.rs::no_secret_in_any_cmdline` in `ratatoskr-notes`
 
 #### Scenario: The login unit receives its secrets
 
@@ -115,6 +116,17 @@ SHALL NOT sync the `.obsidian` configuration of the vault.
 
 - **WHEN** a `sync` connection is set up
 - **THEN** the stub `ob` records `sync-config --mode pull-only --configs ""` and the device name `ratatoskr-<connection id>`, verified by `services/notes/tests/sync_supervisor.rs::connect_starts_one_unit_in_pull_only_mode` in `ratatoskr-notes`
+
+### Requirement: An expired Sync login stops the connection and waits for the owner
+
+When the `sync` client of a connection reports an authentication failure for 5 minutes,
+`ratatoskr-notes` SHALL stop that connection's sync unit, SHALL mark the connection `login_expired`
+with the code `notes.sync.login_expired`, and SHALL NOT start a new login by itself.
+
+#### Scenario: The stub client keeps failing to authenticate
+
+- **WHEN** a stub `ob` logs `Failed to authenticate:` every 30 seconds for 5 minutes of paused time
+- **THEN** the unit is stopped once, the connection state is `login_expired`, and no login unit is started, verified by `services/notes/tests/sync_supervisor.rs::auth_failure_stops_the_unit_and_waits_for_the_owner` in `ratatoskr-notes`
 
 ### Requirement: Connection events name the connection and never its secrets
 

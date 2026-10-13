@@ -1,0 +1,17 @@
+{
+  "name": "shortest-path-link",
+  "from": "RenameTargets/Shortest.md",
+  "to": "RenameTargets/Shortest Renamed.md",
+  "settings": {
+    "alwaysUpdateLinks": true,
+    "newLinkFormat": "shortest",
+    "useMarkdownLinks": false
+  },
+  "settle": "resolved",
+  "ms": 821,
+  "changed": [
+    "RenameSources/Uses Shortest.md",
+    "RenameTargets/Shortest Renamed.md",
+    "RenameTargets/Shortest.md"
+  ]
+}

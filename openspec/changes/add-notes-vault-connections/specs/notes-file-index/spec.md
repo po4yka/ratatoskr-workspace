@@ -13,31 +13,41 @@ For each current Markdown file the index SHALL hold the frontmatter as JSON, the
 and from the `tags` frontmatter key, the headings with their levels, the block ids, the `aliases`
 frontmatter values, and every outgoing link and embed. Links SHALL include `[[name]]`,
 `[[name|alias]]`, `[[name#heading]]`, `[[name#^block]]`, `![[embed]]` and Markdown links to
-relative paths. Text inside `%% comments %%`, code spans and fenced code blocks SHALL NOT produce
-tags or links.
+relative paths.
 
-#### Scenario: A link inside a comment
+#### Scenario: Every link form is indexed
+
+- **WHEN** a file contains one link of each form listed above
+- **THEN** the index of that file holds each of them with its target, heading or block, verified by `crates/notes-index/tests/parse.rs::every_link_form_is_indexed` in `ratatoskr-notes`
+
+### Requirement: Comments are indexed and code is not
+
+Code spans, fenced, tilde and indented code blocks, HTML comments and `$$` math SHALL NOT produce
+tags or links. Links and tags inside `%% comments %%` SHALL be indexed, because Obsidian indexes
+them and rewrites them on a rename.
+
+#### Scenario: A link inside a comment and a link inside code
 
 - **WHEN** a file contains `%% see [[Secret]] %%` and a fenced code block with `[[Code]]`
-- **THEN** the index of that file holds neither `Secret` nor `Code` as a link, verified by `crates/notes-index/tests/parse.rs::comments_and_code_produce_no_links` in `ratatoskr-notes`
+- **THEN** the index of that file holds `Secret` as a link and does not hold `Code`, verified by `crates/notes-index/tests/parse.rs::comment_links_count_and_code_links_do_not` in `ratatoskr-notes`
 
 ### Requirement: Links resolve as Obsidian resolves them
 
-A link target SHALL resolve to an exact vault path when one matches, otherwise to the only file with
-that name, otherwise to the file with the shortest path among the files with that name. A link that
-matches no file SHALL be recorded as unresolved. An alias SHALL NOT resolve a link target. For each
-pinned Obsidian version, the resolved links, backlinks, tags and properties of the fixture vault
-SHALL equal the golden output that the real Obsidian CLI produced for that version.
+A link target SHALL resolve to an exact vault path when one matches, otherwise to a file with that
+name in the linking file's own folder, otherwise to the only file with that name, otherwise to the
+shortest path among the files with that name. Matching SHALL ignore case. An unmatched link SHALL
+be recorded as unresolved, and an alias SHALL NOT resolve a target. The links, backlinks, tags and
+properties of the fixture vault SHALL equal the golden output of the real Obsidian engine.
 
 #### Scenario: The fixture vault is compared with Obsidian
 
-- **WHEN** `crates/notes-index/tests/golden.rs::index_matches_obsidian_cli_output` runs against every directory under `crates/notes-index/tests/fixtures/obsidian-<version>/`
-- **THEN** the outgoing links, backlinks, tags and properties of every fixture file equal the stored `obsidian links`, `obsidian backlinks format=json`, `obsidian tags` and `obsidian properties` output, verified by that test in `ratatoskr-notes`
+- **WHEN** `crates/notes-index/tests/golden.rs::index_matches_obsidian_engine_output` runs against every directory under `crates/notes-index/tests/fixtures/obsidian-<version>/`
+- **THEN** the outgoing links, backlinks, tags and properties of every fixture file equal the stored engine output (`metadata.json`, taken from the metadata cache of that Obsidian version), verified by that test in `ratatoskr-notes`
 
 #### Scenario: Two files share a name
 
-- **WHEN** a vault holds `A/Note.md` and `B/C/Note.md` and a file links `[[Note]]`
-- **THEN** the link resolves to `A/Note.md`, verified by `crates/notes-index/tests/resolve.rs::shortest_path_wins_for_equal_names` in `ratatoskr-notes`
+- **WHEN** a vault holds `A/Note.md` and `B/C/Note.md`, and `Root.md` and `B/C/Other.md` each link `[[Note]]`
+- **THEN** the link from `Root.md` resolves to `A/Note.md` and the link from `B/C/Other.md` resolves to `B/C/Note.md`, verified by `crates/notes-index/tests/resolve.rs::same_folder_then_shortest_path_wins` in `ratatoskr-notes`
 
 ### Requirement: Clients read files and the index only through Edge
 

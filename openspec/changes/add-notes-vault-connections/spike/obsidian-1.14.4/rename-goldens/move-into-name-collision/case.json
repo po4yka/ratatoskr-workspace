@@ -1,0 +1,17 @@
+{
+  "name": "move-into-name-collision",
+  "from": "RenameTargets/Collide.md",
+  "to": "RenameTargets/Other/Epsilon.md",
+  "settings": {
+    "alwaysUpdateLinks": true,
+    "newLinkFormat": "shortest",
+    "useMarkdownLinks": false
+  },
+  "settle": "resolved",
+  "ms": 990,
+  "changed": [
+    "RenameSources/Uses Collide.md",
+    "RenameTargets/Collide.md",
+    "RenameTargets/Other/Epsilon.md"
+  ]
+}

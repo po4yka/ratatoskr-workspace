@@ -18,7 +18,7 @@ Each child repository works on the task branch `site-027/<slug>` named in the ch
 ## 2. Planning records
 
 - [x] 2.1 Write `changesets/SITE-027-site-owner-editing-and-live.yaml`: affected repositories, task branches, merge order, rollout and rollback as in `design.md`. No test: a planning record. Verify with `./ws manifest check` and `openspec validate add-site-owner-editing-and-live --strict`.
-- [ ] 2.2 Add `site_owner` and the site origin to Platform's `docs/ARCHITECTURE.md` S6.2 session table, with its lifetime and its route rule from design D2. No test: documentation. Verify that the table lists six kinds.
+- [x] 2.2 Add `site_owner` and the site origin to Platform's `docs/ARCHITECTURE.md` S6.2 session table, with its lifetime and its route rule from design D2. No test: documentation. Verify that the table lists six kinds. Done in ratatoskr-platform 2cda1da.
 
 ## 3. Contracts (ratatoskr-contracts)
 

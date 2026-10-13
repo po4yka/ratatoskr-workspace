@@ -140,10 +140,25 @@ rewrites form one write group, which waits until it is at the head of every queu
 stale base stops the whole group. On the `plugin` and `cli` channels Obsidian rewrites the links on
 the device, and notes' own result is the expected result that the acknowledgement must match.
 
-The oracle is a fixture corpus recorded with the real app: a script copies a "before" vault, runs
-`obsidian move` or `obsidian rename`, and stores the "after" vault with the Obsidian version, the
-vault settings and a checksum list. Recording runs on the owner's Mac, because it needs the desktop
-app; CI only replays the fixtures.
+The oracle is a fixture corpus recorded with the real app: a recorder copies a "before" vault,
+calls `fileManager.renameFile` (the call behind `obsidian move` and `obsidian rename`), and stores
+the "after" vault with the Obsidian version, the vault settings and a checksum list. Recording runs
+on the owner's Mac, because it needs the desktop app; CI only replays the fixtures. The recorder is
+the Obsidian CLI where the installer is 1.12.7 or later, or a recording plugin in an isolated
+profile, as in OBS-023 spike 3.6.
+
+Spike 3.6 recorded five seed cases with Obsidian 1.14.4
+(`add-notes-vault-connections/spike/obsidian-1.14.4/rename-goldens/`, `alwaysUpdateLinks: true`,
+`newLinkFormat: shortest`). They show three rules that the rewrite must copy:
+
+- a relative Markdown link to the renamed file is rewritten to a bare name (`../X.md` becomes
+  `X%20Renamed.md`);
+- a path wikilink is shortened when the new name is unique (`[[Dir/Aliased|A]]` becomes
+  `[[Aliased Renamed|A]]`);
+- a move into a name collision writes the full path (`[[Collide]]` becomes
+  `[[RenameTargets/Other/Epsilon]]`).
+
+Subpaths, block references and display aliases are kept.
 
 Alternative: run the Obsidian desktop app under Xvfb on the host and send every rename to it.
 Electron on the Pi as a server dependency, upgraded by Obsidian's release schedule, is fragile.

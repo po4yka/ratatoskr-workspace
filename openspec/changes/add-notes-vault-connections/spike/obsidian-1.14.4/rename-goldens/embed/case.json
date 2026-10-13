@@ -1,0 +1,17 @@
+{
+  "name": "embed",
+  "from": "RenameTargets/Embedded.md",
+  "to": "RenameTargets/Embedded Renamed.md",
+  "settings": {
+    "alwaysUpdateLinks": true,
+    "newLinkFormat": "shortest",
+    "useMarkdownLinks": false
+  },
+  "settle": "resolved",
+  "ms": 993,
+  "changed": [
+    "RenameSources/Uses Embedded.md",
+    "RenameTargets/Embedded Renamed.md",
+    "RenameTargets/Embedded.md"
+  ]
+}

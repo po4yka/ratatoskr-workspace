@@ -74,7 +74,7 @@ end to end.
   it changes. A mismatch makes a conflict with a three-way merge proposal. It never overwrites in
   silence.
 - **Link rewrite on the server.** A rename through Ratatoskr rewrites links with Obsidian's rules.
-  Golden fixtures that the real Obsidian CLI produces are the test oracle.
+  Golden fixtures that the real Obsidian app produces are the test oracle.
 - **The read path comes first** (OBS-023, `ob` in `pull-only` mode). The write path follows in
   OBS-024.
 
@@ -100,9 +100,12 @@ end to end.
   connect call to notes and never persists or logs its body.
 - Login and cleanup run as oneshot template units (`ratatoskr-notes-login@<id>`,
   `ratatoskr-notes-cleanup@<id>`), which receive the secrets as systemd credentials. The OBS-023
-  spike checks whether `ob` reads them from stdin or a file. If `ob` needs them in argv, the unit runs
-  as its own user, and the host mounts `/proc` with `hidepid=invisible` so that other users cannot
-  read the command line. `PrivatePIDs=` is not used, because the host runs systemd 252.
+  spike 3.2 found that `ob` reads both passwords from standard input, so no password enters argv.
+  Only the one-time MFA code is in argv. `PrivatePIDs=` is not used, because the host runs systemd
+  252.
+- `ob` keeps its login token and the derived end-to-end key in plaintext files (mode 0600) in its
+  state directory. The 0700 `ob-home` of each connection, owned by `ratatoskr-notes-sync`, is their
+  only protection.
 - The client state of each `ob` process lives in its own directory, mode 0700, owned by the
   `ratatoskr-notes-sync` user.
 - The plugin authenticates as a registered device. Its credential is kept outside the vault folder,
@@ -120,12 +123,33 @@ Development status rules apply: no migrations, one version.
 
 - The OBS-023 spike on the target hardware: login with MFA, end-to-end encryption, `--continuous`
   uptime and memory, `pull-only` mode, and a concurrent local edit.
-- The golden-fixture corpus from the Obsidian CLI, run against the server-side link rewrite.
+- The golden-fixture corpus from the real Obsidian app, run against the server-side link rewrite.
 - The scenarios in the specs of OBS-023 and OBS-024.
+
+## Terms of use (spike 3.4, open)
+
+Obsidian's Terms of Service have no clause about automation or servers. Obsidian's own
+documentation names this use: Headless Sync is "useful for CI pipelines, agents, and automated
+workflows", and Obsidian Headless lists "Give agentic tools access to a vault". The conditions that
+follow from the Terms and from Obsidian staff are:
+
+- the use stays personal: no service for others, and no access by third parties;
+- the client is installed from npm on the host and is never redistributed in a published image;
+- the client logs in once and backs off on errors. The supervisor never repeats a login by itself:
+  a `login_expired` connection waits for the owner.
+
+No commercial licence is needed, and a Sync subscription is. Five points need written confirmation
+from Obsidian support before this ADR is accepted. One of them is whether note text may go to the
+LLM provider that Knowledge uses. The evidence and a draft email are in
+`openspec/changes/add-notes-vault-connections/spike/3.4-obsidian-terms.md`.
+
+The Sync plan limits apply to the host as to any device. Sync Standard allows one vault, 5 MB per
+file and 1 GB of storage, and stored versions count toward that storage. Frequent automated writes
+therefore cost storage.
 
 ## Exit path
 
-`obsidian-headless` is a beta with no declared license. If Obsidian withdraws it, or its terms of use
+`obsidian-headless` is a beta whose licence is `UNLICENSED` (proprietary). If Obsidian withdraws it, or its terms of use
 forbid this use, the `sync` channel stops and the `plugin` and `cli` channels remain. The data in
 `notes` and in the blob root stays complete, because every revision is stored in Ratatoskr.
 

@@ -1,0 +1,17 @@
+{
+  "name": "aliased-link",
+  "from": "RenameTargets/Aliased.md",
+  "to": "RenameTargets/Aliased Renamed.md",
+  "settings": {
+    "alwaysUpdateLinks": true,
+    "newLinkFormat": "shortest",
+    "useMarkdownLinks": false
+  },
+  "settle": "resolved",
+  "ms": 1637,
+  "changed": [
+    "RenameSources/Uses Aliased.md",
+    "RenameTargets/Aliased Renamed.md",
+    "RenameTargets/Aliased.md"
+  ]
+}
