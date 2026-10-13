@@ -1935,6 +1935,10 @@ round_6:
     workspace_commits_before_this_record:
       - "d085ef0 test(native): assert what the F1 reaper names say, add the XR-021 round 6 legs (rebased onto the owner's deployment commits as 6c1bc36)"
       - "eafce86 docs: bring the fleet map in line with the children's origin/main and the port table (rebased as 11cc17d; the owner's dad4e3d had edited docs/fleet-map.html and docs/DEPLOYMENT_TARGET.md meanwhile, and the three conflicts were merged by hand: the open-gaps list and the route list are the owner's, the port table is this round's with the 8094 and 8095 rows set to the owner's unresolved wording)"
+    published:
+      pushed: "plain fast-forward of origin/main from b4c4b87 (the owner's deployment commits, onto which the two harness commits were rebased) to 17b208aae21f8be9cdb34d4e9baae7da7a4fd9e2 on 2026-10-13: 6c1bc36 (F1 assertions and the Round 6 legs), 11cc17d (the fleet map), 05f8293 (the OpenSpec change) and 17b208a (the five pins, workspace.lock, EXPECTED_PINS, this changeset block)"
+      hosted_ci_of_17b208a: "six check runs concluded success on 2026-10-13: fleet / invariants, openspec / specs, zizmor / audit, deny, snapshot and release-artifact-selftest / artifact (workflows fleet, openspec, zizmor and workspace snapshot)"
+      hosted_ci_of_the_recording_commit: "the commit that records this result is checked the same way; read it from the workflow runs of the head of main"
     manifest: "workspace.toml unchanged (it names no revisions); workspace.lock regenerated with ./ws lock generate"
   harness_results:
     f1_assertions:
