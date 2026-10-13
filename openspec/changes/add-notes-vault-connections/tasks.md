@@ -31,10 +31,14 @@ child repository works on the task branch `obs-023/notes-vault-connections`.
 
 ## 4. Contracts (ratatoskr-contracts)
 
-- [ ] 4.1 RED: add fixtures under `fixtures/events/notes.vault.connected.v1`, `notes.vault.disconnected.v1` and `notes.file.changed.v1`, including one invalid fixture each with an extra field and one `file.changed` fixture of kind `deleted` that carries a `BlobRef`. Register the three types in `contracts.toml` with producer `ratatoskr-notes` and consumer `ratatoskr-knowledge`. Add `tools/contractsc/tests/fixtures.rs::notes_vault_fixtures_refuse_unknown_fields`, which asserts that every invalid fixture is refused. Confirm that it fails because the schema files do not exist.
-- [ ] 4.2 GREEN: add the crate `ratatoskr-notes-contracts` and the three schemas under `schemas/events/`. Verify that 4.1 passes, that the `deleted` fixture with a `BlobRef` is refused, and that `cargo test --test live_message_types` passes.
-- [ ] 4.3 RED: add the operation kind `notes.connection.connect` to the operation fixtures with the reporter lane `ratatoskr-notes`, and a test `tools/contractsc/tests/fixtures.rs::notes_connect_kind_is_registered` that asserts the kind is in the registry. Confirm that it fails because the kind is not registered.
-- [ ] 4.4 GREEN: register the kind with the lane `ratatoskr-notes`, and verify 4.3.
+- [x] 4.1 RED: add fixtures under `fixtures/events/notes.vault.connected.v1`, `notes.vault.disconnected.v1` and `notes.file.changed.v1`, including one invalid fixture each with an extra field and one `file.changed` fixture of kind `deleted` that carries a `BlobRef`. Register the three types in `contracts.toml` with producer `ratatoskr-notes` and consumer `ratatoskr-knowledge`. Add `tools/contractsc/tests/fixtures.rs::notes_vault_fixtures_refuse_unknown_fields`, which asserts that every invalid fixture is refused. Confirm that it fails because the schema files do not exist.
+- [x] 4.2 GREEN: add the crate `ratatoskr-notes-contracts` and the three schemas under `schemas/events/`. Verify that 4.1 passes, that the `deleted` fixture with a `BlobRef` is refused, and that `cargo test --test live_message_types` passes.
+
+The operation kind `notes.connection.connect` needs no contracts task. `OperationKind` in
+`ratatoskr-operation-contracts` is an open validated string, and contracts holds no registry of kinds
+or reporter lanes, so no test there could fail first. The kind and its reporter lane
+`ratatoskr-notes` are enforced by Platform's authority table, in tasks 9.3 and 9.4. (Corrected on
+2026-10-13; this replaces the former tasks 4.3 and 4.4.)
 
 ## 5. Notes repository, connections and secrets (ratatoskr-notes)
 
