@@ -182,6 +182,33 @@ and which were not run.
 This gate does not rerun child CI, deploy the fleet, contact a provider, or establish runtime
 end-to-end health.
 
+## The release-artifact gate
+
+`.github/workflows/reusable-release-artifact.yml` is the one definition of what a repository that
+ships a systemd unit publishes for a commit on `main` (openspec `release-artifacts`, ADR-0009). On a
+native `ubuntu-24.04-arm` runner it builds the repository's Dockerfile `export` stage, and refuses
+to publish when a unit's `ExecStart=` binary is missing from the export, when the export holds a file
+that no unit starts, when a binary is not an `aarch64` ELF, or when it requires a `GLIBC_` version
+newer than 2.36. It then writes `SHA256SUMS` and an SPDX SBOM, pushes
+`ghcr.io/po4yka/<repository>:sha-<commit>` with `oras`, refuses to move a tag that already exists, and
+attests the digest with GitHub build provenance.
+
+Two checks in this repository keep it honest:
+
+- `release_artifact_check.rs` lifts the check block between `# BEGIN artifact-check` and
+  `# END artifact-check` out of the workflow and runs it against generated ELF fixtures: a missing
+  binary, an extra file, an `x86-64` binary and a `GLIBC_2.38` requirement are refused, and a
+  complete export is accepted with a `sha256sum -c` file. A reusable workflow cannot be called in a
+  way that is expected to fail, so this is where the refusals are proven.
+- The `release-artifact-selftest` job in `ci.yml` calls the workflow with `publish: false` against
+  `harness/fixtures/release-artifact/`, which exports one real Debian 12 `aarch64` binary. It proves
+  that the build, the check and the SBOM steps work together on the runner the callers get.
+
+What it cannot see: the attestation proves which workflow built a digest from which commit, not that
+the binary is correct. The repository's own arm64 smoke test, which runs before the call, is the
+evidence that the binary starts, answers readiness and stops cleanly. The GLIBC check reads the
+version strings in the binary, so a requirement loaded at run time through `dlopen` is outside it.
+
 ## What each repository has
 
 All 18 repositories are public. The default branch of each repository is `main`.

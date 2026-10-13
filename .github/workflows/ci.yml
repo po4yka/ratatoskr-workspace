@@ -33,6 +33,24 @@ jobs:
         working-directory: harness
         run: cargo deny check
 
+  # The publishing workflow the service repositories call, run end to end against a fixture without
+  # publishing. Its refusals are covered by `release_artifact_check.rs`; this proves the build, the
+  # check and the SBOM steps work together on the runner the callers get.
+  release-artifact-selftest:
+    permissions:
+      contents: read
+      # The three below are requested by the called job for its publish half. With
+      # `publish: false` nothing is pushed or attested, but a called job may not ask for more than
+      # its caller grants.
+      packages: write      # ghcr.io push, unused here
+      id-token: write      # attestation signing, unused here
+      attestations: write  # attestation record, unused here
+    uses: ./.github/workflows/reusable-release-artifact.yml
+    with:
+      context: harness/fixtures/release-artifact
+      units: harness/fixtures/release-artifact/deploy/systemd
+      publish: false
+
   snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 20

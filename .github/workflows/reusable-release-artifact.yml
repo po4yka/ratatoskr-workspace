@@ -1,0 +1,198 @@
+# The linux/arm64 artifact of one commit, defined once for every repository that ships a unit.
+#
+# A repository whose `deploy/systemd/` holds a unit calls this from its own workflow, pinned to a
+# commit of this repository, after its own arm64 smoke test has passed. For that commit it publishes
+# `ghcr.io/po4yka/<repository>:sha-<commit>`: an OCI artifact that holds every binary a unit starts,
+# `SHA256SUMS` and an SPDX SBOM, with a GitHub build-provenance attestation beside it. The playbook in
+# `deploy/ansible/` installs nothing else (openspec `release-artifacts`, ADR-0009).
+#
+# Not an image. The services run under systemd, so the binary is what is deployed; the repository's
+# own `runtime` image stays a CI fixture for its smoke test. Platform's tag-triggered image release is
+# separate and keeps its own `v*` tags in the same package.
+name: release-artifact
+
+on:
+  workflow_call:
+    inputs:
+      context:
+        description: Docker build context, relative to the repository root. Its Dockerfile has an `export` stage.
+        type: string
+        default: "."
+      units:
+        description: Directory of the systemd units whose ExecStart binaries the artifact must hold.
+        type: string
+        default: deploy/systemd
+      publish:
+        description: Push and attest. Off builds and checks only, which is how this repository tests the workflow.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  artifact:
+    # Native arm64: the artifact is what the Raspberry Pi 5 runs (docs/DEPLOYMENT_TARGET.md), and
+    # GitHub's arm64 runners are free on a public repository.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+      packages: write      # push to ghcr.io
+      id-token: write      # the OIDC token the attestation is signed with; no key is stored anywhere
+      attestations: write  # record the attestation against the repository
+
+    env:
+      CONTEXT: ${{ inputs.context }}
+      UNITS: ${{ inputs.units }}
+      PUBLISH: ${{ inputs.publish }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the export stage
+        run: |
+          set -euo pipefail
+          # The `export` stage is `FROM scratch` with only the binaries in it, so the local exporter
+          # writes exactly what is published and nothing the build left lying around.
+          docker buildx build \
+            --platform linux/arm64 \
+            --target export \
+            --build-arg RATATOSKR_GIT_SHA="$GITHUB_SHA" \
+            --output "type=local,dest=$RUNNER_TEMP/out" \
+            "$CONTEXT"
+          ls -l "$RUNNER_TEMP/out"
+
+      # The decision whether to publish. It lives between the two markers so that the harness test
+      # `release_artifact_check.rs` runs exactly these lines against generated fixtures: a reusable
+      # workflow cannot be called in a way that is expected to fail. Arguments: the units directory
+      # and the export directory. On success it writes SHA256SUMS into the export directory.
+      - name: Every unit binary is in the artifact, for aarch64 and glibc 2.36
+        run: |
+          python3 - "$UNITS" "$RUNNER_TEMP/out" <<'PY'
+          # BEGIN artifact-check
+          import hashlib, pathlib, re, sys
+
+          GLIBC_CEILING = (2, 36)  # Debian 12 on the host, docs/DEPLOYMENT_TARGET.md
+          EM_AARCH64 = 183
+
+          units, out = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+          errors = []
+
+          wanted = set()
+          for unit in sorted(units.glob("*.service")):
+              for line in unit.read_text().splitlines():
+                  if not line.startswith("ExecStart="):
+                      continue
+                  command = line[len("ExecStart="):].lstrip("-@:+!").split()
+                  if command:
+                      wanted.add(pathlib.PurePosixPath(command[0]).name)
+          if not wanted:
+              errors.append(f"no ExecStart= binary found in {units}")
+
+          built = {path.name for path in out.iterdir() if path.is_file()}
+          for name in sorted(wanted - built):
+              errors.append(f"{name}: a unit starts it and the export stage did not produce it")
+          for name in sorted(built - wanted):
+              errors.append(f"{name}: in the export stage, and no unit starts it")
+
+          for name in sorted(wanted & built):
+              data = (out / name).read_bytes()
+              if data[:4] != b"\x7fELF" or data[4] != 2:
+                  errors.append(f"{name}: not a 64-bit ELF file")
+                  continue
+              machine = int.from_bytes(data[18:20], "little")
+              if machine != EM_AARCH64:
+                  errors.append(f"{name}: ELF machine {machine}, expected aarch64 ({EM_AARCH64})")
+              versions = {
+                  (int(major), int(minor))
+                  for major, minor in re.findall(rb"GLIBC_(\d+)\.(\d+)", data)
+              }
+              too_new = sorted(v for v in versions if v > GLIBC_CEILING)
+              if too_new:
+                  needed = ", ".join(f"GLIBC_{a}.{b}" for a, b in too_new)
+                  errors.append(f"{name}: requires {needed}, newer than GLIBC_2.36")
+
+          if errors:
+              for error in errors:
+                  print(f"::error::{error}")
+              sys.exit(1)
+
+          sums = "".join(
+              f"{hashlib.sha256((out / name).read_bytes()).hexdigest()}  {name}\n"
+              for name in sorted(wanted)
+          )
+          (out / "SHA256SUMS").write_text(sums)
+          print(sums, end="")
+          # END artifact-check
+          PY
+
+      - name: SBOM of the published binaries
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          path: ${{ runner.temp }}/out
+          format: spdx-json
+          output-file: ${{ runner.temp }}/sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Install oras
+        if: env.PUBLISH == 'true'
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+      - name: Push, unless this commit already has an artifact
+        id: push
+        if: env.PUBLISH == 'true'
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          # The package is named after the repository, as Platform's image release names its own.
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          ref="$image:sha-$GITHUB_SHA"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          # Through stdin, so the token is never an argument in the process list.
+          printf '%s' "$REGISTRY_TOKEN" | oras login ghcr.io -u "$ACTOR" --password-stdin
+
+          # A published tag never moves (release-artifacts): a re-run for the same commit reports
+          # the existing digest and publishes nothing.
+          if existing=$(oras manifest fetch --descriptor "$ref" 2>/dev/null); then
+            digest=$(printf '%s' "$existing" | python3 -c 'import json,sys; print(json.load(sys.stdin)["digest"])')
+            echo "::notice::$ref already exists at $digest; nothing is published"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+            echo "attest=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cp "$RUNNER_TEMP/sbom.spdx.json" "$RUNNER_TEMP/out/sbom.spdx.json"
+          cd "$RUNNER_TEMP/out"
+          files=()
+          while read -r _ name; do
+            files+=("$name:application/octet-stream")
+          done < SHA256SUMS
+          files+=("SHA256SUMS:text/plain" "sbom.spdx.json:application/spdx+json")
+          digest=$(oras push "$ref" \
+            --artifact-type application/vnd.ratatoskr.binaries.v1 \
+            --annotation "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --annotation "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --format go-template='{{.digest}}' \
+            "${files[@]}")
+          case "$digest" in
+            sha256:*) ;;
+            *) echo "::error::could not read the pushed digest, got '$digest'"; exit 1 ;;
+          esac
+          echo "published $ref at $digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "attest=true" >> "$GITHUB_OUTPUT"
+
+      - name: Attest that this workflow built this digest
+        if: env.PUBLISH == 'true' && steps.push.outputs.attest == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.push.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

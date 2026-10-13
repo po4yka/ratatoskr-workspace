@@ -1,0 +1,11 @@
+# The unit the release-artifact self-test checks the fixture export against.
+[Unit]
+Description=Ratatoskr release-artifact fixture
+PartOf=ratatoskr.target
+
+[Service]
+Type=exec
+ExecStart=/usr/local/bin/fixture-ok
+
+[Install]
+WantedBy=ratatoskr.target
