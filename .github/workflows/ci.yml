@@ -73,7 +73,7 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install --quiet \
             ansible-core==2.18.19 molecule==26.10.0 'molecule-plugins[docker]==26.10.12' docker==7.2.0 # zizmor: ignore[adhoc-packages]
-          "$RUNNER_TEMP/venv/bin/ansible-galaxy" collection install community.docker:==5.3.0
+          "$RUNNER_TEMP/venv/bin/ansible-galaxy" collection install community.docker:==5.3.0 ansible.posix:==2.2.2
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
       - name: Converge, idempotence and verify
