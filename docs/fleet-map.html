@@ -1087,7 +1087,7 @@ tr.dim-row { opacity: 0.35; }
   // deployment
   const ROUTES_GW = [
     ["/v1/k", "8091", "knowledge", "bound"], ["/v1/gh", "8092", "github", "bound"], ["/v1/vault", "8093", "vault", "routed"],
-    ["/v1/social", "8094", "no owner", "unresolved"], ["/v1/ai", "8095", "no owner", "unresolved"],
+    ["/v1/social", "8094", "ratatoskr-social", "routed"], ["/v1/ai", "8095", "ratatoskr-ai-archive", "routed"],
     ["/v1/chatgpt", "8096", "chatgpt receipt", "bound"], ["/v1/claude", "8097", "claude receipt", "bound"],
   ];
   document.getElementById("routes").innerHTML = `<div class="box">${ROUTES_GW.map(([path, port, who, st]) =>
@@ -1099,8 +1099,8 @@ tr.dim-row { opacity: 0.35; }
     ["8091", "127.0.0.1", "ratatoskr-knowledge domain API, /v1/k", "knowledge", "loopback", "bound", "Dedicated listener (RATATOSKR__API__LISTEN_ADDRESS) beside the operator listener 9081; also /v1/capabilities, /internal/search and /internal/user-content/*"],
     ["8092", "127.0.0.1", "/v1/gh, GitHub catalog API", "github", "loopback", "bound", "Also internal reader routes, which Edge never exposes"],
     ["8093", "127.0.0.1", "/v1/vault", "vault", "loopback", "routed", "No listener yet, so Edge reports the capability stale, which is truthful"],
-    ["8094", "127.0.0.1", "/v1/social", "none", "loopback", "unresolved", "No service binds it yet; Instagram's product API is 9083, host only"],
-    ["8095", "127.0.0.1", "/v1/ai", "none", "loopback", "unresolved", "No service binds it yet; chatgpt and claude serve the archive receipt on 8096 and 8097"],
+    ["8094", "127.0.0.1", "/v1/social", "ratatoskr-social", "loopback", "routed", "No service binds it yet; Instagram's product API is 9083, host only"],
+    ["8095", "127.0.0.1", "/v1/ai", "ratatoskr-ai-archive", "loopback", "routed", "No service binds it yet; chatgpt and claude serve the archive receipt on 8096 and 8097"],
     ["8096", "127.0.0.1", "/v1/chatgpt, archive receipt", "chatgpt", "loopback", "bound", "POST /v1/ai-archives/receipt and GET /v1/capabilities (RATATOSKR__RECEIPT__LISTEN_ADDRESS); reached only through Platform archive acceptance"],
     ["8097", "127.0.0.1", "/v1/claude, archive receipt", "claude", "loopback", "bound", "POST /v1/ai-archives/receipt and GET /v1/capabilities (RATATOSKR__RECEIPT__LISTEN_ADDRESS); reached only through Platform archive acceptance"],
     ["8098", "127.0.0.1", "ratatoskr-channel-digests-api", "channel-digests", "loopback", "bound", "Owner-scoped read API (/v1/manifests, /v1/subscriptions, /v1/results, /ready) for Platform and Knowledge only"],
