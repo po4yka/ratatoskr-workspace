@@ -1,0 +1,289 @@
+# Design
+
+## Context
+
+See proposal.md for the motivation. `docs/NOTES_AND_SITES.md` holds the shared names: repositories,
+subjects, routes, ports and storage paths. ADR-0010 records the decision to create a notes bounded
+context and to use Obsidian's own clients.
+
+The constraints that shape this design:
+
+- One host, a Raspberry Pi 5 with four cores and 15 GiB shared with other tenants
+  (`docs/DEPLOYMENT_TARGET.md`). Every new process must justify its memory.
+- Each service owns one schema in the database `ratatoskr`, its own blob root, and its own NATS
+  identity (`postgres-provisioning`, `blob-references`, `fleet-bus-topology`).
+- Public clients talk only to Edge. Edge authenticates and mints claims for the domain service
+  (Platform ADR-0015). Devices pair through Platform ADR-0016.
+- The fleet has no Node.js runtime on the host today. Obsidian Headless needs Node.js 22.
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- Every connected vault has a complete, current copy in Ratatoskr: bytes, revisions and an index.
+- The three channels give the same events and the same index for the same vault content.
+- Obsidian secrets stay inside `ratatoskr-notes` and the one process that needs them.
+- Knowledge can search and analyse notes with the intake pattern it already has.
+
+**Non-Goals:**
+
+- Writing into a vault. The data model keeps `base_hash` from the start so that OBS-024 adds the
+  write path without a schema redesign, but no write route exists in this change.
+- Real-time collaboration inside one note.
+- A Ratatoskr UI inside Obsidian beyond pairing and status.
+
+## Decisions
+
+### D1. A new bounded context, `ratatoskr-notes`
+
+Notes are owner-authored content with their own lifecycle: connections, revisions, conflicts later,
+and publications later. Knowledge analyses content that other services own and must not become the
+owner of user-authored files. `ratatoskr-vault` backs up Git repositories and shares only the word.
+
+Alternatives:
+- Put notes in Knowledge. Rejected: Knowledge would own source bytes and the Obsidian secrets, and
+  every other producer keeps its source outside Knowledge.
+- Put notes in `ratatoskr-vault`. Rejected: a different domain, and the name collision would grow.
+
+### D2. One connection, one channel
+
+A connection records `channel` as one of `sync`, `plugin` or `cli`, and a **vault key** that
+identifies the vault. For `sync` the key is the remote vault id that `ob sync-list-remote` reports.
+For `plugin` and `cli` it is a random id that the device writes into
+`.obsidian/plugins/ratatoskr/vault-id` or into the export-agent settings on the first pairing.
+`ratatoskr-notes` refuses a second active connection with the same owner and vault key, whatever its
+channel.
+
+A plugin that finds that its vault already has a `sync` connection switches to status-only mode: it
+shows the connection and sends nothing. Two channels on one vault would deliver each change twice,
+and in OBS-024 they would also echo each write.
+
+Alternative: allow several channels and deduplicate by hash. Rejected: deduplication cannot order
+two different edits that arrive through two channels, so the result would depend on timing.
+
+### D3. The `sync` channel runs Obsidian Headless under systemd
+
+Each `sync` connection gets one unit instance, `ratatoskr-notes-sync@<connection id>.service`. The
+unit runs `ob sync --continuous --path /mnt/nvme/ratatoskr/notes/connections/<id>/tree` as the
+system user `ratatoskr-notes-sync`, with `HOME=/mnt/nvme/ratatoskr/notes/connections/<id>/ob-home`
+(mode 0700). `ratatoskr-notes` starts, stops and inspects the instances through the systemd D-Bus
+API with one polkit rule. The rule allows only three template units: `ratatoskr-notes-sync@*.service`
+(the continuous sync), `ratatoskr-notes-login@*.service` (a oneshot unit that runs `ob login` and
+`ob sync-setup`, D4) and `ratatoskr-notes-cleanup@*.service` (a oneshot unit that runs
+`ob sync-unlink` and deletes the working tree and the client state of a removed connection). In this
+change the
+connection is configured with `ob sync-config --mode pull-only --configs "" --excluded-folders
+<owner list>`, and `--device-name ratatoskr-<connection id>`.
+
+`ratatoskr-notes` does not parse the output of `ob`. It watches the working tree with inotify, with
+a full rescan at start and every 15 minutes, and turns each settled file state into a revision. A
+file is settled when its size and modification time have not changed for 2 seconds.
+
+Alternatives:
+- Spawn `ob` as child processes of `ratatoskr-notes`. Rejected: a crash of the service would stop
+  every sync, and systemd already gives restart, resource limits and journal capture.
+- Implement the Sync protocol in Rust. Rejected: the protocol is not documented and it uses
+  end-to-end encryption whose details Obsidian can change.
+- Run the Obsidian desktop app under Xvfb. Rejected: Electron as a server dependency, more memory,
+  and a GUI upgrade path.
+
+### D4. Secret custody
+
+The connect flow on the web client sends the Obsidian email, password, MFA code and end-to-end
+password to Edge. Edge proxies the request to `ratatoskr-notes` over loopback with the minted claims
+and the operation id that it mints. Edge keeps no part of the body: not in its database, its outbox,
+its idempotency or audit records, or its logs. The Platform test
+`connect_body_is_not_persisted_or_logged` proves it. `ratatoskr-notes` then:
+
+1. encrypts the account password and the end-to-end password with XChaCha20-Poly1305 under the key
+   in `/etc/ratatoskr/notes-secrets.key` (mode 0400, owner `ratatoskr-notes`), and stores the
+   ciphertext in `notes.connection_secrets`. The MFA code is never stored.
+2. writes each secret that the login needs to a file under
+   `/run/ratatoskr-notes/credentials/<connection id>/` (tmpfs, mode 0700, owner `ratatoskr-notes`),
+   and starts `ratatoskr-notes-login@<connection id>.service`. The unit reads the files with
+   `LoadCredential=`, so systemd gives them to the unit in `$CREDENTIALS_DIRECTORY` and no other
+   user can read them. `ratatoskr-notes` deletes the files when the unit stops, whatever its result.
+3. the login unit gives the secrets to `ob` on standard input or from a file, when `ob` allows it.
+   The spike (task 3.2) finds out. If `ob` accepts a secret only as argv, the login unit runs as its
+   own system user, `ratatoskr-notes-login`, and the host mounts `/proc` with `hidepid=invisible`,
+   so that no other user can see the process or its command line. The spike measures what
+   `hidepid=invisible` changes for monitoring on the host (the node-exporter, vmagent and the
+   systemd tools) before this fallback is chosen.
+4. after the setup succeeds, keeps only the client state that `ob` writes in `ob-home`. The
+   continuous unit needs no password.
+
+Secrets never appear in an event, an operation report, a log line or an error message. A failed
+login reports one of the stable codes `notes.sync.login_failed`, `notes.sync.mfa_required`,
+`notes.sync.e2e_password_wrong` or `notes.sync.vault_not_found`. The marker tests are split by
+repository: `marker_secrets_appear_nowhere_in_notes` in `ratatoskr-notes` (its tables, its outbox,
+its journal and that of its units, and its events) and `connect_body_is_not_persisted_or_logged` in
+`ratatoskr-platform`.
+
+A private PID namespace for the login (`PrivatePIDs=`) is not used: it needs systemd 257, and the
+host runs Debian 12 with systemd 252.
+
+Alternative: keep no ciphertext and ask the owner again when the client state expires. Kept as the
+fallback if the spike shows that `ob` never needs the password again after setup. Then step 1
+stores nothing.
+
+### D5. The `plugin` channel
+
+The plugin pairs through Platform's pairing flow (ADR-0016) as a registered device of the new kind
+`obsidian_plugin`. It keeps the device credential outside the vault folder, in storage that the
+operating system protects (on desktop, Electron `safeStorage`; on mobile, the mechanism that the
+spike in task 3.5 finds). It never writes the credential into `data.json` or any other file in the
+vault, because the vault itself syncs to other devices and services. If a platform has no protected
+storage, the plugin keeps the credential in memory only, and the owner pairs again after a restart.
+
+Edge authenticates the device and forwards each request with a minted claim that names the owner, the
+device id and the device kind. Edge does not decide which connection a device may use.
+`ratatoskr-notes` enforces it: a connection of another owner answers `404`, and a device whose kind
+does not match the channel answers `notes.channel_mismatch`. A `plugin` or `cli` connection records
+the device that created it and accepts changes only from that device. A second device that presents
+the same vault id, for example because the vault folder was copied or synced by another tool, is
+refused with `notes.channel_mismatch` and a message that points the owner to Obsidian Sync.
+
+The plugin then talks only to Edge:
+
+- `POST /v1/notes/connections` with `channel = plugin` and its vault key creates the connection.
+- `POST /v1/notes/connections/{id}/changes` sends a batch of up to 256 changes. Each change names
+  the path, the kind (`created`, `updated`, `renamed` with the old path, `deleted`), the SHA-256 of
+  the new bytes, the byte length, and the device's monotonic change sequence.
+- Bytes that Ratatoskr does not already hold go through the shared chunked, resumable transfer
+  contract on the `transfer` route class (`/v1/notes/connections/{id}/blobs`), before the batch that
+  names them.
+- The response names the highest sequence that `ratatoskr-notes` committed. The plugin resends from
+  there after a restart or after it was offline.
+- At pairing, and whenever the plugin cannot prove that it saw every change (for example after an
+  edit while the plugin was disabled), it sends a manifest of every path and hash.
+  `ratatoskr-notes` answers with the paths whose bytes it needs, and turns the difference into
+  changes.
+
+The plugin uses the vault API events `create`, `modify`, `rename` and `delete`, so that a rename
+arrives as a rename.
+
+### D6. The `cli` channel
+
+`ratatoskr-export-agent` gains a vault mode for macOS. It watches the vault folder with FSEvents,
+reads files from disk, and uses the Obsidian CLI only to confirm renames and to read the vault id
+(`obsidian vault=<name> vault`) when the app is running. It uses the same routes and the same batch
+format as the plugin, with device kind `export_agent`. When the app is not running, the agent still
+reports changes from the file system, and marks a delete plus create with equal hash as a rename.
+
+### D7. Paths, revisions and exclusions
+
+- A path is stored and published in Unicode NFC. Its **path key** is the NFC path folded with Unicode
+  default case folding. Two files whose path keys are equal make the second one a collision: it is
+  recorded, it gets no revision, and the connection reports `notes.file.path_collision`.
+- `.obsidian/`, `.trash/`, the owner's excluded folders, and files larger than 64 MiB are not
+  indexed. The size limit is a configuration value with that default.
+- A revision is the SHA-256 of the bytes. A change whose hash equals the current revision of that
+  path creates no new revision and publishes no event.
+- Each connection has a gapless `connection_sequence`. Each `evt.notes.file.changed.v1` carries it,
+  so that a consumer can detect a gap after a redelivery.
+
+### D8. The index and link resolution
+
+The index parses Markdown with a CommonMark parser plus the Obsidian extensions: wikilinks,
+embeds, block ids, tags in text and in frontmatter, callouts, and `%% comments %%`. Link resolution
+follows Obsidian: an exact path wins, then a unique file name anywhere in the vault, then the
+shortest path among equal names. Aliases from the `aliases` frontmatter key are recorded but do not
+resolve a link target, as in Obsidian.
+
+The test oracle is a set of golden fixtures. The spike builds a fixture vault, runs
+`obsidian links`, `obsidian backlinks format=json`, `obsidian properties` and `obsidian tags` on it
+with the real app, and commits the outputs to `ratatoskr-notes` under
+`crates/notes-index/tests/fixtures/obsidian-<version>/`. The index tests compare against them. A
+new Obsidian version adds a new fixture directory and does not overwrite the old one.
+
+### D9. Knowledge intake
+
+Knowledge follows `social-analysis-intake`: the event is itself the analysis request. A run is keyed
+by `(file_id, revision)`. Knowledge reads the bytes from the notes blob root read-only, as
+`blob-references` allows. A `deleted` change, or `evt.notes.vault.disconnected.v1`, removes the
+derived analyses, embeddings and search entries for those files. Knowledge gets two durables:
+`ratatoskr_knowledge_notes_files` (filter `evt.notes.file.changed.v1`) and
+`ratatoskr_knowledge_notes_vaults` (filter `evt.notes.vault.>`), both 120 s and unlimited
+delivery, like its other ingest durables.
+
+### D10. The connect operation
+
+Edge proxies `POST /v1/notes/connections` to `ratatoskr-notes`, mints only the operation id, and
+returns `202` with the operation of kind `notes.connection.connect`, lane `ratatoskr-notes`. `ratatoskr-notes` reports progress (`login`, `setup`, `first_sync`,
+`indexing`) through `evt.platform.operation.reported.v1` and completes the operation when the first
+full scan is indexed. This makes `ratatoskr-notes` the sixth producer of the shared report subject,
+so the residual risk that `fleet-bus-topology` states extends to it.
+
+### D11. Storage and ports
+
+As `docs/NOTES_AND_SITES.md` section 7 lists them: schema `notes`, role `ratatoskr_notes`, blob root
+`/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, working trees and client state under
+`/mnt/nvme/ratatoskr/notes/connections/<id>/`, domain API 8099 behind Edge, operator listener 9471.
+A working tree holds a second copy of the current vault, beside the revisions in the blob root. That
+is the cost of running Obsidian's own client.
+
+### D12. The read group of the blob root
+
+Knowledge reads note bytes read-only from the notes blob root (`blob-references`). This change
+creates the system group `ratatoskr-notes-blobs`, makes the blob root and every directory in it
+setgid with that group (mode 2750), and runs `ratatoskr-notes` with `UMask=0027`, so that a blob is
+mode 0640 and its group is `ratatoskr-notes-blobs`. The Knowledge service user is a member from this
+change. A later consumer, such as `ratatoskr-sites`, only joins the group in its own change. The
+deploy role creates the group, the membership and the root; the notes test
+`new_blob_is_group_readable_and_not_world_readable` and the Molecule verify case
+`notes_blob_read_group` check them.
+
+Alternative: one ACL entry per consumer. Rejected: ACLs are not inherited by the hard-link and
+rename steps of the blob store as reliably as a setgid group, and the other blob roots of the fleet
+already use plain modes.
+
+## Risks / Trade-offs
+
+- [A stale scenario title in `fleet-bus-topology`] → The scenario "The reviewed file holds exactly the
+  thirteen identities" keeps its title, because a MODIFIED block cannot rename a scenario. The title
+  is historical. The body governs: it names `platform_conf_has_exactly_the_fourteen_identities` and
+  fourteen names.
+- [An earlier change rewrites the same bus requirements] → The `fleet-bus-topology` delta is written
+  against the text that `xr-021-fleet-round-5` leaves after archive, with its 23 service durables,
+  its five deletion-acknowledgement durables and its stream-API rule. That change must be archived
+  first, and the delta's first line says so.
+- [Obsidian Headless is an open beta with no declared license] → The spike reads the terms of use
+  and records the result in ADR-0010 before any other group starts. The `plugin` and `cli` channels
+  do not depend on it, so a vault that uses Sync can still connect through the plugin if `ob` must
+  be dropped. The version is pinned and upgraded only through a reviewed change.
+- [Node.js and one `ob` process per connection on the Pi] → The spike measures resident memory of
+  one continuous sync with a 1 GiB fixture vault. The unit sets `MemoryMax=` from that measurement
+  plus 50 %. `DEPLOYMENT_TARGET.md` records the per-connection budget.
+- [Secrets in argv] → D4 steps 2 and 3. The spike decides which form applies. The notes test
+  `no_secret_in_any_cmdline` asserts that no process of another user can read a secret from
+  `/proc/<pid>/cmdline`, and `login_unit_gets_secrets_only_as_credentials` asserts the
+  `LoadCredential=` path.
+- [`hidepid=invisible` hides processes from monitoring] → Used only if `ob` needs argv. The spike
+  measures the effect first, and the monitoring role then grants its collectors the `gid=` exemption
+  of the mount option.
+- [The plugin credential leaks through a synced vault] → D5: the credential never enters the vault
+  folder, and the plugin test `credential_never_written_to_data_json` checks every file.
+- [The server can read the whole vault, including an end-to-end encrypted one] → This is inherent
+  in "manage content". The connect flow states it to the owner before it asks for the end-to-end
+  password, and `THREAT_MODEL.md` records it.
+- [A file changes while `ob` writes it] → The settle window of D3 and the rescan. The spike checks
+  the behaviour of `ob` with a concurrent local edit and records a pull-only session as a fixture.
+  The notes test `pull_only_connection_never_pushes_a_local_edit` replays that fixture through a
+  stub `ob` and asserts that a local edit makes no upload.
+- [Link resolution drifts from Obsidian] → The golden fixtures of D8, versioned per Obsidian release.
+- [The plugin is offline for a long time] → The manifest reconciliation of D5. No change is lost,
+  but intermediate revisions made while offline are not seen, only the latest state.
+
+## Migration Plan
+
+Nothing exists, so there is no migration. The order of the repositories is in proposal.md. On a
+test host: allocate the ports, create the role, reload NATS with the `NOTES` identity, start Edge
+so that it provisions the two Knowledge durables, then start `ratatoskr-notes`, then Knowledge.
+Rollback is the reverse, and the disconnect command removes each connection's unit, tree and client
+state.
+
+## Open Questions
+
+- Whether Obsidian Sync's selective sync settings in `ob sync-config --file-types` should follow the
+  owner's settings on their devices or a fixed server setting. The connection stores the value
+  either way, so the answer does not change the specs.

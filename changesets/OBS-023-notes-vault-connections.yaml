@@ -1,0 +1,90 @@
+id: OBS-023
+state: planned
+goal: Connect Obsidian vaults to Ratatoskr through exactly one channel each (Obsidian Headless Sync on the host, an Obsidian plugin, or the macOS export agent with the Obsidian CLI), index their files with Obsidian's link rules, and give note changes to Knowledge. Read path only.
+openspec_change: add-notes-vault-connections
+# DPL-022 provides the Ansible tree, Molecule, the freeze guard, services.json and deploy_inventory.rs
+# that tasks 14.6 and 14.7 extend. xr-021-fleet-round-5 must be archived before this change, because
+# the fleet-bus-topology delta is written against its text.
+depends_on: [DPL-022]
+authorization: The owner authorised direct commits on main for the workspace planning records. Each child repository works on its task branch and merges through a pull request.
+repositories:
+  - id: ratatoskr-contracts
+    role: notes-event-schemas-and-operation-kind
+    branch: obs-023/notes-vault-connections
+  - id: ratatoskr-notes
+    role: new-service-connections-index-sync-supervisor
+    branch: obs-023/notes-vault-connections
+  - id: ratatoskr-platform
+    role: edge-route-durables-identity-device-kind-authority
+    branch: obs-023/notes-vault-connections
+  - id: ratatoskr-knowledge
+    role: notes-intake-consumer
+    branch: obs-023/notes-vault-connections
+  - id: ratatoskr-obsidian-plugin
+    role: new-client-plugin-channel
+    branch: obs-023/notes-vault-connections
+  - id: ratatoskr-export-agent
+    role: cli-channel
+    branch: obs-023/notes-vault-connections
+  - id: ratatoskr-web
+    role: connections-and-read-only-browse
+    branch: obs-023/notes-vault-connections
+  - id: ratatoskr-workspace
+    role: fleet-membership-deploy-harness-integration-and-pins
+    branch: main
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-notes
+  - ratatoskr-platform
+  - ratatoskr-knowledge    # its durables must exist first
+  - [ratatoskr-obsidian-plugin, ratatoskr-export-agent, ratatoskr-web]
+  - ratatoskr-workspace    # membership, deploy, harness, integration, pins
+contracts:
+  shared_documents:
+    - docs/NOTES_AND_SITES.md
+    - docs/adr/0010-notes-and-obsidian-vault-connections.md
+  change:
+    - notes.vault.connected.v1 (new)
+    - notes.vault.disconnected.v1 (new)
+    - notes.file.changed.v1 (new)
+    - operation kind notes.connection.connect (new)
+compatibility:
+  strategy: Additive. Every new contract is version 1. Existing requirements gain a member (a repository, a role, an identity, two durables, a listener) and lose nothing.
+database:
+  strategy: New schema notes in the database ratatoskr, created from ratatoskr-notes schema.sql. No other schema changes.
+  migration_artifacts: none
+api:
+  version: 1
+  negotiation: none
+  breaking_change: none
+runtime:
+  supervision: ratatoskr-notes as a systemd unit in ratatoskr.target; one ratatoskr-notes-sync@<connection id>.service per sync connection, and the oneshot ratatoskr-notes-login@ and ratatoskr-notes-cleanup@ units, all started by ratatoskr-notes through the systemd D-Bus API under one polkit rule.
+  new_dependencies: Node.js 22 and the obsidian-headless npm package at a pinned version, on the host only.
+  ports: 8099 (notes domain API, loopback, through Edge) and 9471 (notes operator listener, host only).
+security:
+  secrets: The Obsidian account password and the end-to-end password are stored only as ciphertext under /etc/ratatoskr/notes-secrets.key; the MFA code is never stored. Edge proxies the connect body and persists or logs none of it. Login and cleanup run as oneshot template units (ratatoskr-notes-login@, ratatoskr-notes-cleanup@) that get secrets through LoadCredential=; if ob needs argv, the login unit runs as its own user and /proc is mounted with hidepid=invisible. No secret enters argv of a visible process, logs, events or operation records.
+  device_channels: Edge mints a device-kind claim; ratatoskr-notes enforces the owner (404) and the channel (notes.channel_mismatch). One device per plugin or cli connection. The plugin credential never enters the vault folder.
+  blob_access: The notes blob root belongs to the group ratatoskr-notes-blobs (setgid, umask 0027); the Knowledge service user is the only member in this change.
+  server_access: The host can read every connected vault, end-to-end encrypted vaults included. The connect flow says so before it asks for the end-to-end password.
+  freeze: The real host is not touched until the owner lifts the freeze in docs/DEPLOYMENT_TARGET.md.
+privacy: Note content is user content. It leaves ratatoskr-notes only as BlobRefs that Knowledge resolves read-only. Disconnect removes the working tree, the client state, the ciphertext and all Knowledge-derived data.
+rollout:
+  - Run the spike (tasks group 3) and record the results in design.md and ADR-0010. If the terms of use rule out the sync channel, revise this change with openspec update and move the sync work into a new change before any later group starts.
+  - Merge contracts, then ratatoskr-notes, then Platform, then Knowledge.
+  - Merge the plugin, the export agent and the web client in any order.
+  - Add the two repositories to the fleet, advance the pins, and land deploy, harness and integration changes.
+rollback:
+  - Nothing has shipped. Revert each repository's commit. Disconnect any test connection first, which stops its unit and deletes its tree, state and ciphertext.
+verification:
+  - tools/contractsc tests fixtures.rs and live_message_types.rs in ratatoskr-contracts
+  - the connection, secret custody, sync supervisor (including pull_only_connection_never_pushes_a_local_edit), blob root, index, file event, read API and device channel tests in ratatoskr-notes
+  - notes_routes.rs (device_claim_names_the_device_kind, connect_body_is_not_persisted_or_logged), report_authority.rs and nats_permissions.rs in ratatoskr-platform
+  - credential.test.ts (credential_never_written_to_data_json) in ratatoskr-obsidian-plugin
+  - the Molecule verify cases notes_sync_unit and notes_blob_read_group in ratatoskr-workspace
+  - notes_intake.rs in ratatoskr-knowledge
+  - committed_snapshot.rs and bus_acl.rs in ratatoskr-workspace
+  - integration/tests/notes_sync_connect.sh and notes_channel_equivalence.sh
+residual_risks:
+  - Obsidian Headless is an open beta with no declared license; the spike checks the terms of use.
+  - ratatoskr-notes becomes the sixth producer of evt.platform.operation.reported.v1, so the forgery and metadata limits of fleet-bus-topology apply to it.
+evidence: {}

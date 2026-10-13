@@ -1,0 +1,85 @@
+id: OBS-024
+state: planned
+goal: Let Ratatoskr create, edit, rename, move and delete files in a connected Obsidian vault through the connection's one channel, with pending writes that become current only on the channel's acknowledgement, a required base revision, conflicts that the owner resolves, echo suppression and Obsidian-compatible link rewriting.
+openspec_change: add-notes-write-back
+depends_on:
+  - OBS-023  # add-notes-vault-connections: connections, channels, index, revisions; archived first, after xr-021-fleet-round-5
+authorization: Planning records only. The workspace planning records use main, because the owner authorised direct commits for them. Each child repository works on its task branch and opens its own pull request.
+repositories:
+  - id: ratatoskr-contracts
+    role: write-request-and-conflict-contracts-and-registry
+    branch: obs-024/notes-write-back
+  - id: ratatoskr-notes
+    role: write-consumer-pending-writes-conflicts-delivery-and-link-rewrite
+    branch: obs-024/notes-write-back
+  - id: ratatoskr-platform
+    role: edge-write-routes-operation-kinds-durables-and-bus-acl
+    branch: obs-024/notes-write-back
+  - id: ratatoskr-obsidian-plugin
+    role: plugin-channel-apply-and-report
+    branch: obs-024/notes-write-back
+  - id: ratatoskr-export-agent
+    role: cli-channel-apply-and-report
+    branch: obs-024/notes-write-back
+  - id: ratatoskr-web
+    role: editor-write-mode-and-conflict-view
+    branch: obs-024/notes-write-back
+  - id: ratatoskr-workspace
+    role: harness-checks-pins-integration-profile-and-documentation
+    branch: main
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-notes      # ships with write mode off; its consumer waits for the durable Edge creates
+  - ratatoskr-platform
+  - [ratatoskr-obsidian-plugin, ratatoskr-export-agent, ratatoskr-web]
+  - ratatoskr-workspace
+contracts:
+  shared_documents:
+    - notes/write-request.v1
+    - notes/conflict.v1
+  subjects:
+    - cmd.notes.file.write_requested.v1   # producer ratatoskr-platform only
+    - evt.notes.conflict.raised.v1
+    - evt.notes.conflict.resolved.v1
+  durables:
+    - ratatoskr_notes_write_requests      # NOTES, cmd.notes.file.write_requested.v1, 30 s; DOMAIN_CONSUMERS 25 -> 26
+    - platform_notes_conflict_projection  # EDGE own consumer, evt.notes.conflict.>, 30 s; harness PLATFORM_ONLY 3 -> 4
+  change: additive
+openspec:
+  modified_specs:
+    - fleet-bus-topology    # written against the text xr-021-fleet-round-5 and OBS-023 leave after archive; 25 -> 26 service durables
+    - notes-device-channels # ADDED requirements only; the spec exists only after OBS-023 archives
+compatibility:
+  strategy: Additive. Every connection starts with write mode off and behaves exactly as under OBS-023 until the owner turns write mode on.
+database:
+  strategy: The notes schema definition is edited in place; there are no migrations.
+  migration_artifacts: none
+api:
+  version: 1
+  negotiation: none
+  breaking_change: none
+runtime:
+  supervision: unchanged; the Headless client unit of each sync connection changes only its sync mode and conflict strategy.
+security:
+  secrets: none new. The write path reuses the Obsidian credentials that OBS-023 holds.
+  authority: Edge authenticates the session and is the only producer of the write command; notes checks that the tenant owns the connection and answers a foreign connection like a missing one.
+privacy: Write content is uploaded to notes and never enters Edge's outbox or JetStream. Conflict events carry hashes, not content. A pending write is invisible to every consumer until the vault acknowledges it.
+rollout:
+  - Contracts publishes the two contracts and registers the three types.
+  - Notes ships with write mode off for every connection.
+  - Platform ships the routes, the operation kinds, the two durables and the ACL lines.
+  - The plugin, the export agent and the web client ship in any order.
+  - The workspace advances the pins after the harness checks and the integration profile pass.
+  - The owner turns write mode on per connection.
+rollback:
+  - Turn write mode off per connection; a sync connection returns to pull-only and undelivered writes fail.
+  - Revert each repository's commit; nothing has shipped.
+verification:
+  - crates/notes-contracts/tests/write_request.rs and conflict.rs, and tools/contractsc/tests/live_message_types.rs in ratatoskr-contracts
+  - services/notes/tests/bus_durables.rs, write_queue.rs, write_base_hash.rs, write_pending.rs, write_content.rs, write_idempotency.rs, write_authority.rs, write_operation.rs, write_mode.rs, conflict_merge.rs, echo.rs, delivery_plugin.rs, sync_mode.rs, sync_write.rs, link_rewrite_golden.rs and link_rewrite_atomic.rs in ratatoskr-notes
+  - crates/public-api/tests/notes_writes.rs, crates/operations/tests/report_authority.rs, crates/eventing/tests/stream_table.rs and nats_permissions.rs in ratatoskr-platform
+  - test/apply-operation.test.ts in ratatoskr-obsidian-plugin
+  - Tests/AgentCoreTests/ObsidianCliApplyTests.swift in ratatoskr-export-agent
+  - src/features/notes/conflict-view.test.tsx and editor.test.tsx in ratatoskr-web
+  - harness bus_acl.rs and the durable-name scan, and the notes-write-back integration profile in ratatoskr-workspace
+evidence: {}

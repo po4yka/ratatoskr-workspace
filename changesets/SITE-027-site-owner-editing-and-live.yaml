@@ -1,0 +1,99 @@
+id: SITE-027
+state: planned
+goal: Let the owner of a site sign in on the site's own origin with a session valid only for that site, edit the site's source notes through the notes write path, request releases, receive live events, and read the owner's library and knowledge search, all bounded by the effective capability set that SITE-025 defines.
+openspec_change: add-site-owner-editing-and-live
+depends_on:
+  - OBS-024   # add-notes-write-back: cmd.notes.file.write_requested.v1 with origin, BlobRef content, conflicts, platform_notes_conflict_projection
+  - SITE-025  # add-site-publications: manifest, identity.site_approvals, effective set, release route and modes
+  - SITE-026  # add-site-gateway-hosting: the gateway, /_r/, /.ratatoskr/ and X-Ratatoskr-Client-IP
+authorization: Planning only. The workspace planning records go on main, because the owner authorised direct commits for them. No child repository is changed until the owner starts the implementation; each child repository item then records its pull request and merged commit.
+repositories:
+  - id: ratatoskr-contracts
+    role: site-event-draft-changed-registration-and-route-schemas
+    branch: site-027/site-owner-contracts
+  - id: ratatoskr-notes
+    role: site-owner-blob-upload-registration-only
+    branch: site-027/site-owner-uploads
+  - id: ratatoskr-platform
+    role: site-owner-session-route-classes-capability-check-event-stream-and-routes
+    branch: site-027/site-owner-edge
+  - id: ratatoskr-sites
+    role: scope-query-draft-read-anonymous-claim-refusal-and-draft-changed-producer
+    branch: site-027/site-owner-drafts
+  - id: ratatoskr-knowledge
+    role: verification-only-no-change-expected
+    branch: site-027/site-owner-verification
+  - id: ratatoskr-site-sdk
+    role: owner-sign-in-reserved-callback-sse-client-editing-helpers
+    branch: site-027/site-owner-sdk
+  - id: ratatoskr-web
+    role: consent-page-and-session-list
+    branch: site-027/site-owner-web
+  - id: ratatoskr-workspace
+    role: pins-composed-profile-and-documentation
+    branch: main
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-notes       # accepts the site_owner upload claim before Platform forwards one
+  - ratatoskr-platform    # nothing reads evt.sites.draft.changed.v1 until Edge does
+  - ratatoskr-sites
+  - ratatoskr-knowledge   # only if the integration run finds a defect there
+  - [ratatoskr-site-sdk, ratatoskr-web]
+  - ratatoskr-workspace
+contracts:
+  shared_documents:
+    - sites/site-event.v1
+    - sites.draft.changed.v1 (registered message type, schema sites/draft-changed.v1)
+    - sites route schemas for sessions, drafts, blobs, edits, conflicts, library and knowledge search
+  change: additive; every schema is new and v1
+compatibility:
+  strategy: Additive. Every route, durable and session kind is new. /v1/library/search and the operation stream do not change.
+database:
+  strategy: Platform's schema.sql is edited in place to add the site_owner session kind and the sign-in code table. identity.site_approvals belongs to SITE-025. There is no migration.
+  migration_artifacts: none
+api:
+  version: 1
+  negotiation: none
+  breaking_change: none
+events:
+  new_durables:
+    - platform_site_events  # Edge; evt.sites.release.published.v1 and evt.sites.draft.changed.v1
+  reused_durables:
+    - platform_notes_conflict_projection  # Edge; evt.notes.conflict.> (OBS-024)
+  produced_by_platform:
+    - cmd.notes.file.write_requested.v1   # Edge is the only producer; this change adds origin site:<id>
+    - cmd.sites.release.build_requested.v1  # Edge is the only producer; this change adds the site-session guard
+  produced_by_sites:
+    - evt.sites.draft.changed.v1
+  topology_delta: fleet-bus-topology MODIFIED delta (platform_site_events, the SITES publish rule for evt.sites.draft.changed.v1), written against the text that SITE-026 leaves after archive. Identity count stays fifteen; service durables stay thirty.
+security:
+  sessions: site_owner sessions authenticate only on the site-origin and release routes of their own site, from the __Host-ratatoskr-site cookie; 12 h absolute, 1 h idle, no refresh. Withdrawal of the SITE-025 approval revokes them.
+  sign_in: single-use 60 s code, digest only, bound to site, owner, PKCE S256 challenge and approved hostname; issued only to a primary session with platform.owner. The callback page is the reserved /.ratatoskr/sign-in/, served no-store.
+  csrf: SameSite=Strict, X-Ratatoskr-Site-Request header on unsafe methods, Origin equal to the approved hostname, no CORS preflight on site routes.
+  authorization: every /v1/sites/{site}/ route has a class (management, deploy, site-origin, sign-in, release); site-origin routes enforce the SITE-025 effective set. Unrequested public capability or unapproved site answers 404 sites.site_not_found; an ungranted owner-only capability answers 403 edge.capability_not_granted.
+  content: edit content travels only as a BlobRef uploaded to notes first; no file bytes enter Edge's outbox, logs or JetStream.
+  limits: anonymous SSE bounded per client (default 4, keyed on the gateway's X-Ratatoskr-Client-IP) and per site (default 64).
+privacy: The release.published event carries only the release id and time. Anonymous events carry no source reference, vault path or page list. Library and knowledge routes use the session user as the only tenant authority.
+rollout:
+  - Contracts publish the schemas and the sites.draft.changed.v1 registration.
+  - Notes accepts the site_owner upload claim for blob registration only. Nothing sends one yet.
+  - Platform ships the session kind, route classes, capability check, event stream and routes. No session can exist yet, because web has no consent page.
+  - The sites service ships its scope query, draft read and draft events.
+  - The SDK and web ship sign-in, the reserved callback page and the session list.
+  - The workspace advances the pins after the composed profile passes.
+rollback:
+  - Nothing has shipped, so there is nothing to roll back on a host.
+  - Revert each repository's commit with git revert.
+  - On a running host, revoke every site_owner session; owner editing, drafts and system data stop at once, and public content from SITE-025 is unchanged.
+verification:
+  - contracts crates/sites-contracts/tests/site_event.rs and site_routes.rs; tools/contractsc/tests/live_message_types.rs
+  - notes services/notes/tests/device_channel.rs (site_owner_upload_registers_blob_only, site_owner_cannot_send_change_batches)
+  - platform crates/http/tests/site_route_classes.rs; crates/public-api/tests/sites_build_command.rs; site_edits.rs::site_upload_claim_is_not_relabelled_as_primary
+  - platform crates/identity/tests/site_sign_in.rs and site_owner_session.rs; crates/eventing/tests/stream_table.rs and nats_permissions.rs
+  - workspace harness/crates/workspace-core/tests/bus_acl.rs and bus_durables.rs
+  - platform crates/public-api/tests/site_sessions.rs, site_capabilities.rs, site_events.rs, site_edits.rs, site_library.rs and sessions.rs
+  - sites crates/sites/tests/scope.rs and draft_events.rs; services/sites/tests/route_classes.rs; services/sites/tests/bus.rs
+  - site-sdk src/owner/sign-in.test.ts, template/template.test.ts, src/live/events.test.ts and src/owner/edit.test.ts
+  - web src/features/sites/SiteSignInConsent.test.tsx and the session list test
+  - workspace integration/run-site-owner-editing.sh and integration/tests/site_owner_editing_profile_test.sh
+evidence: {}

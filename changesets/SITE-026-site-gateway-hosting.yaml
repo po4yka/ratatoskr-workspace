@@ -1,0 +1,73 @@
+id: SITE-026
+state: planned
+goal: Serve each approved site's static bundle by hostname from the single host behind cloudflared, forward the site's own API calls to Edge on the same origin, and deploy and roll back bundles that CI built and attested and that the controller and the host both verified.
+openspec_change: add-site-gateway-hosting
+depends_on:
+  - SITE-025  # route classes, the Edge-owned approval routes, evt.platform.site_approval.changed.v1, the durable ratatoskr_sites_approvals, the sites schema and the /v1/sites prefix
+  - DPL-022   # tasks groups 10 and 11 extend its Ansible playbook, host role, services.json, Molecule scenario with freeze_guard, and the harness test deploy_inventory.rs; they wait until DPL-022 is merged and archived
+authorization: The repository owner authorised direct commits on main for the workspace planning records. Every child repository change goes through its task branch below and a pull request. No branch, worktree, pull request or host change exists for this changeset yet.
+repositories:
+  - id: ratatoskr-contracts
+    role: bundle-manifest-schema-and-deploy-shapes
+    branch: site-026/bundle-manifest
+  - id: ratatoskr-sites
+    role: deploy-receipt-store-projection-rewrite-and-gateway-binary
+    branch: site-026/gateway-and-deploys
+  - id: ratatoskr-platform
+    role: site-deployer-device-deploy-route-class-and-client-ip-trust
+    branch: site-026/site-deployer-and-deploy-routes
+  - id: ratatoskr-site-sdk
+    role: reusable-bundle-workflow-login-and-deploy-commands
+    branch: site-026/bundle-workflow-and-deploy
+  - id: ratatoskr-workspace
+    role: planning-records-then-pins-enrolment-ingress-block-port-and-storage-rows-docs
+    branch: main
+dependency_order:
+  - ratatoskr-contracts   # first: every repository below reads sites/bundle-manifest.v1
+  - ratatoskr-sites
+  - ratatoskr-platform    # Edge reports an absent upstream truthfully, so it may also merge before sites; it must merge before site-sdk
+  - ratatoskr-site-sdk    # its deploy command pairs as a site_deployer device
+  - ratatoskr-workspace   # last: pins, enrolment, ingress, ports, docs
+contracts:
+  shared_documents:
+    - ratatoskr-contracts/schemas/json-schema/sites/bundle-manifest.v1.schema.json
+  change: additive; new schema at version 1
+  shared_specs: MODIFIED site-route-classes (adds the deploy class; requires SITE-025 archived first); no fleet-bus-topology delta and no postgres-provisioning delta
+compatibility:
+  strategy: Additive. No existing route, port or unit changes. The gateway is a new binary, the deploy routes are new rows of a new class, deploy, under the /v1/sites prefix that SITE-025 adds, and site_deployer is a new device kind beside the existing three.
+database:
+  strategy: The deploy rows live in the sites schema that SITE-025 defines, and site_deployer edits Platform's identity schema; both definitions are edited in place. The gateway has no database role.
+  migration_artifacts: none
+api:
+  version: 1
+  negotiation: none
+  breaking_change: none
+runtime:
+  supervision: one new systemd unit, ratatoskr-sites-gateway.service, PartOf and WantedBy ratatoskr.target.
+  ports: 8183 public (127.0.0.1, cloudflared), 9473 operator (host only).
+  storage: /mnt/nvme/ratatoskr/sites/<site id>/{site.json,bundles/<commit>,current,previous}, owner the sites service user, group ratatoskr-sites-bundles, mode 2750.
+  artifacts: ghcr.io/<owner>/<site repository>:sha-<commit>, media type application/vnd.ratatoskr.site-bundle.v1, with a build-provenance attestation.
+  bus: no new subject or durable; the sites service rewrites site.json from the existing durable ratatoskr_sites_approvals of SITE-025.
+security:
+  secrets: None on the host for the gateway. The deploy command holds the refresh secret of a site_deployer device in the controller's operating-system credential store, never in a site repository.
+  verification: The controller verifies the attestation and the digests before upload; the sites service verifies every path and digest again before it stores a byte.
+  boundary: The gateway forwards only /_r/v1/sites/<site id>/ for the site of the request hostname, strips x-ratatoskr-* headers, sets X-Ratatoskr-Client-IP from CF-Connecting-IP and adds no identity. Edge alone authenticates, and trusts X-Ratatoskr-Client-IP only from the gateway's loopback source address.
+  freeze: The playbook refuses the real host while docs/DEPLOYMENT_TARGET.md states that the host is frozen.
+privacy: A bundle holds only the site's static code and assets. Vault content reaches a site only through the delivery API of SITE-025, under its privacy rules.
+rollout:
+  - Publish sites/bundle-manifest.v1 from ratatoskr-contracts.
+  - Land the deploy receipt, the projection rewrite and the gateway in ratatoskr-sites, then the device kind, the deploy class and its rows and the client-address rule in ratatoskr-platform.
+  - Land the reusable workflow and the login and deploy commands in ratatoskr-site-sdk.
+  - Advance the workspace pins, then land the enrolment, the ingress block, the port and storage rows, the harness checks and the documentation.
+  - The real host is not touched until the owner lifts the freeze; then the runbook adds the DNS record and the HSTS setting per hostname, and the owner pairs a site_deployer device.
+rollback:
+  - Revert each repository's commit. Nothing has shipped.
+  - After the host is live, withdraw the approval through DELETE /v1/sites/{site}/manifest/approval to stop a site at the gateway, remove the hostname from group_vars/all/sites.json and run the playbook to stop it at the tunnel, or activate the previous deploy to roll a site back without a download.
+verification:
+  - ratatoskr-contracts crates/sites-contracts/tests/bundle_manifest.rs
+  - ratatoskr-sites crates/deploys/tests/{receipt,activation}.rs, services/sites/tests/gateway_projection.rs and services/sites-gateway/tests/{host_routing,static_serving,headers,forwarding,limits}.rs, tests/unit_structure.rs
+  - ratatoskr-platform crates/identity/tests/site_deployer_pairing.rs, crates/public-api/tests/sites_deploy_routes.rs and crates/http/tests/client_ip_trust.rs
+  - ratatoskr-site-sdk packages/site-sdk/test/{bundle-manifest,bundle-workflow,deploy}.test.ts
+  - ratatoskr-workspace harness tests port_allocation.rs, deploy_inventory.rs and sites_ingress.rs
+  - the Molecule cases sites_tree_and_ingress and freeze_guard on a native arm64 runner
+evidence: {}

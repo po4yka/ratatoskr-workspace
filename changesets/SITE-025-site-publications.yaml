@@ -1,0 +1,127 @@
+id: SITE-025
+state: planned
+goal: Select public content from a connected vault, build an immutable and privacy-filtered release from it, and serve the current release of an approved site through an anonymous, cacheable Content Delivery API that a site with any UI reads through @ratatoskr/site-sdk.
+openspec_change: add-site-publications
+authorization: Planning only. Implementation starts after the owner accepts ADR-0011 and Platform's ADR-0017, and after the read path of OBS-023 has merged. The owner creates the two new GitHub repositories. Child repositories work on task branches; the workspace planning records use main, which the owner authorised for them.
+depends_on:
+  - OBS-023  # add-notes-vault-connections: file index, resolved links, the read group ratatoskr-notes-blobs
+  - DPL-022  # add-deployment-automation: task 9.6 enrols ratatoskr-sites in the Ansible inventory, which needs the playbook, Molecule and the freeze guard merged and archived
+archive_after:
+  - OBS-024  # strict archive order xr-021-fleet-round-5, OBS-023, OBS-024, SITE-025, SITE-026, SITE-027
+repositories:
+  - id: ratatoskr-contracts
+    role: sites-contracts-crate-approval-event-schema-and-message-registration
+    branch: site-025/sites-contracts
+  - id: ratatoskr-notes
+    role: loopback-internal-index-route
+    branch: site-025/notes-internal-index
+  - id: ratatoskr-sites
+    role: new-service-registry-publications-release-builder-approval-projection-delivery-api
+    branch: site-025/sites-service
+  - id: ratatoskr-platform
+    role: public-and-site-route-classes-adr-0017-site-approvals-build-route-sites-identity-and-durables
+    branch: site-025/site-routes-and-approvals
+  - id: ratatoskr-site-sdk
+    role: new-generated-client-and-starter-template
+    branch: site-025/site-sdk
+  - id: ratatoskr-web
+    role: site-registry-manifest-approval-publication-editor-release-history
+    branch: site-025/site-management
+  - id: ratatoskr-workspace
+    role: fleet-membership-pins-ports-deploy-enrolment-harness-and-documentation
+    branch: main
+dependency_order:
+  - ratatoskr-contracts
+  - ratatoskr-notes
+  - ratatoskr-sites
+  - ratatoskr-platform
+  - ratatoskr-site-sdk
+  - ratatoskr-web
+  - ratatoskr-workspace
+contracts:
+  crate: crates/sites-contracts
+  shared_documents:
+    - sites/site-manifest.v1
+    - sites/release.v1
+    - sites/page.v1
+    - platform/site-approval-changed.v1
+  messages:
+    - cmd.sites.release.build_requested.v1    # producer ratatoskr-platform (Edge outbox), consumer ratatoskr-sites
+    - evt.sites.release.published.v1          # producer ratatoskr-sites
+    - evt.platform.site_approval.changed.v1   # producer ratatoskr-platform, consumer ratatoskr-sites
+  consumers_added:
+    - evt.notes.file.changed.v1       # ratatoskr-sites
+    - evt.notes.vault.disconnected.v1 # ratatoskr-sites
+  approval_event_fields: site id, manifest digest, approved capability set, hostname (the sites service rewrites site.json from it, SITE-026), state
+  change: additive; all new contracts are v1.
+bus:
+  identity: SITES
+  durables:
+    - ratatoskr_sites_release_builds        # cmd.sites.release.build_requested.v1
+    - ratatoskr_sites_note_changes          # evt.notes.file.changed.v1
+    - ratatoskr_sites_vault_disconnections  # evt.notes.vault.disconnected.v1
+    - ratatoskr_sites_approvals             # evt.platform.site_approval.changed.v1
+  publishes:
+    - evt.sites.release.published.v1
+    - evt.platform.operation.reported.v1
+operations:
+  new_kinds:
+    - sites.release.build  # lane ratatoskr-sites; authority row in Platform
+compatibility:
+  strategy: Additive. No existing route, subject or schema changes behaviour. The public route class serves only new paths.
+database:
+  role_file: ratatoskr-sites deploy/postgres/role.sql creates ratatoskr_sites (postgres-provisioning)
+  strategy: A new schema `sites` with role `ratatoskr_sites` in the database `ratatoskr`, and a new table `identity.site_approvals` in Platform's schema, each created from its `schema.sql` at startup. No migrations (Development status).
+  migration_artifacts: none
+api:
+  version: 1
+  negotiation: none
+  breaking_change: none
+  new_routes:
+    - GET|HEAD /v1/sites/{site}/content/release           # site-origin, public class
+    - GET|HEAD /v1/sites/{site}/content/pages/{slug}      # site-origin, public class
+    - GET|HEAD /v1/sites/{site}/content/assets/{sha256}   # site-origin, public class
+    - GET|HEAD /v1/sites/{site}/content/search            # site-origin, public class
+    - PUT /v1/sites/{site}/manifest                       # management, proxied to sites
+    - POST|DELETE /v1/sites/{site}/manifest/approval      # management, served by Edge
+    - GET|PUT|DELETE /v1/sites/{site}/publications[/{publication}]  # management
+    - GET /v1/sites/{site}/releases                       # management
+    - POST /v1/sites/{site}/releases                      # class release, two guards: platform.owner, or site_owner with notes.edit
+  internal_routes:
+    - GET /internal/connections/{connection}/files  # ratatoskr-notes, loopback peers only, not routed by Edge
+    - GET /internal/sites/{site}/manifest           # ratatoskr-sites, loopback peers only, read by Edge for approvals
+runtime:
+  supervision: one systemd unit, ratatoskr-sites.service, PartOf ratatoskr.target.
+  ports:
+    - 8100  # domain API, loopback, reached only through Edge
+    - 9472  # operator, host only
+  storage:
+    - /mnt/nvme/ratatoskr/blobs/ratatoskr-sites
+    - read-only /mnt/nvme/ratatoskr/blobs/ratatoskr-notes; ratatoskr-sites joins the group ratatoskr-notes-blobs that OBS-023 creates
+security:
+  public_surface: Anonymous GET and HEAD under /v1/sites/{site}/content only, rate-limited per client and per site at Edge, no cookies, no credential read. The sites service refuses an anonymous claim on every other route.
+  approval: Platform identity.site_approvals is the only approval authority; the effective set is approved intersected with active.
+  privacy: The release builder filters every release with the rules of the site-release-privacy spec and renders every page on every build; a canary fixture vault proves that nothing from an unselected file reaches a release.
+  secrets: none new.
+privacy: A release is public by design. Only files that a publication selects reach it, the first release of a publication needs an explicit request, and a withdrawn site stops serving at once and leaves shared caches within 3600 seconds.
+rollout:
+  - Contracts publish crates/sites-contracts and the approval event, and register the messages and the new consumers.
+  - Notes adds the loopback internal index route.
+  - The owner creates ratatoskr-sites; the service merges with its deploy files, its read-group membership and its NATS stanza.
+  - Platform merges ADR-0017, the route classes, identity.site_approvals and its routes, the build route and its operation kind, the SITES identity and the four durables.
+  - The owner creates ratatoskr-site-sdk; the generated client and template merge.
+  - The web client merges the site management views.
+  - The workspace adds both repositories, advances the pins, allocates the ports and enrols the unit.
+  - The real host is not touched while it is frozen.
+rollback:
+  - Revert each repository's commit. Reverting Platform's route rows removes the public surface at once. Nothing has shipped.
+verification:
+  - privacy.rs and sanitise.rs in ratatoskr-sites (canary fixture vault, full rebuilds)
+  - selection.rs, slug.rs, release_build.rs, release_switch.rs, build_triggers.rs, disconnect.rs, manifest_projection.rs, effective_set.rs, route_classes.rs, delivery.rs, search.rs, notes_blob_read.rs, deploy_files.rs and deployment_profile.rs in ratatoskr-sites
+  - internal_index.rs in ratatoskr-notes
+  - public_route_class.rs, site_route_classes.rs, gateway_routes.rs, site_approvals.rs, sites_build_command.rs, report_authority.rs, stream_table.rs and nats_permissions.rs in ratatoskr-platform
+  - sites_fixtures.rs and live_message_types.rs in ratatoskr-contracts
+  - check-generated.test.ts and fixture-release.test.ts in ratatoskr-site-sdk
+  - committed_snapshot.rs, bus_acl.rs, bus_durables.rs, postgres_roles.rs, port_allocation.rs, edge_upstreams.rs and deploy_inventory.rs in ratatoskr-workspace
+  - the integration scenario integration/sites-privacy/
+evidence: {}

@@ -21,3 +21,8 @@ Each ADR contains context, decision drivers, considered options, decision, conse
 
 - [ADR-0008](0008-openspec-and-test-first.md): OpenSpec as the planning layer, and a test-first task shape.
 - [ADR-0009](0009-ansible-for-the-single-host.md): Ansible provisions the single host from pinned, attested artifacts.
+
+## Proposed
+
+- [ADR-0010](0010-notes-and-obsidian-vault-connections.md): A notes service connects Obsidian vaults through one channel each (Sync, plugin or CLI).
+- [ADR-0011](0011-independent-sites-on-the-single-host.md): Independent sites read releases through a public API and run on the host.

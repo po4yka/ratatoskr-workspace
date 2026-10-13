@@ -300,6 +300,11 @@ The fleet is not. Nine of the seventeen product repositories hold code:
 | `ratatoskr-web` | TypeScript. Generated Edge gateway, authenticated shell, public status, search/reader and archive views, owner operational views, Vitest/Playwright accessibility coverage, build, and CI. |
 | `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents and fleet/OpenSpec gates. No product manifest or runtime yet. |
 
+Four more repositories are planned and do not exist yet: `ratatoskr-notes`,
+`ratatoskr-obsidian-plugin`, `ratatoskr-sites` and `ratatoskr-site-sdk`. They connect Obsidian vaults
+and serve independent sites. `docs/NOTES_AND_SITES.md` describes the target, and ADR-0010 and
+ADR-0011 record the decisions.
+
 The first domain loop now exists in source: Platform publishes
 `cmd.content.capture.requested.v1`, Extractor consumes it durably and reports the terminal operation
 outcome, and Platform projects that report without discarding its structured detail. Knowledge can

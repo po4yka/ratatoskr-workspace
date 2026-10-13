@@ -17,6 +17,8 @@
 - `QUALITY_GATES.md` — the static analysis, linters, CI and Git hooks that the 17 repositories have,
   the checks that were measured and rejected, why there is no continuous deployment yet, and what
   arrives with the first code. `Implemented`.
+- `NOTES_AND_SITES.md` — the target architecture for Obsidian vault connections and independent
+  sites, and the shared names that its five OpenSpec changes use. `Proposed`.
 - `adr/README.md` — ADR process and decision backlog.
 
 Root documents: `README.md`, `AGENTS.md`, `DEVELOPMENT.md`, and `SECURITY.md`.
