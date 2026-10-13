@@ -404,21 +404,21 @@ pinned_snapshot:
   contracts: d98967b7b7ee80442c93ef4657140068955c8f61
   platform: 3275d523d004787aa5871266b8636dd0b11e74e6
   extractor: b5655232c10df6253bab2e9f97e13f913cf21547
-  knowledge: 577ccc3935ae0620d9952d05a42b7f4da2e18f42
-  channel-digests: 65a5df7a7f1d6c82a1ce6213cacb980897680d58
-  github: 80aaa84a4c581336f88e034aeb8799248e010c22
+  knowledge: b5f2bbd786e039b3a49168c6914647f4e99acd19
+  channel-digests: a7cec3a1e13534fa226b8fcfd40425879db69060
+  github: da4f67991ad83111f3857e26f022bfdee80d85a7
   vault: b810b26b730de840fb2aa3225165d7a677df80a8
   x: cf21321f1286ebaa85181b498cf76a5687211978
   instagram: 171caf11830e786900a7aafe88689f5e87f54b23
   threads: e8cb95cfb074ae87c01c4fe8dca5f0988f687ba0
-  chatgpt: 6e9508764be8f9f876f4ddee611707951459b3a5
-  claude: 272b6833d7207241416c1b8b00012ade4e234f22
+  chatgpt: 0b142eb82e1ad55bbe282acfd2996d80dd67e398
+  claude: 049922d7be40ac533d84b084f54bb56604abd5d2
   telegram: a8a337ad504e2a7f89a218fa972edcfa6078193e
   browser-extension: 0aceedd44d2c9448c817cf6464fa6ea81917fd1c
   export-agent: 22c14fdc8310b043772cc0ea6874abae575a66b0
   mobile: 67646d3ec6f50a458b59ec50ccea0cec29981e98
   web: 3c30f15f8d78d116aaf726e4ae085e8d2f317ea5
-  workspace_lock_sha256: 8c5f52ec72414c86c7b6423e31f3ce1d7cf52c9cb44c55ef410324c4478e3295
+  workspace_lock_sha256: 16dd28e73d472202d733cb83f911845f6c2935383e65b3773df3f1acd9b53580
 round_2:
   goal: Fix the defects that independent verifiers found by tracing each flow through the round 1 code (Edge upstream listeners, operation report authority, publisher health and outbox failure classes, channel-digest terminal states, tenant deletion of recap state, the blob registration and erasure race, GitHub origination, X provider deletion, operator examples, permalink hosts, profile ACLs), record the behaviour as an OpenSpec change, add the harness checks that stop the first and last kind of drift, and advance the pins.
   contract_source: .omc/plans/XR-021/CONTRACTS.md sections R2-01 to R2-19 (a local planning file, not committed). CONTRACTS_SHA stays ad16855c4e7f3d52cd118274faa3b8f3ab4da576 for every repository except chatgpt and claude, which pin 5426cf3096733d714c59b02ec41e946fdedcd94d, a contracts commit that adds a test and no crate source (see residual_risks).
@@ -1590,7 +1590,7 @@ round_5:
     - "The agent's fixed 1 MiB chunk cannot carry an archive between about 9.77 GiB and 10 GiB (the shipped 2 GiB default is unaffected)."
     - "The macOS 14 floor for .iso8601 with fractional seconds is untested."
     - "Claude's late report for a duplicate upload can disagree with the original (load_summary hard-codes too_large = false)."
-    - "docs/fleet-map.html in the workspace still names the old receiver ports and methods."
+    - "docs/fleet-map.html in the workspace still names the old receiver ports and methods. (closed_in: round_6)"
     - "The ChatGPT and Claude receivers connect to NATS lazily at the first outbox row, so a bad seed or ACL is not visible in /health/ready."
     - "Only Platform has a '## Deployment target' section although the workspace AGENTS.md asks every repository for one; chatgpt and claude ship no systemd unit or tmpfiles entry."
     - "Knowledge late object facts: record_object ignores tombstone_blocks, so a retried archive.imported, artifact.added or artifact.updated after the tombstone re-inserts an ai_archive_object_inbox row."
@@ -1758,11 +1758,13 @@ round_5:
     - repository: "ratatoskr-workspace"
       kind: "harness weakness"
       where: "integration/native/fixtures/f1_scenario.py:597"
-      detail: "the digest-mismatch assertion passes on a finalize of 200 or a 404 status, and the following assertion also accepts a token that is not in the states; together they are looser than their names. Not a service defect. Open."
+      detail: "the digest-mismatch assertion passes on a finalize of 200 or a 404 status, and the following assertion also accepts a token that is not in the states; together they are looser than their names. Not a service defect. Closed in round 6."
+      closed_in: "round_6"
     - repository: "ratatoskr-workspace"
       kind: "harness cosmetic"
       where: "integration/native/fixtures/f1_scenario.py:612"
-      detail: "the reaper assertion prints 'dirs left=[3 rst_ dirs]' in its PASS detail, which reads like a failure. Open."
+      detail: "the reaper assertion prints 'dirs left=[3 rst_ dirs]' in its PASS detail, which reads like a failure. Closed in round 6."
+      closed_in: "round_6"
     - repository: "ratatoskr-channel-digests"
       kind: "observation for the owner (low)"
       where: "src/runtime.rs lines 106 and 145, src/database.rs line 60"
@@ -1774,3 +1776,256 @@ round_5:
       kind: "pre-existing observation, not part of this change"
       where: ".github/workflows/drift.yml, issue 20"
       detail: "the weekly drift check has failed since 2026-10-05 (runs 37308964584 and 38254422070): the wrappers of the child repositories pin .github/workflows/reusable-advisories.yml at b7bd2a15b4ed, which is not the revision on main, and every wrapper must raise the SHA. The fix is an edit in each child repository, which this change does not make. Open; the next scheduled run will show whether the pins of this change alter the result."
+round_6:
+  goal: "Close the four items the repository owner approved for the last wave of XR-021: the Knowledge repository lane waits out an operator-fixable provider failure and a spend-budget refusal and the GitHub request stays pending (R6-01), a channel-digests manifest is under the body retention and the withdrawal and its route answers 410 (R6-02), every published stream copy of a ChatGPT or Claude fact row is recorded and a row in flight is serialized with its deletion (R6-03), and the fleet map and two F1 assertions say what is true (R6-04). Round 6 has no contracts commit; CONTRACTS_SHA stays d98967b7b7ee80442c93ef4657140068955c8f61."
+  contract_source: ".omc/plans/XR-021/CONTRACTS.md sections R6-01 to R6-05 (a local planning file, not committed), as copied into .omc/plans/XR-021/round6/*.md. No repository moves its contracts pin (contracts_pin.rs passes)."
+  openspec: "openspec/changes/xr-021-fleet-round-6 (NOT archived: task 5.2, RED evidence for the F4 manifest retention leg and the F6 in-flight deletion leg against the Round 5 heads, was not collected, and the change cannot be archived before xr-021-fleet-round-5, whose task 6.2 is open). xr-021-fleet-round-5 stays open and its task 6.2 stays unticked: its RED evidence cannot be collected after the fact."
+  hosted_ci_of_pinned_heads: "read through the GitHub API on 2026-10-13: every check run concluded success on knowledge b5f2bbd (5 of 5), github da4f679 (5 of 5), channel-digests a7cec3a (5 of 5), chatgpt 0b142eb (5 of 5) and claude 049922d (5 of 5). The heads that did not move keep the results recorded under round_5 and round_3. The Round 5 field hosted_ci_of_pinned_heads is left as a Round 5 record."
+  repositories:
+    - id: "ratatoskr-knowledge"
+      head: "b5f2bbd786e039b3a49168c6914647f4e99acd19"
+      previous_head: "577ccc3935ae0620d9952d05a42b7f4da2e18f42"
+      pull_requests: "none, pushed directly to main under the repository owner authorization"
+      hosted_ci: "5 of 5 check runs succeeded (read through the GitHub API on 2026-10-13)"
+      commits:
+        - "083ac465c9c568243a32535a5b80d43ef7949d0d docs: open the XR-021 round 6 changes for the repository wait and 410 [R6-01, R6-02]"
+        - "799acecddd5913054c99bf2357ee0e710d67d9e3 feat(ingest): wait out operator and spend-budget failures in repository [R6-01]"
+        - "05bc608177d9daf1df01159de2a1b63011c0f867 docs: describe the repository wait on operator-fixable failures [R6-01]"
+        - "3e0fd42ec513c2b584d1a28e794f0819cdafc716 feat(recap): treat a 410 from the manifest route as terminal [R6-02]"
+        - "f52232cb6a53a70c1c439a81532a1e22652120b2 docs: name the manifest 410 in the digest source client contract [R6-02]"
+        - "b5f2bbd786e039b3a49168c6914647f4e99acd19 docs: archive the XR-021 round 6 OpenSpec changes [R6-01, R6-02]"
+    - id: "ratatoskr-github"
+      head: "da4f67991ad83111f3857e26f022bfdee80d85a7"
+      previous_head: "80aaa84a4c581336f88e034aeb8799248e010c22"
+      pull_requests: "none, pushed directly to main under the repository owner authorization"
+      hosted_ci: "5 of 5 check runs succeeded (read through the GitHub API on 2026-10-13)"
+      commits:
+        - "c8c09ef2c016b89c48c7ed070b6cb7dce008b581 docs(openspec): propose keeping a pending analysis request open (XR-021 R6-01) [R6-01]"
+        - "3cb346d7d55ff8ec024904f59c68a45de922e2a4 test(catalog): pin that a pending analysis request stays open [R6-01]"
+        - "bc3570a0c92bc4f63b25093df4564eb00b593680 docs: state that a pending analysis request has no deadline [R6-01]"
+        - "f0eba5436979ff77d4c5e516aefa5f61a74da59f docs(openspec): mark the pending-request change as spec-free [R6-01]"
+        - "da4f67991ad83111f3857e26f022bfdee80d85a7 chore(openspec): archive xr-021-r6-pending-request-stays-open [R6-01]"
+      note: "tests and documentation only, as R6-01 rule 4 requires: no code change in github"
+    - id: "ratatoskr-channel-digests"
+      head: "a7cec3a1e13534fa226b8fcfd40425879db69060"
+      previous_head: "65a5df7a7f1d6c82a1ce6213cacb980897680d58"
+      pull_requests: "none, pushed directly to main under the repository owner authorization"
+      hosted_ci: "5 of 5 check runs succeeded (read through the GitHub API on 2026-10-13)"
+      commits:
+        - "83e23474def286c80ecfdd6f41aacd74d8c259b1 docs(openspec): propose xr-021-r6-manifest-retention [R6-02]"
+        - "82fe8ae392b331a9a1bced676a82ba6ab28dae0d feat(schema): let a manifest lose its text and link it to its messages [R6-02]"
+        - "fd91dc98bcc4d7d910b1233e725aa0d5f5ab3974 feat(manifest): record the messages a manifest holds when it commits [R6-02]"
+        - "5ae73db879ae56f702fac5c53ee3b7d3a7197369 feat(retention): minimize manifest text on the body cutoff [R6-02]"
+        - "e92937e6b8c7b3c247db8457806ccc1533167897 feat(revisions): minimize manifests that hold a withdrawn message [R6-02]"
+        - "f83f6d1eb423a6a826a5eef312b0530d3c6097a9 feat(api): answer 410 for a minimized manifest behind its claims [R6-02]"
+        - "595d12a0cbcee166b1f14b2d27becc078234606e docs: describe manifest retention, withdrawal and the 410 [R6-02]"
+        - "a7cec3a1e13534fa226b8fcfd40425879db69060 docs(openspec): archive xr-021-r6-manifest-retention [R6-02]"
+    - id: "ratatoskr-chatgpt"
+      head: "0b142eb82e1ad55bbe282acfd2996d80dd67e398"
+      previous_head: "6e9508764be8f9f876f4ddee611707951459b3a5"
+      pull_requests: "none, pushed directly to main under the repository owner authorization"
+      hosted_ci: "5 of 5 check runs succeeded (read through the GitHub API on 2026-10-13)"
+      commits:
+        - "72b873cdbe2446d8cdc6cd0eb67ce15d079fdb28 docs(openspec): plan XR-021 round 6 stream erasure bookkeeping [R6-03]"
+        - "6c2ff5b41ac9047ac868e4001549eb5c60e6a583 feat(outbox): record every PubAck sequence of a row in an array [R6-03]"
+        - "a7934c9995c5415bd07d701c83829de0606d895a refactor(outbox): split the pump into a module directory [R6-03]"
+        - "ebb30581ea3d51249ce3837e6d48c2000844e779 feat(outbox): count and report a mark that lands on no row [R6-03]"
+        - "906647bcb267b2d2584448098998438a7f27f1ed feat(outbox): serialize first publication with deletion, carry unrecorded copies [R6-03]"
+        - "0b142eb82e1ad55bbe282acfd2996d80dd67e398 docs(openspec): archive the XR-021 round 6 stream erasure bookkeeping change [R6-03]"
+    - id: "ratatoskr-claude"
+      head: "049922d7be40ac533d84b084f54bb56604abd5d2"
+      previous_head: "272b6833d7207241416c1b8b00012ade4e234f22"
+      pull_requests: "none, pushed directly to main under the repository owner authorization"
+      hosted_ci: "5 of 5 check runs succeeded (read through the GitHub API on 2026-10-13)"
+      commits:
+        - "8b54f24f22f7c6f54bda327bb452375003d6b55f docs(openspec): plan the stream erasure bookkeeping change [R6-03]"
+        - "99026fd563fd5b955a63359823dc1cd885da66e7 feat(outbox): record every published stream sequence in an array [R6-03]"
+        - "c30a90c522ec6184c8f43209773d8e58ac952351 fix(outbox): count a mark that does not affect exactly one row [R6-03]"
+        - "eccc18462ad623a6a1dae8ff72dabb31089e012a refactor(outbox): split operation_outbox into a module directory [R6-03]"
+        - "ce8475db2ec660439a4f33b3055274b73fd16e24 feat(outbox): serialize a fact row in flight with its deletion [R6-03]"
+        - "71d45e5fbadb4b86642d5c79673e75194f5ce444 docs: replace the accepted stream erasure residual by the protocol [R6-03]"
+        - "049922d7be40ac533d84b084f54bb56604abd5d2 chore(openspec): archive the stream erasure bookkeeping change [R6-03]"
+  repositories_without_round_6_work:
+    - id: "ratatoskr-platform"
+      head: "3275d523d004787aa5871266b8636dd0b11e74e6"
+      reason: "no Round 6 item touches Platform. Its origin/main moved to ec2251b845a17a60b23dab8fc130338600dff78f after the Round 5 pin through four deployment commits of the owner's deployment automation work (ratatoskr.target, the arm64 artifact, the deploy README); they change CI, the Dockerfile, systemd units and documentation and no Rust source. They are not Round 6 work and the pin is deliberately not moved: moving it needs its own integration validation."
+    - id: "ratatoskr-contracts"
+      head: "d98967b7b7ee80442c93ef4657140068955c8f61"
+      reason: "no contracts commit in Round 6"
+    - id: "ratatoskr-extractor"
+      head: "b5655232c10df6253bab2e9f97e13f913cf21547"
+      reason: "no Round 6 item touches the extractor. Its origin/main moved to dfbb40f4381f70f83803050378d0dd84251848dc through two deployment commits (join ratatoskr.target, publish the arm64 artifact); not Round 6 work, not pinned."
+    - id: "ratatoskr-telegram"
+      head: "a8a337ad504e2a7f89a218fa972edcfa6078193e"
+      reason: "no Round 6 item touches Telegram. Its origin/main moved to 3d5da94b9f40b561e78d307acc38a367601be30c through one deployment commit (join ratatoskr.target); not Round 6 work, not pinned."
+    - id: "ratatoskr-mobile"
+      head: "67646d3ec6f50a458b59ec50ccea0cec29981e98"
+      reason: "no Round 6 item touches the mobile client. Its origin/main moved to 6ec53a3b9a92c9477657149beb403d96cbe5dcd8 through a Gradle wrapper update; not Round 6 work, not pinned."
+    - id: "ratatoskr-vault"
+      head: "b810b26b730de840fb2aa3225165d7a677df80a8"
+      reason: "no Round 6 item touches Vault"
+    - id: "ratatoskr-x, ratatoskr-instagram, ratatoskr-threads"
+      head: "cf21321f1286ebaa85181b498cf76a5687211978, 171caf11830e786900a7aafe88689f5e87f54b23, e8cb95cfb074ae87c01c4fe8dca5f0988f687ba0"
+      reason: "no Round 6 item touches the social lanes; their origin/main equals the pin"
+    - id: "ratatoskr-browser-extension, ratatoskr-export-agent, ratatoskr-web"
+      head: "0aceedd44d2c9448c817cf6464fa6ea81917fd1c, 22c14fdc8310b043772cc0ea6874abae575a66b0, 3c30f15f8d78d116aaf726e4ae085e8d2f317ea5"
+      reason: "no Round 6 item touches the clients; their origin/main equals the pin"
+  breaks:
+    - "channel-digests: digest_manifests.canonical_text is nullable and the table gains minimized_at with a CHECK that exactly one of the two is set; the new table digest_manifest_sources links a manifest to the (channel_id, provider_message_id) pairs it holds; GET /v1/manifests/{manifest_id} gains the 410 status; a second counter channel_digests_manifests_minimized_total is served on the operator plane; CanonicalManifest carries the message pairs. A database is recreated from the edited schema."
+    - "Knowledge: DigestSourceClientError gains Gone and a manifest 410 settles manifest_unavailable at once with no retry; the repository family returns a redelivery at every delivery for an operator-fixable provider failure and a spend-budget refusal, so a retryable repository_analysis.failed fact is no longer published for those two failures."
+    - "ChatGPT and Claude: outbox_events.published_stream_seq is replaced by published_stream_seqs bigint[]; the first publication of a row is a per-row transaction with for update skip locked, bounded by a 5 s JetStream request timeout; a new counter (chatgpt_outbox_mark_lost_total, claude_outbox_mark_lost_total) counts a mark that lands on no row; a pump-originated erasure command carries a request_ref that names no real deletion request. A database is recreated from the edited schema."
+    - "Workspace: the native harness state directory and evidence root are XR-021-r6; the F7 closure assertion second_request_closes_failed_when_the_provider_refuses is deleted and replaced by a wait leg and a 503 leg. The development status applies to every item: one version, no migration, databases recreated from the edited schema definitions."
+  exclusions:
+    - item: "The Claude late duplicate report that can disagree with the first; Edge finalize_transfer without a per-token lock; the reaper deleting a finalized row at the next sweep; a digest mismatch not failing the operation"
+      reason: "owner scope round 6"
+    - item: "The Swift export agent never run live; the 2 GiB timing on the Pi; the chunk-size band between 9.77 and 10 GiB"
+      reason: "owner scope round 6"
+    - item: "The dead LIMITS__* keys and unused columns of channel-digests; observed_at set to the run's window_end; the grammers MessageEmpty and short-page inference risk; the F4 acquisition hop faulted natively; the channel-digests test fixture port"
+      reason: "owner scope round 6"
+    - item: "supervise_provider reconnecting every second and execute_one not being interrupted by shutdown"
+      reason: "owner scope round 6"
+    - item: "A README over README_MAX_BYTES failing the track action; the repository handler emitting no failed fact for an idempotency conflict or a permanent accept failure, and nothing detecting a stale pending request"
+      reason: "owner scope round 6"
+    - item: "The weak F5 assertions (lines 89, 98 and 107 of f5-social-captures.sh) and the weak F3 held-stream assertion; the native F6 verification gaps"
+      reason: "owner scope round 6"
+    - item: "The unrun extension client; Threads classify_status mapping 400 and 401 to a permanent outcome"
+      reason: "owner scope round 6"
+    - item: "The Telegram blob_root default, the Bot API file download timeout and the classify() mapping of 403"
+      reason: "owner scope round 6"
+    - item: "The RatatoskrConsumerRedeliveryStorm rule over a gauge; the missing alerts for erasure and ack durables"
+      reason: "owner scope round 6"
+    - item: "The stale ChatGPT README sentence on the lazy connection; the per-repository ## Deployment target sections"
+      reason: "owner scope round 6"
+    - item: "Knowledge late object facts; Claude's outbox_privacy_tombstone_once suppressing a second tombstone for a reused Artifact id; Claude's announced-subjects ledger limitation; a resent tombstone applied without a head check"
+      reason: "owner scope round 6"
+    - item: "Knowledge's stored manifest and recap copies that no delete reaches (knowledge.channel_recap_manifests and the recap tables)"
+      reason: "owner scope round 6; they fall under the fleet-wide erasure transport"
+    - item: "The fleet-wide account-erasure transport, image OCR, live provider credentials and exports, the notification producer, the unwired domain listeners 8093 to 8095"
+      reason: "still excluded as in R5-15, unchanged"
+    - item: "The POST /v2/captures wording at docs/DEPLOYMENT_TARGET.md line 416 (the development status allows no v2)"
+      reason: "reported to the owner, who alone changes the development-status rules; DEPLOYMENT_TARGET.md was not edited by this round (the owner reconciled it in a separate commit, dad4e3d)"
+  accepted_residuals:
+    - "The crash window of R6-03 rule 5: a process crash between the broker's acknowledgement and the commit of its sequence, followed by a republish after the 120 s duplicate window, leaves one stream copy that no record names. It ages out at 7 days or 1 GiB. Closing it needs a contract addition (a message id on platform.stream_erasure.requested.v1) and an Edge lookup by Nats-Msg-Id."
+    - "A plain transient fault of the repository family (a timeout, a held run, an invalid response, an unavailable README, a transient provider failure) still closes the GitHub request as failed and retryable after five deliveries, and GitHub does not re-queue it (the R5-15 re-queue sweep)."
+    - "A withdrawal minimizes a whole manifest, not one post, so an earlier digest is unavailable for the rest of its life once any of its posts is deleted upstream."
+  open_lows_closed_in_round_6:
+    - "docs/fleet-map.html in the workspace still names the old receiver ports and methods (round_5.open_lows): corrected, see harness_results.fleet_map."
+    - "The two weak F1 assertions and the misleading PASS detail (round_5.remaining_defects, f1_scenario.py lines 597 and 612): corrected, see harness_results.f1_assertions."
+    - "The loss of a GitHub repository analysis request on a credential or spend-budget outage (round_5 residual of the repository lane): the request now waits, see R6-01; a plain transient fault still closes it (accepted_residuals)."
+  amended_residual_risks:
+    removed:
+      - "The GitHub repository lane losing a request on a credential or budget outage (R6-01). Evidence: the Knowledge tests in services/knowledge/tests/ingest_bus/ (hosted CI green) and native F7 leg (a): the request stayed pending for 60 s while the provider refused the key, Knowledge redelivered (0 to 5), no failed row and no failed fact, then it completed and the analyses grew from 1 to 2. Against the Round 5 Knowledge pin the same leg fails at its pending assertion (4 failed assertions)."
+      - "Manifests keeping deleted post bodies for ever (R6-02). Evidence: the channel-digests tests (hosted CI green) and native F4 leg RM (the minimized manifest answered 410 to matching claims, 404 to a wrong digest and to another owner; digest and counts unchanged; a younger manifest untouched). The withdrawal path is NOT RUN natively (MTProto), and the F4 leg was not run against the Round 5 channel-digests head."
+      - "The stream-erasure in-flight race of the ChatGPT and Claude pumps (R6-03). Evidence: the repository tests of both importers (hosted CI green) and native F6 in-flight deletion leg (outbox rows 0 and stream fact messages 0 for both providers). The F6 leg does not force the race and asserts the end state only, and it was not run against the Round 5 importer heads."
+    added:
+      - "The crash window of R6-03 rule 5 (accepted_residuals)."
+      - "A plain transient fault still closes the request after five deliveries (accepted_residuals)."
+      - "A withdrawal minimizes a whole manifest (accepted_residuals)."
+      - "Knowledge's stored manifest copy and recap copies are not reached by any delete."
+      - "The pump of ChatGPT and Claude holds one database connection while a publish is in flight, for at most 5 s per row."
+      - "The Round 6 native legs F4 RM and F6 in-flight were not run against the Round 5 heads, so they are not shown to fail without their fixes (OpenSpec task 5.2)."
+  workspace_changes:
+    openspec: "openspec/changes/xr-021-fleet-round-6 (three capability deltas, all ADDED requirements)"
+    docs: "docs/fleet-map.html (corrected against the children's origin/main and the port table of docs/DEPLOYMENT_TARGET.md; the inventory of every corrected statement with the file and line that proves it is in the body of the commit that carries it), integration/native/README.md (the Round 6 legs and the XR-021-r6 state directory)"
+    harness_tests:
+      - "harness/crates/workspace-cli/tests/committed_snapshot.rs (EXPECTED_PINS advanced to the Round 6 heads of the five repositories)"
+    integration:
+      - "integration/tests/native_smoke_contract_test.sh (an AST scan of fixtures/f1_scenario.py, and the XR-021-r6 state directory)"
+      - "integration/native/fixtures/f1_scenario.py, flows/f4-channel-digests.sh (leg RM), flows/f6-privacy-deletion.sh (the in-flight deletion leg), flows/f7-github-analysis.sh (the wait leg and the 503 leg), lib/common.sh and README.md"
+    workspace_commits_before_this_record:
+      - "d085ef0 test(native): assert what the F1 reaper names say, add the XR-021 round 6 legs (rebased onto the owner's deployment commits as 6c1bc36)"
+      - "eafce86 docs: bring the fleet map in line with the children's origin/main and the port table (rebased as 11cc17d; the owner's dad4e3d had edited docs/fleet-map.html and docs/DEPLOYMENT_TARGET.md meanwhile, and the three conflicts were merged by hand: the open-gaps list and the route list are the owner's, the port table is this round's with the 8094 and 8095 rows set to the owner's unresolved wording)"
+    manifest: "workspace.toml unchanged (it names no revisions); workspace.lock regenerated with ./ws lock generate"
+  harness_results:
+    f1_assertions:
+      red_before_green: "native_smoke_contract_test.sh with the new AST scan of f1_scenario.py was RED on the committed file with three findings (the digest-mismatch assertion accepting a 404 or a 400/409/422 status, the failed-row assertion accepting a missing row, a PASS detail printing dirs left=); the scan was proved on a good and a bad scratch scenario and is GREEN after the fix."
+      green: "reaper.digest_mismatch_session_is_refused passes only for HTTP 200 with outcome digest_mismatch, declared 3dab5ddb16a1 against computed 909fc8956138 (the first 12 characters); reaper.mismatch_session_is_failed reads the transfer row right after finalize and requires session_state failed ('failed'); reaper.mismatch_chunks_are_left_for_the_reaper holds right after finalize; the directory assertion prints removed=abandoned,mismatch,orphan kept=fresh. F1 on the Round 5 pins passed with 128 assertions. A scratch copy with three deliberately wrong expectations failed exactly those three assertions with correct details (a fourth failure, facts.tenant_is_user_U1, came from running F1 twice on retained state)."
+    fleet_map: "docs/fleet-map.html was corrected against the origin/main heads of the children and docs/DEPLOYMENT_TARGET.md: PUT to POST; the receipts on 8096 and 8097; the operator listeners 9085 and 9086; the 9467 and 9084 conflicts gone; bound ports 8091, 8092, 8096, 8097 and 8098; the wired lanes (documents, social and AI-archive facts to Knowledge, github to the vault policy lane, Platform to channel-digests, the terminal digest report); the API list regenerated to 37 paths; the contract matrix to 65; the vault-to-github edge moved into the manifest edges. The page renders in headless Chrome with no script error (node --check of the script and a dump-dom with every table populated); after the merge with the owner's commit dad4e3d the script was checked again with node --check, and the render was not viewed again."
+    final_gate: "see verification_of_the_pins below"
+  native_smoke:
+    note: "F1, F4, F6 and F7 were run through integration/native/run.sh as committed (workspace commit d085ef0 and its successors, which change only documentation and flows) by earlier writers of this round on the developer's Mac (macOS 27, arm64, python 3.12.15 from mise, 131 GiB free), one at a time, against the Round 6 heads of the children, NOT through the pinned checkouts (the pins had not moved): F1 used RATATOSKR_SMOKE_REF=origin/main (platform 3275d52, chatgpt 0b142eb, claude 049922d); F4 used a byte-identical scratch copy of integration/ whose repos/ entries were symlinks to the XR-021 task clones (platform e3dd575, knowledge b5f2bbd, channel-digests a7cec3a), because the harness resolves a ref from the submodule object stores and the platform submodule still held 3275d52 as origin/main; F6 ran as 'run.sh f1 f6' after a git fetch in the platform submodule's object store (platform e3dd575, chatgpt 0b142eb, claude 049922d, knowledge b5f2bbd); F7 ran platform e3dd575 knowledge b5f2bbd github da4f679 (the platform clone had moved to bc6ef29, whose delta against e3dd575 is CI, Dockerfile and deploy documentation only, but the baseline object store did not contain it). Platform e3dd575 differs from the pin 3275d52 by deployment files only (ratatoskr.target, README, ufw rule), no Rust source. The evidence summaries are in the gitignored evidence/XR-021-r6/<flow>/ (asserts.txt, result.txt). Results are copied from what each run reported; nothing is upgraded. F0, F3 and F5 were not re-run in Round 6 (nothing they cover changed) and keep their Round 5 verdicts as Round 5 results."
+    flows:
+      - flow: "F1 AI-archive upload (Edge, ChatGPT, Claude) via integration/native/run.sh, Round 6, against origin/main of platform, chatgpt and claude"
+        ran: true
+        passed: true
+        assertions: 128
+        commits_that_ran: "platform@3275d52 chatgpt@0b142eb claude@049922d"
+        as_reported: "RESULT f1: PASS (pass=128 fail=0); scenario SUMMARY pass=124 fail=0 plus the harness checks (nats_log_has_no_acl_violations 0 violations; repo_clean_platform, chatgpt and claude 0 dirty files). Reaper legs (s14) all PASS: digest_mismatch_session_is_refused (finalize=200 outcome=digest_mismatch), mismatch_session_is_failed (session_state='failed'), abandoned, expired, failed and orphan directories removed and the fresh session kept, counter expired 0 to 1 and failed 0 to 1, dead token 404 and a new token on reopen (201), readiness archive_staging pass, fail, pass. s15: a 256 MiB synthetic ChatGPT archive reached succeeded in wall=10s (a laptop number, not a Pi measurement). s17: the Claude 401 stand-in leg passed. Cleanup: run.sh --prune removed the state directory; no listeners, no processes, no target dir; the three submodules had 0 dirty files."
+        faked_or_seeded: "archives are synthetic ZIPs; principals, sessions and the Mini App session seeded by SQL; the reaper legs rewind a session clock by SQL, delete a transfer row by SQL and make an orphan directory by hand; one leg replaces the Claude receiver with a 401 stand-in; the sweep interval is 30 s instead of 300"
+        not_exercised: "the Export Agent Swift client and the macOS keychain pairing; TLS through cloudflared; the Knowledge and extractor consumers of the ai_archive facts (F2, F6) in this run; per-flow privacy deletion; RED proving against older heads (not done)"
+        defects:
+          - "No service boundary defect observed in platform, chatgpt or claude."
+          - "Harness observation, not a service defect: reaper.digest_mismatch_session_is_refused pins a 200 status with a mismatch outcome in the body, which is the contract; the old looseness of this assertion is closed by this round (harness_results.f1_assertions)."
+      - flow: "F2 Knowledge ingestion as a regression of the Round 6 pump change (a PDF blob capture and a ChatGPT archive fact searched through Edge, the negatives, a NATS outage, the size legs, the credential and database outages), run by the writer of this record through integration/native/run.sh with no RATATOSKR_SMOKE_REF"
+        ran: true
+        passed: true
+        assertions: 93
+        commits_that_ran: "platform@3275d52 extractor@b565523 knowledge@b5f2bbd chatgpt@0b142eb claude@049922d (the commits the workspace now pins, built from the pinned submodule checkouts and read from built-commits.txt)"
+        as_reported: "RESULT f2: PASS (pass=93 fail=0), exit 0; 93 ASSERT lines, none other than PASS. Large conversation facts of about 2 MiB and 7.85 MB reached Knowledge through the deployed ACL and were not Termed unanalysable; the credential outage (401 for 60 s, then 402 and 404 for 30 s each) was retried and never Termed (redeliveries 0 to 18); the database outage deliveries were retried more than five times (redeliveries 18 to 42, delays 2, 4, 8, 16, 32 s); a 400 was Termed at its first delivery and the non-envelope message was Termed; nats_log_has_no_acl_violations 0 violations; repo_clean for platform, extractor, knowledge, chatgpt and claude 0 dirty files. This is the only Round 6 flow run through the pinned checkouts."
+        faked_or_seeded: "OpenRouter is a loopback fake, so no analysis text is a live provider result; the PDFs and the ChatGPT archive are synthetic; two users and a Mini App session are seeded by SQL; the Knowledge outage revokes and restores the login of Knowledge's database role (ALTER ROLE ... NOLOGIN, pg_terminate_backend), a seeded fault; Knowledge's recap is disabled for this flow"
+        not_exercised: "NOT RUN: the same PDF fetched by URL as well as received as a blob (the URL lane refuses loopback addresses by design); the credential outage with a social-style fact in flight; the Telegram webhook (the blob is placed by hand; F3 uses the real webhook). F2 publishes through the new per-row transaction of the ChatGPT importer under the deployed ACL, but it does not delete anything, so it says nothing about the row lock; that is F6 and the repository tests."
+        defects:
+          - "No service defect observed in platform, extractor, knowledge, chatgpt or claude."
+      - flow: "F4 channel digests including manifest retention (integration/native/flows/f4-channel-digests.sh)"
+        ran: true
+        passed: true
+        assertions: 84
+        commits_that_ran: "platform@e3dd575 knowledge@b5f2bbd channel-digests@a7cec3a"
+        as_reported: "RESULT f4: PASS (pass=84 fail=0), wall time 13m14s including the release builds; zero ASSERT lines not PASS; nats_log_has_no_acl_violations 0; repo_clean_platform, knowledge and channel-digests 0 dirty files. The Round 6 manifest retention leg (leg RM, R6-02) all PASS: two manifests committed by the faulted helper, the link table holding the messages of the old manifest, the old manifest served before retention, the retention window rewound by SQL (SEEDED), the old manifest text nulled and minimized_at set, the digest (sha256 ba7b9029...e4230) and the counts (sources=2 channels=2) unchanged, the route answering 410 with an empty body to the matching claims, 404 to a wrong digest, 404 to another owner, and the younger manifest untouched and served with its exact text. Retention leg R (post bodies), the recap with a faulted acquisition and the schedule owner leg also PASS."
+        faked_or_seeded: "the acquisition hop is the faulted helper (fixtures/legb/main.rs.txt calls ManifestBuilder::build and DigestCoordinator::commit_manifest by hand); the run state and window of the old manifest are rewound by SQL (SEEDED); the worker runs at RETENTION BODY_DAYS 8, SWEEP_INTERVAL_SECONDS 60 and a '* * * * *' schedule, RUN_DEADLINE_SECONDS 60; the worker.env deviation lines repeat in result.txt because the worker env is restarted per leg"
+        not_exercised: "NOT RUN: the withdrawal path of R6-02 rule 3 (MTProto needs live credentials); real acquisition. The leg was not run against the Round 5 channel-digests head (task 5.2 open)."
+        defects:
+          - "No boundary defect observed in platform, knowledge or channel-digests."
+          - "Harness gap, not a service defect (integration/native/lib/common.sh lines 72 to 73 and 103 to 117): RATATOSKR_SMOKE_REF is resolved against the submodule object stores under repos/, so a run against the children's origin/main needs the submodules fetched. The platform submodule's origin/main was 3275d52 while the child's was e3dd575, so the documented method would have silently tested a stale platform head. Worked around here with a scratch copy of the harness; the harness is not changed. Open."
+      - flow: "F6 privacy deletion including stream erasure and the in-flight deletion leg (integration/native/flows/f6-privacy-deletion.sh), run as 'run.sh f1 f6' because F6 resumes the databases, blobs and keys that F1 keeps"
+        ran: true
+        passed: true
+        assertions: 86
+        commits_that_ran: "platform@e3dd575 chatgpt@0b142eb claude@049922d knowledge@b5f2bbd"
+        as_reported: "RESULT f1: PASS (pass=128 fail=0) and RESULT f6: PASS (pass=86 fail=0). Cumulative-series deletion for ChatGPT and Claude; the tombstone published through the real pump and applied by Knowledge; stream erasure (the deleted conversations' facts gone within 30 s, 11 neighbour facts before and 11 after, erasure counter 18, an audit row with counts and no content); the tombstone resend at 150 s (2 stream copies each), one acknowledgement each, gauges 3 to 0; a PostgreSQL outage of 20 s (redeliveries 0 to 2); the foreign-subject probe acknowledged refused; the owner after a mapping change; the concurrency leg (0 missing blobs); the Round 6 in-flight deletion leg for ChatGPT and Claude (outbox rows 0, stream fact messages 0); tenant deletion clears the recap tables; NATS log ACL violations 0; repo_clean for platform, chatgpt, claude and knowledge."
+        faked_or_seeded: "OpenRouter is a loopback fake on 18791; the archives are synthetic ZIPs; principals and one Knowledge recap row are seeded by SQL; the tombstone-resilience and foreign-subject tombstones are published directly with the ChatGPT identity's real seed; the importer resend is 150 s instead of 600 s; Knowledge's channel recap is disabled; paths, addresses, secrets and PLATFORM_ACCOUNTS are deviations from the shipped examples"
+        not_exercised: "the in-flight race of R6-03 is not forced (the pump's 5 s window needs a paused pump); the leg asserts the end state only and was not run against the Round 5 importer heads, so it is not RED-proven (task 5.2). The foreign-subject probe is a tombstone published directly, so the producer-side refused counter is not asserted. NOT RUN: two owners for one account, and the survivor-content legs of R4-03 and R5-08. The Edge to receiver hop in the deletion path was not exercised (the importers are driven through their CLIs)."
+        defects:
+          - "No service defect observed in platform, chatgpt, claude or knowledge."
+          - "Harness note, not a service defect: the same RATATOSKR_SMOKE_REF resolution as under F4; the platform submodule had to be fetched so that origin/main there is e3dd575."
+      - flow: "F7 GitHub repository analysis into Knowledge including provider outage behaviour (integration/native/flows/f7-github-analysis.sh)"
+        ran: true
+        passed: true
+        assertions: 54
+        commits_that_ran: "platform@e3dd575 knowledge@b5f2bbd github@da4f679"
+        as_reported: "RESULT f7: PASS (pass=54 fail=0), exit 0, wall 9m14s; only one smoke ran. The track action was accepted (http=200); exactly one analysis request for the owner; the request on the stream; Knowledge fetched the README with the shared secret; the loop closed with a completed fact consumed by GitHub; the completed repository was searchable through Knowledge's read API; an unchanged poll queued none. Leg (a), the provider refuses the key with 401: the second request stayed pending for 60 s, no failed row, Knowledge kept redelivering (knowledge_ingest_redeliveries_total 0 to 5), no failed fact on the bus (0 to 0), and the request completed after the provider stopped refusing (status=completed, analyses 1 to 2). Leg (b), 503 for 400 s: the request closed failed with dependency_unavailable and retryable=true. The PAT leg passed (reconnect exits zero, the provider saw GET /user with a bearer, the PAT never appears in the output); a stalled provider answered http=200 after 1 s with aggregate failed/provider_unavailable and github stayed ready. nats_log_has_no_acl_violations 0; repo_clean_platform, knowledge and github 0 dirty files."
+        faked_or_seeded: "the GitHub API and OpenRouter are loopback fakes, so no analysis text is a live provider result; the 401 and the 503 are produced by the fake OpenRouter's fake-fail file and its fake-status schedule; users, sessions and the PAT account row are seeded by SQL"
+        not_exercised: "a real GitHub token, OAuth, star and revoke; the account-erasure transport of GitHub (excluded)"
+        red_evidence: "leg (a) was run against the Round 5 pins by an earlier writer and FAILED at the pending assertion (4 failed assertions), which is the stated reason: Knowledge settled the failed fact within the old five-delivery budget."
+        defects:
+          - "No service boundary defect observed (the report this record copies from ends mid-sentence at this point)."
+          - "Harness note, not a service defect: the same RATATOSKR_SMOKE_REF resolution as under F4; the platform submodule's origin/main (e3dd575) did not contain bc6ef29, which the clone held; its delta is CI, Dockerfile and deploy documentation only, so the built Rust code is identical."
+    what_it_cannot_show: "Real MTProto acquisition (so the withdrawal by absence of manifests and the grammers signals), live X, Meta, Threads, GitHub and OpenRouter responses, the Swift export agent, Telegram's real webhook, TLS through cloudflared, systemd sandboxing, the Raspberry Pi, a forced hit of the 5 s in-flight window of the producer pump (the repository tests force it), and anything that needs more than the single-machine loopback."
+    red_evidence_per_leg:
+      f7_wait_leg: "run against the Round 5 pins: FAILED at the pending assertion (4 failed assertions). RED collected."
+      f1_assertions: "the contract-test scan was RED on the committed file and GREEN after the fix (harness_results.f1_assertions). The F1 flow itself was run on the Round 5 pins with the tightened assertions and passed 128, which is expected: Platform's behaviour did not change."
+      f4_manifest_leg: "NOT COLLECTED. The leg ran against the Round 6 heads only; it was not run against the Round 5 channel-digests head, so it is not shown to fail without its fix (OpenSpec task 5.2)."
+      f6_in_flight_leg: "NOT COLLECTED, and the leg cannot show the race: it asserts the end state only. The deterministic proof is the repository tests of R6-03 rule 7 in chatgpt and claude (OpenSpec task 5.2)."
+  remaining_defects:
+    - repository: "ratatoskr-workspace"
+      kind: "harness gap, not a service defect"
+      where: "integration/native/lib/common.sh lines 72 to 73 and 103 to 117 (baseline_dir, src_prepare)"
+      detail: "RATATOSKR_SMOKE_REF is resolved against the object stores of the submodules under repos/, not against the task clones, so a run against a child's origin/main silently tests a stale head until the submodule is fetched (platform e3dd575 against 3275d52 was seen in F4, F6 and F7). The README states that the refs come from the submodules; the harness does not fetch. Not changed in Round 6. Open."
+    - repository: "ratatoskr-workspace"
+      kind: "harness noise"
+      where: "integration/native/flows/f4-channel-digests.sh, result.txt"
+      detail: "the worker.env deviation lines repeat several times in result.txt because the worker env is restarted per leg and re-recorded. Open."
+    - repository: "child repositories"
+      kind: "none"
+      detail: "no flow was stopped by a service defect and nothing is reported against a child repository as a blocker."
+    - repository: "ratatoskr-workspace (docs/DEPLOYMENT_TARGET.md)"
+      kind: "report to the owner"
+      where: "docs/DEPLOYMENT_TARGET.md line 416"
+      detail: "the wording POST /v2/captures conflicts with the development status (one version only). Not edited: only the owner changes that status. Open."
+  verification_of_the_pins:
+    harness: "cd harness: cargo fmt --all -- --check clean, cargo clippy --workspace --all-targets --all-features --locked -- -D warnings clean, cargo test --workspace --all-features --locked every test binary green at the Round 6 pins (including contracts_pin, committed_snapshot, schema_in_place, postgres_roles, shared_secrets, port_allocation and edge_upstreams)"
+    workspace_commands: "ws manifest check valid, ws lock check current, ws status clean, ws doctor healthy"
+    openspec: "openspec validate --all --strict passed (38 items, the new change xr-021-fleet-round-6 among them)"
+    profile_contract_tests_run: "web_operational_profile_test.sh, export_agent_product_profile_test.sh, telegram_library_profile_test.sh, telegram_notification_profile_test.sh, nats_conf_test.sh, no_unauthenticated_broker_test.sh and native_smoke_contract_test.sh PASS; telegram_deployment_profile_test.sh PASS against telegram a8a337ad504e2a7f89a218fa972edcfa6078193e (RATATOSKR_TELEGRAM_CONTEXT and RATATOSKR_TELEGRAM_REVISION set)"
+    could_not_run: "the composed Docker profiles (no Docker on the machine); no composed claim is made"
+    baseline_submodules: "git submodule status shows no dirty submodule after the F2 run; the only changes against HEAD are the five moved gitlinks"

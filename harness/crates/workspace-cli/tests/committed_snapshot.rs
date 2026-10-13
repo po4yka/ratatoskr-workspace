@@ -19,17 +19,17 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "channel-digests",
         "repos/integrations/channel-digests",
-        "65a5df7a7f1d6c82a1ce6213cacb980897680d58",
+        "a7cec3a1e13534fa226b8fcfd40425879db69060",
     ),
     (
         "chatgpt",
         "repos/ai-archive/chatgpt",
-        "6e9508764be8f9f876f4ddee611707951459b3a5",
+        "0b142eb82e1ad55bbe282acfd2996d80dd67e398",
     ),
     (
         "claude",
         "repos/ai-archive/claude",
-        "272b6833d7207241416c1b8b00012ade4e234f22",
+        "049922d7be40ac533d84b084f54bb56604abd5d2",
     ),
     (
         "contracts",
@@ -49,7 +49,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "github",
         "repos/github",
-        "80aaa84a4c581336f88e034aeb8799248e010c22",
+        "da4f67991ad83111f3857e26f022bfdee80d85a7",
     ),
     (
         "instagram",
@@ -59,7 +59,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "knowledge",
         "repos/knowledge",
-        "577ccc3935ae0620d9952d05a42b7f4da2e18f42",
+        "b5f2bbd786e039b3a49168c6914647f4e99acd19",
     ),
     (
         "mobile",
