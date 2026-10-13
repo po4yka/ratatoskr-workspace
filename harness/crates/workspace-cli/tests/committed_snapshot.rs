@@ -44,7 +44,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "extractor",
         "repos/extractor",
-        "b5655232c10df6253bab2e9f97e13f913cf21547",
+        "dcc85b7b63d94509bd9f011d78a2fccec895037d",
     ),
     (
         "github",
@@ -69,12 +69,12 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
     (
         "platform",
         "repos/platform",
-        "3275d523d004787aa5871266b8636dd0b11e74e6",
+        "ec2251b845a17a60b23dab8fc130338600dff78f",
     ),
     (
         "telegram",
         "repos/integrations/telegram",
-        "a8a337ad504e2a7f89a218fa972edcfa6078193e",
+        "0b61997a2d5e6b0fa3797789019f7ddfdfac84d3",
     ),
     (
         "threads",

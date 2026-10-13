@@ -73,7 +73,7 @@ id = "extractor"
 path = "repos/extractor"
 remote = "https://github.com/po4yka/ratatoskr-extractor.git"
 default_branch = "main"
-commit = "b5655232c10df6253bab2e9f97e13f913cf21547"
+commit = "dcc85b7b63d94509bd9f011d78a2fccec895037d"
 digests = [
   { path = "Cargo.lock", kind = "file", sha256 = "b5364910930f601cb449ba6bcaec007fbcf46197487d247f91af6a28a6a517bd" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "ed487bde93ea6cc5d7fb26abe62db0498b67ebb9dd0c6d54d7d9902696c79bd5" },
@@ -129,7 +129,7 @@ id = "platform"
 path = "repos/platform"
 remote = "https://github.com/po4yka/ratatoskr-platform.git"
 default_branch = "main"
-commit = "3275d523d004787aa5871266b8636dd0b11e74e6"
+commit = "ec2251b845a17a60b23dab8fc130338600dff78f"
 digests = [
   { path = "openapi/openapi.json", kind = "file", sha256 = "6140a21e67cc79e3c3325cea36315aa2adb169414e355fa3cc113fb13fae3ae3" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "eb76e54cf5e2ba9fbfb17af3019cddd85d3354274d38a24dcf9c998473224b05" },
@@ -140,7 +140,7 @@ id = "telegram"
 path = "repos/integrations/telegram"
 remote = "https://github.com/po4yka/ratatoskr-telegram.git"
 default_branch = "main"
-commit = "a8a337ad504e2a7f89a218fa972edcfa6078193e"
+commit = "0b61997a2d5e6b0fa3797789019f7ddfdfac84d3"
 digests = [
   { path = "Cargo.lock", kind = "file", sha256 = "9944a0ea81047c2818038fd253fc8f55b7043f1dce69d33aadd7b13f9f67c867" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "93b2ed4dab096988e788d20547f3fd84f7a074779075cde2340e115e3655ae4e" },
