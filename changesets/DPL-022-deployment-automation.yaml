@@ -1,7 +1,7 @@
 id: DPL-022
-state: verified
+state: complete
 goal: Provision the single host from pinned, verified sources with one idempotent Ansible playbook, and publish an attested linux/arm64 artifact for every commit on main of each repository that ships a systemd unit.
-openspec_change: add-deployment-automation
+openspec_change: add-deployment-automation  # archived as openspec/changes/archive/2026-10-13-add-deployment-automation
 authorization: The repository owner asked for direct commits on main and a push to the remote, so no pull request is opened; each repository item records its pushed head and its hosted CI.
 repositories:
   - id: ratatoskr-workspace
@@ -74,4 +74,6 @@ evidence:
   required_checks_added: [molecule, release-artifact-selftest / artifact]
   required_checks_open: linux/arm64 artifact is not yet required in ratatoskr-extractor and ratatoskr-telegram
   test_first_order: not kept for groups 6 to 9; tasks.md records it per task
+  openspec_archive: openspec/changes/archive/2026-10-13-add-deployment-automation
+  main_specs: [openspec/specs/host-provisioning, openspec/specs/release-artifacts]
 live_deployment: not_authorized_target_frozen

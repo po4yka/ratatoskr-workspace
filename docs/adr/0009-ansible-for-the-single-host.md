@@ -2,7 +2,7 @@
 
 > Status: Accepted  
 > Date: 2026-10-13  
-> Change: `openspec/changes/add-deployment-automation`, changeset `DPL-022`
+> Change: `openspec/changes/archive/2026-10-13-add-deployment-automation`, changeset `DPL-022`
 
 ## Context
 

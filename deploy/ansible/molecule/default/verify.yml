@@ -1,4 +1,4 @@
-# The verify cases of openspec/changes/add-deployment-automation (host-provisioning), run against
+# The verify cases of openspec/specs/host-provisioning (DPL-022), run against
 # the converged stand-in. The cases that need a whole run of the playbook (the freeze guard, a pin
 # that disagrees with the lock, a tampered artifact cache, the rerun and the secret scan) run it
 # again from the controller, against this same target.
