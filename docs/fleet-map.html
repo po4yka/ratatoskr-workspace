@@ -466,7 +466,7 @@ tr.dim-row { opacity: 0.35; }
       <div class="box"><b>Storage</b><span>466 GB NVMe, 954 GB SATA SSD</span>
         <ul><li>logs: <code>/mnt/nvme/ratatoskr/logs/&lt;role&gt;.log</code>, daily rotation, 14 kept</li><li>extractor blobs and AI archive staging under <code>/mnt/nvme/ratatoskr/</code></li><li><code>/var/log</code> is a 128 MiB log2ram tmpfs</li></ul></div>
       <div class="box"><b>Monitoring</b><span>containers on <code>monitoring_default</code></span>
-        <ul><li>VictoriaMetrics, vmalert, Grafana, Alertmanager, node-exporter</li><li>alerts reach Telegram through receiver <code>local-only</code></li><li>alert rules are not written yet; node-exporter has no disk series</li></ul></div>
+        <ul><li>VictoriaMetrics, vmalert, Grafana, Alertmanager, node-exporter</li><li>alerts reach Telegram through receiver <code>local-only</code></li><li>bus alert rules are written but no engine loads them; node-exporter has no disk series</li></ul></div>
     </div>
     <h3 class="vh">Port allocation</h3>
     <div class="table-wrap"><table><thead><tr><th>Port</th><th>Bind</th><th>Owner</th><th>Repository</th><th>Plane</th><th>Status</th><th>Note</th></tr></thead><tbody id="ports"></tbody></table></div>
@@ -476,14 +476,12 @@ tr.dim-row { opacity: 0.35; }
       <svg viewBox="0 0 960 150" role="img" aria-label="Nightly backup schedule: 02:30 database dump, 03:00 borgmatic copy, 04:00 encrypted off-host copy; Sundays 08:00 restore drill on a separate machine." id="backup-svg"></svg>
       <p class="source">Not backed up: JetStream, and the Vault and AI archive blobs. The SATA copy is in the same machine, so the 04:00 S3 copy is the only off-host one.</p>
     </div>
-    <h3 style="margin:6px 0 0;font:600 1.1rem var(--display)">Where the documents disagree</h3>
+    <h3 style="margin:6px 0 0;font:600 1.1rem var(--display)">Open gaps</h3>
     <ol class="issues">
-      <li>Port <code>9467</code> is the telegram-webhook operator listener and also the extractor admin listener; both example configs bind <code>0.0.0.0:9467</code>.</li>
-      <li>Port <code>9084</code> is the default listener for threads, chatgpt and claude alike.</li>
-      <li>Edge routes <code>/v1/k</code>, <code>/v1/vault</code>, <code>/v1/social</code>, <code>/v1/ai</code>, <code>/v1/chatgpt</code> and <code>/v1/claude</code> to ports 8091 and 8093 to 8097, and no repository binds those ports yet.</li>
-      <li>The PostgreSQL data directory is <code>/mnt/nvme/ratatoskr/postgres</code> in the storage table and <code>/mnt/nvme/shared-postgres/data</code> in the container note of the same document.</li>
-      <li>The ufw rule opens <code>9464:9466</code> in the platform deploy README and <code>9464:9468</code> in DEPLOYMENT_TARGET.md.</li>
-      <li>Extractor, github and channel-digests listeners are missing from the DEPLOYMENT_TARGET.md port table.</li>
+      <li>Edge routes <code>/v1/vault</code>, <code>/v1/social</code> and <code>/v1/ai</code> to ports 8093 to 8095, and no service binds them yet. Edge reports those capabilities stale on purpose.</li>
+      <li>No repository serves the web client's built bundle. Platform has no static route, and the port table allocates no port for it.</li>
+      <li>The bus alert rules exist in <code>platform/deploy/monitoring/</code>, but no alert engine loads them.</li>
+      <li>The metrics stack does not set <code>extra_hosts: host-gateway</code>, and node-exporter collects no disk or filesystem series. Both are host state on a frozen host.</li>
     </ol>
     <p class="source">Sources: <code>docs/DEPLOYMENT_TARGET.md</code>; <code>repos/platform/deploy/</code> (systemd, nats, postgres, backup, monitoring); <code>repos/integrations/telegram/deploy/</code>; <code>repos/extractor/deploy/</code>; listener defaults in each service's <code>config.rs</code>; Edge routes in <code>platform/crates/core/src/config/validate.rs</code>.</p>
   </section>
@@ -1099,9 +1097,9 @@ tr.dim-row { opacity: 0.35; }
 
   // deployment
   const ROUTES_GW = [
-    ["/v1/k", "8091", "knowledge", "routed"], ["/v1/gh", "8092", "github", "bound"], ["/v1/vault", "8093", "vault", "routed"],
+    ["/v1/k", "8091", "knowledge", "bound"], ["/v1/gh", "8092", "github", "bound"], ["/v1/vault", "8093", "vault", "routed"],
     ["/v1/social", "8094", "no owner", "unresolved"], ["/v1/ai", "8095", "no owner", "unresolved"],
-    ["/v1/chatgpt", "8096", "chatgpt receipt", "routed"], ["/v1/claude", "8097", "claude receipt", "routed"],
+    ["/v1/chatgpt", "8096", "chatgpt receipt", "bound"], ["/v1/claude", "8097", "claude receipt", "bound"],
   ];
   document.getElementById("routes").innerHTML = `<div class="box">${ROUTES_GW.map(([path, port, who, st]) =>
     `<div class="route"><code>${path}</code><span>:${port} ${who}</span><span class="st ${st}">${st}</span></div>`).join("")}</div>`;
@@ -1109,24 +1107,28 @@ tr.dim-row { opacity: 0.35; }
     ["8080", "127.0.0.1", "ratatoskr-edge", "platform", "public", "installed", "Public API and Edge gateway"],
     ["8181", "127.0.0.1", "ratatoskr-ingest", "platform", "public", "installed", "Webhook adapter"],
     ["8182", "127.0.0.1", "ratatoskr-telegram-webhook", "telegram", "public", "unit", "Telegram Bot API webhook"],
-    ["8091", "127.0.0.1", "/v1/k", "knowledge", "loopback", "routed", "Knowledge binds only its admin listener, 9081"],
+    ["8091", "127.0.0.1", "/v1/k", "knowledge", "loopback", "bound", "A dedicated API listener, separate from the operator listener 9081"],
     ["8092", "127.0.0.1", "/v1/gh, GitHub catalog API", "github", "loopback", "bound", ""],
-    ["8093", "127.0.0.1", "/v1/vault", "vault", "loopback", "routed", "Vault serves no public listener at this milestone"],
-    ["8094", "127.0.0.1", "/v1/social", "none", "loopback", "unresolved", "Instagram's API defaults to 9083 instead"],
-    ["8095", "127.0.0.1", "/v1/ai", "none", "loopback", "unresolved", ""],
-    ["8096", "127.0.0.1", "/v1/chatgpt, archive receipt", "chatgpt", "loopback", "routed", "chatgpt-archive serves /v1/ai-archives/receipt on its default 9084"],
-    ["8097", "127.0.0.1", "/v1/claude, archive receipt", "claude", "loopback", "routed", "claude-archive serves the same path on its default 9084"],
+    ["8093", "127.0.0.1", "/v1/vault", "vault", "loopback", "routed", "Vault has no listener yet, so Edge reports the capability stale"],
+    ["8094", "127.0.0.1", "/v1/social", "none", "loopback", "unresolved", "No service binds it yet; Instagram's product API is 9083, host only"],
+    ["8095", "127.0.0.1", "/v1/ai", "none", "loopback", "unresolved", "No service binds it yet"],
+    ["8096", "127.0.0.1", "/v1/chatgpt, archive receipt", "chatgpt", "loopback", "bound", "A dedicated receipt listener, separate from the operator listener 9085"],
+    ["8097", "127.0.0.1", "/v1/claude, archive receipt", "claude", "loopback", "bound", "A dedicated receipt listener, separate from the operator listener 9086"],
     ["8098", "127.0.0.1", "ratatoskr-channel-digests-api", "channel-digests", "loopback", "bound", "Owner-scoped read API that Knowledge reads recaps through"],
     ["9083", "127.0.0.1", "instagram API, /v1/captures", "instagram", "loopback", "bound", ""],
-    ["9464", "0.0.0.0", "edge operator", "platform", "operator", "installed", ""],
-    ["9465", "0.0.0.0", "ingest operator", "platform", "operator", "installed", ""],
-    ["9466", "0.0.0.0", "scheduler operator", "platform", "operator", "installed", "The scheduler refuses a public listener"],
-    ["9467", "0.0.0.0", "telegram-webhook operator; extractor admin", "telegram, extractor", "operator", "conflict", "Both example configs bind it"],
-    ["9468", "0.0.0.0", "telegram-dispatcher operator", "telegram", "operator", "unit", ""],
+    ["9464", "0.0.0.0", "edge operator", "platform", "operator", "installed", "Open to the monitoring bridge"],
+    ["9465", "0.0.0.0", "ingest operator", "platform", "operator", "installed", "Open to the monitoring bridge"],
+    ["9466", "0.0.0.0", "scheduler operator", "platform", "operator", "installed", "The scheduler refuses a public listener; open to the monitoring bridge"],
+    ["9467", "0.0.0.0", "telegram-webhook operator", "telegram", "operator", "unit", "Open to the monitoring bridge"],
+    ["9468", "0.0.0.0", "telegram-dispatcher operator", "telegram", "operator", "unit", "Open to the monitoring bridge"],
     ["9469 / 9470", "", "channel-digests api / worker operator", "channel-digests", "operator", "bound", ""],
     ["9081", "127.0.0.1", "knowledge admin", "knowledge", "operator", "bound", ""],
     ["9082", "127.0.0.1", "instagram admin", "instagram", "operator", "bound", ""],
-    ["9084", "127.0.0.1", "threads admin; chatgpt and claude listeners", "threads, chatgpt, claude", "operator", "conflict", "Three services default to the same port"],
+    ["9084", "127.0.0.1", "threads admin", "threads", "operator", "bound", ""],
+    ["9085", "127.0.0.1", "chatgpt admin", "chatgpt", "operator", "bound", "Moved from 9084 in XR-021"],
+    ["9086", "127.0.0.1", "claude admin", "claude", "operator", "bound", "Moved from 9084 in XR-021"],
+    ["9087", "127.0.0.1", "x admin", "x", "operator", "bound", "Moved from 8080 in XR-021"],
+    ["9088", "127.0.0.1", "extractor admin", "extractor", "operator", "unit", "Moved from 9467 in XR-021"],
     ["9095", "127.0.0.1", "github admin", "github", "operator", "bound", ""],
     ["9570", "127.0.0.1", "vault admin", "vault", "operator", "bound", ""],
     ["4222", "127.0.0.1", "NATS, container ratatoskr-nats", "platform deploy", "host", "installed", "Monitoring on 8222"],

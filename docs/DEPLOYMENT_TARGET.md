@@ -2,7 +2,7 @@
 
 > Status: Accepted  
 > Owner: `ratatoskr-workspace`  
-> Last reviewed: 2026-10-12 (port table, Telegram blob root, NATS inbox prefixes, PostgreSQL provisioning and the assertion-key procedure revised for XR-021; no host fact re-verified)
+> Last reviewed: 2026-10-13 (PostgreSQL data path in the storage table, operator-port reachability, `ratatoskr.target` and the Clients section; no host fact re-verified)
 
 > **The host is frozen as of 2026-08-21.** Nothing is deployed to it, nothing on it is changed, and
 > the drift between it and `main` is not tracked. The machine remains in scope for exactly one
@@ -16,9 +16,8 @@ port allocations, and who supervises what. Every repository's `AGENTS.md` carrie
 `## Deployment target` section stating the same constraints in the form an agent needs while working
 inside that repository alone; this file is where the detail lives, and it is the one to change first.
 
-Before this file existed, the only place in the workspace that named the machine was
-`legacy/ratatoskr/.claude/skills/pi-deploy/SKILL.md` — the retired archive that `README.md` tells
-everyone to ignore. Sixteen live repositories describe PostgreSQL, NATS, Chromium, pgvector, S3 and
+Before this file existed, the only place in the workspace that named the machine was a `pi-deploy`
+skill in the retired `ratatoskr` backend, an archive that has since been deleted. Sixteen live repositories describe PostgreSQL, NATS, Chromium, pgvector, S3 and
 "horizontal instances" and name no machine at all, so the default inference was a cloud. That is the
 gap this file closes.
 
@@ -52,7 +51,7 @@ keeps durable state off it either way.
 
 | Purpose | Path | Device |
 |---|---|---|
-| PostgreSQL data | `/mnt/nvme/ratatoskr/postgres` | NVMe, 466 GB |
+| PostgreSQL data | `/mnt/nvme/shared-postgres/data` (the `shared-postgres` container, see [PostgreSQL](#postgresql)) | NVMe, 466 GB |
 | `JetStream` store | `/mnt/nvme/ratatoskr/nats` | NVMe |
 | Service logs | `/mnt/nvme/ratatoskr/logs` | NVMe |
 | Database dumps | `/mnt/nvme/backups/ratatoskr` | NVMe |
@@ -100,6 +99,12 @@ rather than a precaution:
   database does not latch a dependent unit into `failed` with nothing to retry it.
 - **`Type=exec`, never `Type=notify`.** No Ratatoskr binary calls `sd_notify`, so `notify` would time
   out and kill a healthy process, and `WatchdogSec=` would `SIGABRT` it on the first interval.
+
+**Every unit joins `ratatoskr.target`.** Platform ships it in `deploy/systemd/ratatoskr.target`
+because Platform is installed first. Each unit carries `PartOf=ratatoskr.target` and
+`WantedBy=ratatoskr.target`, so `systemctl stop ratatoskr.target` stops the whole deployment and
+boot starts it. The PostgreSQL and NATS containers are not members and stay up. A new unit in any
+repository carries the same two lines.
 
 A service that must be scraped by the container-resident metrics stack is reached from a container
 through `host.docker.internal` with `extra_hosts: host-gateway` — the bridge gateway address itself
@@ -288,7 +293,7 @@ bind to `0.0.0.0`.
 | 9087 | `ratatoskr-x` operator listener (moved from 8080) | host only |
 | 9088 | `ratatoskr-extractor` operator listener (moved from 9467) | host only |
 | 9095 | `ratatoskr-github` operator listener | host only |
-| 9464 / 9465 / 9466 | edge / ingest / scheduler operator listener | host only |
+| 9464 / 9465 / 9466 | edge / ingest / scheduler operator listener | host and monitoring bridge only |
 | 9467 | `ratatoskr-telegram-webhook` operator listener | host and monitoring bridge only |
 | 9468 | `ratatoskr-telegram-dispatcher` operator listener | host and monitoring bridge only |
 | 9469 | `ratatoskr-channel-digests` API operator listener | host only |
@@ -380,6 +385,17 @@ gh api -X PUT repos/po4yka/RIPDPI/actions/permissions/fork-pr-contributor-approv
 `phase16-matrix.yml` is left in place and will queue without a runner if it is dispatched against a
 self-hosted matrix entry. That is the honest failure: it waits visibly rather than silently doing
 nothing.
+
+## Clients
+
+No client runs on this host. The mobile apps, the browser extension and the macOS export agent run
+on the user's devices, and each one reaches Ratatoskr only through Edge's public API on 8080, through
+the `cloudflared` tunnel. None of them needs a port in the table above.
+
+The web client is the exception that is not decided yet. It builds to a static bundle, and **no
+repository serves that bundle**: Platform has no static route, and the port table allocates no port
+for it. Where the bundle is served is an open decision for the owner. Whatever is chosen gets a row
+in the port table, or a route on Edge, before it is deployed.
 
 ## What the reflash resets
 
