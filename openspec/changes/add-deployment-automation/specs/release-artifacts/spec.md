@@ -37,7 +37,7 @@ Each artifact SHALL carry a GitHub build-provenance attestation that binds its d
 
 #### Scenario: A consumer verifies an artifact
 
-- **WHEN** a consumer runs `gh attestation verify` on the artifact digest with `--repo po4yka/<repository>`, then checks every binary against `SHA256SUMS`
+- **WHEN** a consumer runs `gh attestation verify` on the artifact with `--repo po4yka/<repository>`, `--signer-workflow po4yka/ratatoskr-workspace/.github/workflows/reusable-release-artifact.yml` and `--source-digest <commit>`, then checks every binary against `SHA256SUMS`
 - **THEN** both checks pass for an artifact that the workflow published, and either one fails for an artifact changed after publication
 
 #### Scenario: A commit is built twice

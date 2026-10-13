@@ -1,0 +1,73 @@
+# The single Ratatoskr host, from a clean Debian 12 arm64 install to a running deployment
+# (openspec host-provisioning, ADR-0009). One command, and a second run changes nothing:
+#
+#   RATATOSKR_HOST=<host> ansible-playbook site.yml --ask-vault-pass
+#
+# The order is load-bearing and follows postgres-provisioning: 01-database-and-roles.sql, then Edge
+# started and ready (it applies schema.sql), then 02-grants.sql, then each other service's role.sql
+# before that service first starts.
+
+- name: Preflight, on the controller
+  hosts: all
+  gather_facts: false
+  any_errors_fatal: true
+  roles:
+    - preflight
+
+- name: The host
+  hosts: all
+  become: true
+  any_errors_fatal: true
+  tasks:
+    - name: Users, groups, directories, the target and the firewall rule
+      ansible.builtin.include_role:
+        name: host
+
+    - name: Binaries, units and secrets of every enrolled service
+      ansible.builtin.include_role:
+        name: ratatoskr_service
+        tasks_from: install
+
+    - name: The bus, with one nkey per identity
+      ansible.builtin.include_role:
+        name: nats
+
+    - name: The database and Platform's roles (01-database-and-roles.sql)
+      ansible.builtin.include_role:
+        name: postgres
+        tasks_from: database
+
+    - name: Every enrolled service's configuration
+      ansible.builtin.include_role:
+        name: ratatoskr_service
+        tasks_from: configure
+
+    - name: Edge first, because it applies schema.sql
+      ansible.builtin.include_role:
+        name: ratatoskr_service
+        tasks_from: start
+      vars:
+        ratatoskr_start: "{{ ratatoskr_services | selectattr('name', 'equalto', 'edge') | list }}"
+
+    - name: Platform's grants, which name the schemas Edge created (02-grants.sql)
+      ansible.builtin.include_role:
+        name: postgres
+        tasks_from: grants
+
+    - name: Each service's role before its first start, then the service
+      ansible.builtin.include_role:
+        name: ratatoskr_service
+        tasks_from: start
+      vars:
+        ratatoskr_start: "{{ ratatoskr_services | rejectattr('name', 'equalto', 'edge') | list }}"
+
+    - name: The database roles of services that ship no unit yet
+      ansible.builtin.include_role:
+        name: postgres
+        tasks_from: roles
+      vars:
+        ratatoskr_roles_only: "{{ ratatoskr_database_roles | rejectattr('role', 'in', ratatoskr_services | map(attribute='database_role') | list) | list }}"
+
+    - name: The scrape target, the alert rules and the extra_hosts line
+      ansible.builtin.include_role:
+        name: monitoring

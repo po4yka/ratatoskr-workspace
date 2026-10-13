@@ -125,6 +125,10 @@ ratatoskr-workspace/
 
 The exact layout may evolve, but repository IDs and dependency semantics must remain stable or be migrated explicitly.
 
+`deploy/` exists and holds `deploy/ansible/`: the single-host playbook that provisions the host from
+the pinned commits and their attested artifacts (ADR-0009, `docs/DEPLOYMENT_TARGET.md`
+"Provisioning"). The rest of the target layout above stays a plan until its own change lands.
+
 ## 5. Workspace harness
 
 The snapshot harness is implemented as a narrow Rust workspace and exposes the root `./ws` launcher.

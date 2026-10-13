@@ -1,0 +1,96 @@
+# The bus: Platform's deploy/nats/ratatoskr.conf with every placeholder replaced by the public key of
+# an nkey pair generated on the host, and Platform's compose file, both from the pinned commit.
+# NATS refuses the file while any placeholder is left, so all thirteen identities get a pair, and
+# a seed no enrolled service reads stays root-only until its service is enrolled.
+
+- name: One nkey pair per identity, generated on the host
+  ratatoskr_nkey:
+    seed_path: "/etc/ratatoskr/{{ item.identity }}.nkey"
+    pub_path: "{{ ratatoskr_state_dir }}/nkeys/{{ item.identity }}.pub"
+    group: "{{ item.group }}"
+    image: "{{ ratatoskr_nats_box_image }}"
+  loop: "{{ ratatoskr_nats_identities }}"
+  loop_control:
+    label: "{{ item.identity }}"
+
+- name: Platform's broker configuration, unchanged from the pinned commit
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins.platform.path }}/deploy/nats/{{ item }}"
+    dest: "{{ ratatoskr_state_dir }}/sources/nats-{{ item }}"
+    owner: root
+    group: root
+    mode: "0600"
+  loop: [ratatoskr.conf, compose.yaml]
+
+- name: Each identity's placeholder pattern, mapped to the file holding its public key
+  ansible.builtin.set_fact:
+    ratatoskr_nkey_tokens: >-
+      {{ ratatoskr_nkey_tokens | default({}) | combine({
+           'UREPLACE_ME_WITH_THE_PUBLIC_NKEY_OF_RATATOSKR_' ~ (item.identity | upper | replace('-', '_')) ~ '_X+':
+           '{file:' ~ ratatoskr_state_dir ~ '/nkeys/' ~ item.identity ~ '.pub}' }) }}
+  loop: "{{ ratatoskr_nats_identities }}"
+  loop_control:
+    label: "{{ item.identity }}"
+
+- name: The broker configuration, with each placeholder replaced by its public key
+  ratatoskr_render:
+    src: "{{ ratatoskr_state_dir }}/sources/nats-ratatoskr.conf"
+    dest: /etc/nats/ratatoskr.conf
+    owner: root
+    group: root
+    mode: "0644"
+    format: tokens
+    placeholders: [REPLACE_ME]
+    replacements: "{{ ratatoskr_nkey_tokens }}"
+  register: ratatoskr_nats_conf
+
+- name: The compose file, unchanged
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins.platform.path }}/deploy/nats/compose.yaml"
+    dest: /etc/nats/compose.yaml
+    owner: root
+    group: root
+    mode: "0644"
+  register: ratatoskr_nats_compose
+
+- name: The broker runs as ratatoskr-nats
+  ansible.builtin.getent:
+    database: passwd
+    key: ratatoskr-nats
+
+- name: The uid and gid the compose file reads
+  ansible.builtin.copy:
+    dest: /etc/nats/.env
+    content: |
+      RATATOSKR_NATS_UID={{ ansible_facts.getent_passwd['ratatoskr-nats'][1] }}
+      RATATOSKR_NATS_GID={{ ansible_facts.getent_passwd['ratatoskr-nats'][2] }}
+    owner: root
+    group: root
+    mode: "0644"
+  register: ratatoskr_nats_env
+
+- name: The broker is up
+  ansible.builtin.command:
+    argv: [docker, compose, --env-file, /etc/nats/.env, -f, /etc/nats/compose.yaml, up, -d]
+  register: ratatoskr_nats_up
+  changed_when: ratatoskr_nats_up.stderr is search('Creat|Recreat|Start')
+
+- name: A changed configuration is reloaded, not restarted
+  ansible.builtin.command:
+    argv: [docker, kill, -s, HUP, ratatoskr-nats]
+  when: ratatoskr_nats_conf is changed and ratatoskr_nats_up is not changed
+  changed_when: true
+
+- name: The broker answers its health check
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8222/healthz
+    status_code: 200
+  register: ratatoskr_nats_health
+  until: ratatoskr_nats_health.status == 200
+  retries: 30
+  delay: 2
+
+- name: Edge provisions every durable, so a changed broker configuration restarts it
+  ansible.builtin.set_fact:
+    ratatoskr_restart: "{{ ratatoskr_restart | combine({'edge': true}) }}"
+  when: ratatoskr_nats_conf is changed

@@ -1,0 +1,62 @@
+# The three lines the monitoring stack needs for Ratatoskr (DEPLOYMENT_TARGET.md, Metrics and
+# alerting), and nothing else in a stack the playbook does not own: the scrape job Platform ships,
+# the alert rule file Platform ships, and `extra_hosts` on the collector so that
+# host.docker.internal resolves inside it.
+
+- name: Is the monitoring stack on this host
+  ansible.builtin.stat:
+    path: "{{ ratatoskr_monitoring_compose }}"
+  register: ratatoskr_monitoring
+
+- name: The monitoring lines
+  when: ratatoskr_monitoring.stat.exists
+  block:
+    - name: The collector's compose file names the victoriametrics service
+      ansible.builtin.command:
+        argv: [grep, -Eq, '^  victoriametrics:[[:space:]]*$', "{{ ratatoskr_monitoring_compose }}"]
+      changed_when: false
+
+    - name: Does the collector already resolve host.docker.internal
+      ansible.builtin.command:
+        argv: [grep, -q, "host.docker.internal:host-gateway", "{{ ratatoskr_monitoring_compose }}"]
+      register: ratatoskr_extra_hosts
+      changed_when: false
+      failed_when: ratatoskr_extra_hosts.rc > 1
+
+    - name: The collector resolves host.docker.internal (one line on its service)
+      ansible.builtin.lineinfile:
+        path: "{{ ratatoskr_monitoring_compose }}"
+        insertafter: '^  victoriametrics:\s*$'
+        line: '    extra_hosts: ["host.docker.internal:host-gateway"]'
+      when: ratatoskr_extra_hosts.rc == 1
+
+    - name: Platform's scrape job, unchanged from the pinned commit
+      ansible.builtin.blockinfile:
+        path: "{{ ratatoskr_monitoring_dir }}/promscrape.yml"
+        block: "{{ lookup('ansible.builtin.file', ratatoskr_workspace_root ~ '/' ~ ratatoskr_pins.platform.path ~ '/deploy/monitoring/promscrape.ratatoskr.yml') }}"
+        marker: "# {mark} ratatoskr scrape job (ratatoskr-workspace deploy/ansible)"
+      register: ratatoskr_scrape
+
+    - name: The alert rule directory
+      ansible.builtin.file:
+        path: "{{ ratatoskr_monitoring_rules_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Platform's bus alert rules, unchanged from the pinned commit
+      ansible.builtin.copy:
+        src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins.platform.path }}/deploy/monitoring/ratatoskr-bus-alerts.rules.yml"
+        dest: "{{ ratatoskr_monitoring_rules_dir }}/ratatoskr-bus-alerts.rules.yml"
+        mode: "0644"
+
+    - name: Is the collector running
+      ansible.builtin.command:
+        argv: [docker, ps, -q, -f, name=^victoriametrics$]
+      register: ratatoskr_vm
+      changed_when: false
+
+    - name: The collector reads a changed scrape file on SIGHUP, not before
+      ansible.builtin.command:
+        argv: [docker, kill, -s, HUP, victoriametrics]
+      when: ratatoskr_scrape is changed and ratatoskr_vm.stdout | length > 0
+      changed_when: true

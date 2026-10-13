@@ -1,0 +1,72 @@
+# Everything here runs on the controller, before the first task that changes the host.
+
+- name: The real host is refused while DEPLOYMENT_TARGET.md says it is frozen
+  ansible.builtin.assert:
+    that: >-
+      ratatoskr_test_target | bool
+      or ratatoskr_freeze_statement not in lookup('ansible.builtin.file', ratatoskr_workspace_root ~ '/docs/DEPLOYMENT_TARGET.md')
+    fail_msg: >-
+      Refused: docs/DEPLOYMENT_TARGET.md says "{{ ratatoskr_freeze_statement }}". Nothing is deployed
+      to the host and nothing on it is changed until the owner lifts the freeze in that document.
+    quiet: true
+  run_once: true
+  delegate_to: localhost
+
+- name: Operator-supplied secrets come from the vault file outside the repository
+  ansible.builtin.include_vars:
+    file: "{{ ratatoskr_secrets_file }}"
+  when: ratatoskr_operator_secrets is not defined
+  no_log: true
+  run_once: true
+  delegate_to: localhost
+
+- name: The operator supplied every value the enrolled services need
+  ansible.builtin.assert:
+    that:
+      - ratatoskr_operator_secrets.telegram_bot_token | default('') | length > 0
+      - ratatoskr_telegram_owner_user_id | default('') | string | regex_search('^[0-9]+$')
+    fail_msg: >-
+      {{ ratatoskr_secrets_file }} must set ratatoskr_operator_secrets.telegram_bot_token and
+      ratatoskr_telegram_owner_user_id.
+    quiet: true
+  no_log: true
+  run_once: true
+  delegate_to: localhost
+
+- name: The pinned commits, from workspace.lock
+  ansible.builtin.set_fact:
+    ratatoskr_pins: "{{ lookup('ansible.builtin.file', ratatoskr_lock_file) | ratatoskr_lock }}"
+    ratatoskr_needed: >-
+      {{ (['platform'] + (ratatoskr_services | map(attribute='repository') | list)
+          + (ratatoskr_database_roles | map(attribute='repository') | list)) | unique }}
+    ratatoskr_published: "{{ ratatoskr_services | map(attribute='repository') | unique }}"
+  run_once: true
+  delegate_to: localhost
+
+- name: Each submodule is at its pinned commit
+  ansible.builtin.command:
+    cmd: git -C {{ ratatoskr_workspace_root }}/{{ ratatoskr_pins[item].path }} rev-parse HEAD
+  register: ratatoskr_heads
+  changed_when: false
+  failed_when: >-
+    ratatoskr_heads.rc != 0
+    or ratatoskr_heads.stdout | trim != ratatoskr_pins[item].commit
+  loop: "{{ ratatoskr_needed }}"
+  run_once: true
+  delegate_to: localhost
+
+- name: No submodule has local edits under deploy/
+  ansible.builtin.command:
+    cmd: git -C {{ ratatoskr_workspace_root }}/{{ ratatoskr_pins[item].path }} status --porcelain -- deploy
+  register: ratatoskr_dirty
+  changed_when: false
+  failed_when: ratatoskr_dirty.rc != 0 or ratatoskr_dirty.stdout | length > 0
+  loop: "{{ ratatoskr_needed }}"
+  run_once: true
+  delegate_to: localhost
+
+- name: Fetch and verify each pinned artifact on the controller
+  ansible.builtin.include_tasks: artifact.yml
+  loop: "{{ ratatoskr_published }}"
+  loop_control:
+    loop_var: ratatoskr_repository

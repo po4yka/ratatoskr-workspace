@@ -1,0 +1,39 @@
+- name: "{{ ratatoskr_service.name }}: its role and password, before its first start"
+  ansible.builtin.include_role:
+    name: postgres
+    tasks_from: role
+  vars:
+    ratatoskr_role: "{{ ratatoskr_database_roles | selectattr('role', 'equalto', ratatoskr_service.database_role) | first }}"
+  when: ratatoskr_service.role_file | bool
+
+- name: "{{ ratatoskr_service.name }}: started, or restarted when something it runs changed"
+  ansible.builtin.systemd_service:
+    name: "{{ ratatoskr_service.unit }}"
+    enabled: true
+    state: "{{ 'restarted' if ratatoskr_restart[ratatoskr_service.name] else 'started' }}"
+  register: ratatoskr_started
+
+- name: "{{ ratatoskr_service.name }}: record the start"
+  ansible.builtin.shell:
+    cmd: echo "$(date +%s%N) start:{{ ratatoskr_service.name }}" >> {{ ratatoskr_state_dir }}/provision.log
+  when: ratatoskr_started is changed
+  changed_when: true
+
+- name: "{{ ratatoskr_service.name }}: ready on its operator listener"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ ratatoskr_service.operator_port }}/health/ready"
+    status_code: 200
+  register: ratatoskr_ready
+  until: ratatoskr_ready.status == 200
+  retries: 60
+  delay: 2
+
+- name: "{{ ratatoskr_service.name }}: record that it was ready"
+  ansible.builtin.shell:
+    cmd: echo "$(date +%s%N) ready:{{ ratatoskr_service.name }}" >> {{ ratatoskr_state_dir }}/provision.log
+  when: ratatoskr_started is changed
+  changed_when: true
+
+- name: "{{ ratatoskr_service.name }}: not restarted again in this run"
+  ansible.builtin.set_fact:
+    ratatoskr_restart: "{{ ratatoskr_restart | combine({ratatoskr_service.name: false}) }}"

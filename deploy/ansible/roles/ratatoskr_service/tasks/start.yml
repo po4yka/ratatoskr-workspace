@@ -1,0 +1,11 @@
+# Start each service of `ratatoskr_start`, in order, and wait until it is ready. A service whose
+# database role comes from its own role.sql gets that file and its password first; Edge's role comes
+# from 01-database-and-roles.sql. A service that is already running restarts only when its binary,
+# unit or configuration changed, so a second run of the playbook leaves every process alone.
+
+- name: Start each service
+  ansible.builtin.include_tasks: start_one.yml
+  loop: "{{ ratatoskr_start }}"
+  loop_control:
+    loop_var: ratatoskr_service
+    label: "{{ ratatoskr_service.name }}"

@@ -1,0 +1,84 @@
+# Host facts the playbook applies, from ratatoskr-workspace/docs/DEPLOYMENT_TARGET.md. Change that
+# document first; these follow it.
+
+# The workspace checkout this playbook runs from: deploy/ansible -> the repository root.
+ratatoskr_workspace_root: "{{ (playbook_dir ~ '/../..') | realpath }}"
+ratatoskr_lock_file: "{{ ratatoskr_workspace_root }}/workspace.lock"
+
+# The real host is refused while DEPLOYMENT_TARGET.md says it is frozen. Only a disposable target
+# (the Molecule container) sets this to true, in its own inventory.
+ratatoskr_test_target: false
+ratatoskr_freeze_statement: "The host is frozen"
+
+# Controller-side cache of verified artifacts, so a re-run with the same pins needs no network.
+ratatoskr_artifact_cache: "{{ lookup('env', 'HOME') }}/.cache/ratatoskr-deploy/artifacts"
+ratatoskr_artifact_registry: ghcr.io
+ratatoskr_signer_workflow: po4yka/ratatoskr-workspace/.github/workflows/reusable-release-artifact.yml
+
+# Operator-supplied secrets live in an ansible-vault file OUTSIDE the repository. The production
+# inventory names it; the Molecule inventory sets test values directly instead.
+ratatoskr_secrets_file: "{{ lookup('env', 'HOME') }}/.config/ratatoskr/secrets.vault.yml"
+
+# Host-side state of the playbook itself: unchanged copies of child files, SQL markers, the log.
+ratatoskr_state_dir: /var/lib/ratatoskr-deploy
+
+ratatoskr_postgres_container: shared-postgres
+ratatoskr_nats_box_image: "natsio/nats-box:0.19.7@sha256:ffce8bd103383f179f8c7f11cf645726acf5d17280706c530c3b342dbe16334c"
+
+# The monitoring bridge subnet and the operator ports opened to it (DEPLOYMENT_TARGET.md, Metrics).
+ratatoskr_monitoring_subnet: 172.19.0.0/16
+ratatoskr_monitoring_ports: "9464:9468"
+ratatoskr_monitoring_dir: /home/po4yka/monitoring
+ratatoskr_monitoring_compose: "{{ ratatoskr_monitoring_dir }}/docker-compose.yml"
+ratatoskr_monitoring_rules_dir: "{{ ratatoskr_monitoring_dir }}/rules"
+
+# Extra KEY=VALUE settings per service name, on top of services.json. Production sets none; the
+# Molecule target points the Telegram roles at a loopback Bot API stand-in.
+ratatoskr_config_overrides: {}
+
+ratatoskr_groups:
+  - ratatoskr
+  - ratatoskr-telegram-secrets
+  - ratatoskr-telegram-blobs
+
+# Each service user gets its own group (--user-group) and these memberships, as the deploy guides of
+# Platform, the extractor and Telegram create them.
+ratatoskr_users:
+  - {name: ratatoskr-edge, groups: [ratatoskr]}
+  - {name: ratatoskr-ingest, groups: [ratatoskr]}
+  - {name: ratatoskr-scheduler, groups: [ratatoskr]}
+  - {name: ratatoskr-extractor, groups: [ratatoskr, ratatoskr-telegram-blobs]}
+  - {name: ratatoskr-telegram-webhook, groups: [ratatoskr, ratatoskr-telegram-secrets, ratatoskr-telegram-blobs]}
+  - {name: ratatoskr-telegram-dispatcher, groups: [ratatoskr, ratatoskr-telegram-secrets]}
+  - {name: ratatoskr-nats, groups: []}
+
+# The one layout the three deploy guides agree on once reconciled (DPL-022): the shared `ratatoskr`
+# group owns the configuration and log directories, and each data directory belongs to one service.
+ratatoskr_directories:
+  - {path: /etc/ratatoskr, owner: root, group: ratatoskr, mode: "0750"}
+  - {path: /etc/ratatoskr/secrets, owner: root, group: root, mode: "0755"}
+  - {path: /etc/ratatoskr/secrets/postgres, owner: root, group: root, mode: "0700"}
+  - {path: /etc/nats, owner: root, group: root, mode: "0755"}
+  # Every service traverses the mount point to reach its own directory below it.
+  - {path: /mnt/nvme, owner: root, group: root, mode: "0755"}
+  - {path: /mnt/nvme/ratatoskr, owner: root, group: root, mode: "0755"}
+  - {path: /mnt/nvme/ratatoskr/logs, owner: root, group: ratatoskr, mode: "0770"}
+  - {path: /mnt/nvme/ratatoskr/nats, owner: ratatoskr-nats, group: ratatoskr-nats, mode: "0700"}
+  - {path: /mnt/nvme/ratatoskr/blobs, owner: root, group: root, mode: "0755"}
+  - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-extractor, owner: ratatoskr-extractor, group: ratatoskr-extractor, mode: "0700"}
+  - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-blobs, mode: "2750"}
+  - {path: /mnt/nvme/backups, owner: root, group: root, mode: "0755"}
+  - {path: /mnt/nvme/backups/ratatoskr, owner: root, group: root, mode: "0700"}
+  - {path: /var/lib/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-webhook, mode: "0750"}
+
+# Child files installed unchanged outside the units: (repository, path in it, destination).
+ratatoskr_host_files:
+  - {repository: platform, src: deploy/systemd/ratatoskr.target, dest: /etc/systemd/system/ratatoskr.target, mode: "0644"}
+  - {repository: platform, src: deploy/logrotate/ratatoskr, dest: /etc/logrotate.d/ratatoskr, mode: "0644"}
+  - {repository: platform, src: deploy/tmpfiles.d/ratatoskr-platform.conf, dest: /etc/tmpfiles.d/ratatoskr-platform.conf, mode: "0644"}
+  - {repository: telegram, src: deploy/logrotate/ratatoskr-telegram, dest: /etc/logrotate.d/ratatoskr-telegram, mode: "0644"}
+
+# Host secrets the playbook generates; each is created once and never read back.
+ratatoskr_generated_secrets:
+  - {path: /etc/ratatoskr/secrets/channel-digests-service-secret, owner: root, group: ratatoskr-edge, mode: "0640"}
+  - {path: /etc/ratatoskr/secrets/telegram-webhook, owner: root, group: ratatoskr-telegram-webhook, mode: "0640"}

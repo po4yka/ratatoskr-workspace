@@ -1,0 +1,430 @@
+# The verify cases of openspec/changes/add-deployment-automation (host-provisioning), run against
+# the converged stand-in. The cases that need a whole run of the playbook (the freeze guard, a pin
+# that disagrees with the lock, a tampered artifact cache, the rerun and the secret scan) run it
+# again from the controller, against this same target.
+
+- name: Verify the converged host
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    project: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+    inventory: "{{ lookup('env', 'MOLECULE_INVENTORY_FILE') }}"
+    workspace: "{{ (project ~ '/../..') | realpath }}"
+    state: /var/lib/ratatoskr-deploy
+    scratch: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/verify"
+    playbook: >-
+      cd {{ project }} && ANSIBLE_FORCE_COLOR=0 ansible-playbook -i {{ inventory }} site.yml
+  tasks:
+    - name: The enrolment, the pins and the host facts the cases compare against
+      ansible.builtin.set_fact:
+        services: "{{ (lookup('ansible.builtin.file', project ~ '/group_vars/all/services.json') | from_json).ratatoskr_services }}"
+        pins: "{{ lookup('ansible.builtin.file', workspace ~ '/workspace.lock') | ratatoskr_lock }}"
+
+    - name: A scratch directory on the controller
+      ansible.builtin.file:
+        path: "{{ scratch }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      become: false
+
+    # --- host_facts -------------------------------------------------------------------------------
+    - name: "host_facts: every user exists with its own group and memberships"
+      ansible.builtin.command: id -nG {{ item }}
+      register: ids
+      changed_when: false
+      loop:
+        - ratatoskr-edge
+        - ratatoskr-ingest
+        - ratatoskr-scheduler
+        - ratatoskr-extractor
+        - ratatoskr-telegram-webhook
+        - ratatoskr-telegram-dispatcher
+        - ratatoskr-nats
+
+    - name: "host_facts: each user's first group is its own"
+      ansible.builtin.assert:
+        that: (item.stdout.split() | first) == item.item
+        quiet: true
+      loop: "{{ ids.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "host_facts: directory owners and modes"
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      register: dirs
+      loop:
+        - {path: /etc/ratatoskr, owner: root, group: ratatoskr, mode: "0750"}
+        - {path: /mnt/nvme/ratatoskr/logs, owner: root, group: ratatoskr, mode: "0770"}
+        - {path: /mnt/nvme/ratatoskr/nats, owner: ratatoskr-nats, group: ratatoskr-nats, mode: "0700"}
+        - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-extractor, owner: ratatoskr-extractor, group: ratatoskr-extractor, mode: "0700"}
+        - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-blobs, mode: "2750"}
+        - {path: /mnt/nvme/ratatoskr/archive-staging, owner: ratatoskr-edge, group: ratatoskr-edge, mode: "0700"}
+        - {path: /var/lib/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-webhook, mode: "0750"}
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: "host_facts: each directory is as the deploy guides require"
+      ansible.builtin.assert:
+        that:
+          - item.stat.isdir
+          - item.stat.pw_name == item.item.owner
+          - item.stat.gr_name == item.item.group
+          - item.stat.mode == item.item.mode
+        fail_msg: "{{ item.item.path }}: {{ item.stat.pw_name }}:{{ item.stat.gr_name }} {{ item.stat.mode }}"
+        quiet: true
+      loop: "{{ dirs.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+
+    - name: "host_facts: the ufw rule for the monitoring bridge is recorded"
+      ansible.builtin.command: ufw show added
+      register: ufw
+      changed_when: false
+
+    - name: "host_facts: it names the bridge subnet and the five operator ports"
+      ansible.builtin.assert:
+        that: ufw.stdout is search('allow from 172\.19\.0\.0/16 to any port 9464:9468 proto tcp')
+        fail_msg: "{{ ufw.stdout }}"
+
+    - name: "host_facts: ratatoskr.target is enabled"
+      ansible.builtin.command: systemctl is-enabled ratatoskr.target
+      changed_when: false
+
+    # --- units_identical ----------------------------------------------------------------------------
+    - name: "units_identical: checksum of each installed unit"
+      ansible.builtin.stat:
+        path: "/etc/systemd/system/{{ item.unit }}"
+        checksum_algorithm: sha256
+      register: installed
+      loop: "{{ services + [{'unit': 'ratatoskr.target', 'repository': 'platform'}] }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "units_identical: checksum of each pinned source"
+      ansible.builtin.stat:
+        path: "{{ workspace }}/{{ pins[item.repository].path }}/deploy/systemd/{{ item.unit }}"
+        checksum_algorithm: sha256
+      register: pinned_units
+      delegate_to: localhost
+      become: false
+      loop: "{{ services + [{'unit': 'ratatoskr.target', 'repository': 'platform'}] }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "units_identical: every installed unit is byte-identical to its pinned source"
+      ansible.builtin.assert:
+        that: item.0.stat.checksum == item.1.stat.checksum
+        fail_msg: "{{ item.0.item.unit }} differs from {{ item.0.item.repository }}"
+        quiet: true
+      loop: "{{ installed.results | zip(pinned_units.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item.unit }}"
+
+    # --- nats_up and seed_modes ---------------------------------------------------------------------
+    - name: "nats_up: the broker answers its health check"
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8222/healthz
+        status_code: 200
+
+    - name: "nats_up: the deployed configuration"
+      ansible.builtin.slurp:
+        src: /etc/nats/ratatoskr.conf
+      register: nats_conf
+
+    - name: "nats_up: no placeholder and no seed in it, and one public key per identity"
+      ansible.builtin.assert:
+        that:
+          - "'REPLACE_ME' not in (nats_conf.content | b64decode)"
+          - (nats_conf.content | b64decode) is not search('SU[A-Z2-7]{56}')
+          - (nats_conf.content | b64decode | regex_findall('nkey:\s*U[A-Z2-7]{55}') | length) == 13
+
+    - name: "seed_modes: each seed file"
+      ansible.builtin.stat:
+        path: "/etc/ratatoskr/{{ item.identity }}.nkey"
+      register: seeds
+      loop: "{{ (lookup('ansible.builtin.file', project ~ '/group_vars/all/services.json') | from_json).ratatoskr_nats_identities }}"
+      loop_control:
+        label: "{{ item.identity }}"
+
+    - name: "seed_modes: root-owned, readable by its service group only, or root only when unenrolled"
+      ansible.builtin.assert:
+        that:
+          - item.stat.pw_name == 'root'
+          - item.stat.gr_name == item.item.group
+          - item.stat.mode == ('0600' if item.item.group == 'root' else '0640')
+        quiet: true
+      loop: "{{ seeds.results }}"
+      loop_control:
+        label: "{{ item.item.identity }}"
+
+    # --- services_ready -----------------------------------------------------------------------------
+    - name: "services_ready: every enrolled operator listener answers /health/ready with 200"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ item.operator_port }}/health/ready"
+        status_code: 200
+      loop: "{{ services }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # --- monitoring_lines ---------------------------------------------------------------------------
+    - name: "monitoring_lines: the three lines"
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      register: monitoring
+      loop:
+        - /opt/monitoring-fixture/docker-compose.yml
+        - /opt/monitoring-fixture/promscrape.yml
+        - /opt/monitoring-fixture/rules/ratatoskr-bus-alerts.rules.yml
+
+    - name: "monitoring_lines: extra_hosts on the collector, the scrape job, the rule file"
+      ansible.builtin.assert:
+        that:
+          - (monitoring.results[0].content | b64decode) is search('victoriametrics:\n\s+extra_hosts:\s*\["host\.docker\.internal:host-gateway"\]')
+          - (monitoring.results[1].content | b64decode) is search('job_name:\s*ratatoskr')
+          - (monitoring.results[1].content | b64decode) is search('job_name:\s*node')
+          - (monitoring.results[2].content | b64decode | length) > 0
+
+    # --- provision_order ----------------------------------------------------------------------------
+    - name: "provision_order: the recorded events"
+      ansible.builtin.slurp:
+        src: "{{ state }}/provision.log"
+      register: provision_log
+
+    - name: "provision_order: the first time each event happened"
+      ansible.builtin.set_fact:
+        first: >-
+          {{ dict((provision_log.content | b64decode).splitlines() | map('split', ' ') | reverse
+                  | map('reverse') | list) }}
+
+    - name: "provision_order: 01, then Edge ready, then 02-grants, then each role before its service"
+      ansible.builtin.assert:
+        that:
+          - first['sql:01-database-and-roles'] | int < first['start:edge'] | int
+          - first['start:edge'] | int < first['ready:edge'] | int
+          - first['ready:edge'] | int < first['sql:02-grants'] | int
+          - first['sql:02-grants'] | int < first['start:ingest'] | int
+          - first['sql:02-grants'] | int < first['start:scheduler'] | int
+          - first['sql:02-grants'] | int < first['sql:role-ratatoskr_extractor'] | int
+          - first['sql:role-ratatoskr_extractor'] | int < first['start:extractor'] | int
+          - first['sql:role-ratatoskr_telegram'] | int < first['start:telegram-webhook'] | int
+          - first['ready:telegram-webhook'] | int < first['start:telegram-dispatcher'] | int
+        fail_msg: "{{ provision_log.content | b64decode }}"
+
+    # --- role_file_failure --------------------------------------------------------------------------
+    - name: "role_file_failure: a role file that fails as written"
+      ansible.builtin.copy:
+        dest: /tmp/failing-role.sql
+        content: "create role ratatoskr_fixture login;\nselect no_such_function();\n"
+        mode: "0600"
+
+    - name: "role_file_failure: run it as the playbook runs every role.sql"
+      ratatoskr_sql:
+        file: /tmp/failing-role.sql
+        label: role-fixture
+      register: failing
+      ignore_errors: true
+
+    - name: "role_file_failure: it stops, names the file, and leaves no marker to skip it next time"
+      ansible.builtin.stat:
+        path: "{{ state }}/sql/role-fixture.sha256"
+      register: failing_marker
+
+    - name: "role_file_failure: assert"
+      ansible.builtin.assert:
+        that:
+          - failing is failed
+          - "'/tmp/failing-role.sql' in failing.msg"
+          - not failing_marker.stat.exists
+
+    - name: "role_file_failure: clean up the fixture role"
+      ansible.builtin.command:
+        argv: [docker, exec, shared-postgres, psql, -U, postgres, -c, drop role if exists ratatoskr_fixture]
+      changed_when: true
+
+    # --- no_restart_on_rerun ------------------------------------------------------------------------
+    - name: "no_restart_on_rerun: start times before"
+      ansible.builtin.command: systemctl show -p ActiveEnterTimestampMonotonic --value {{ item.unit }}
+      register: before
+      changed_when: false
+      loop: "{{ services }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "no_restart_on_rerun: run the playbook again"
+      ansible.builtin.shell:
+        cmd: "{{ playbook }} > {{ scratch }}/rerun.log 2>&1"
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: "no_restart_on_rerun: start times after"
+      ansible.builtin.command: systemctl show -p ActiveEnterTimestampMonotonic --value {{ item.unit }}
+      register: after
+      changed_when: false
+      loop: "{{ services }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "no_restart_on_rerun: nothing changed and nothing restarted"
+      ansible.builtin.assert:
+        that:
+          - (before.results | map(attribute='stdout') | list) == (after.results | map(attribute='stdout') | list)
+          - lookup('ansible.builtin.file', scratch ~ '/rerun.log') is search('changed=0\s')
+        fail_msg: "{{ lookup('ansible.builtin.file', scratch ~ '/rerun.log') | regex_search('PLAY RECAP[\\s\\S]*') }}"
+
+    # --- freeze_guard -------------------------------------------------------------------------------
+    - name: "freeze_guard: the same target, not marked as a test target"
+      ansible.builtin.shell:
+        cmd: "{{ playbook }} -e ratatoskr_test_target=false > {{ scratch }}/frozen.log 2>&1"
+      register: frozen
+      failed_when: frozen.rc == 0
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: "freeze_guard: refused before any change, naming the freeze and the document"
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.file', scratch ~ '/frozen.log') is search('DEPLOYMENT_TARGET\.md')
+          - lookup('ansible.builtin.file', scratch ~ '/frozen.log') is search('The host is frozen')
+          - lookup('ansible.builtin.file', scratch ~ '/frozen.log') is not search('changed=[1-9]')
+
+    # --- pins_match_lock ----------------------------------------------------------------------------
+    - name: "pins_match_lock: a lock whose extractor commit is not the submodule's"
+      ansible.builtin.shell:
+        cmd: >-
+          sed 's/{{ pins.extractor.commit }}/{{ '0' * 40 }}/' {{ workspace }}/workspace.lock
+          > {{ scratch }}/workspace.lock
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: "pins_match_lock: the playbook against that lock"
+      ansible.builtin.shell:
+        cmd: >-
+          {{ playbook }} -e ratatoskr_lock_file={{ scratch }}/workspace.lock > {{ scratch }}/pins.log 2>&1
+      register: pins_run
+      failed_when: pins_run.rc == 0
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: "pins_match_lock: refused in preflight, naming the extractor"
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.file', scratch ~ '/pins.log') is search('Each submodule is at its pinned commit')
+          - lookup('ansible.builtin.file', scratch ~ '/pins.log') is search('extractor')
+          - lookup('ansible.builtin.file', scratch ~ '/pins.log') is not search('changed=[1-9]')
+
+    # --- artifact_tamper ----------------------------------------------------------------------------
+    - name: "artifact_tamper: a copy of the controller cache with one byte changed in one binary"
+      ansible.builtin.shell:
+        cmd: >-
+          rm -rf {{ scratch }}/cache && cp -R {{ lookup('env', 'HOME') }}/.cache/ratatoskr-deploy/artifacts {{ scratch }}/cache
+          && f={{ scratch }}/cache/extractor/{{ pins.extractor.commit }}/ratatoskr-extractor
+          && chmod u+w "$f" && printf 'X' | dd of="$f" bs=1 seek=4096 conv=notrunc 2>/dev/null
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: "artifact_tamper: the playbook against the tampered cache"
+      ansible.builtin.shell:
+        cmd: >-
+          {{ playbook }} -e ratatoskr_artifact_cache={{ scratch }}/cache > {{ scratch }}/tamper.log 2>&1
+      register: tamper_run
+      failed_when: tamper_run.rc == 0
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: "artifact_tamper: refused on the checksum, before the binary reaches the host"
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.file', scratch ~ '/tamper.log') is search('ratatoskr-extractor: does not match SHA256SUMS')
+          - lookup('ansible.builtin.file', scratch ~ '/tamper.log') is not search('changed=[1-9]')
+
+    # --- no_secret_in_output ------------------------------------------------------------------------
+    - name: "no_secret_in_output: make the playbook generate and set one password again"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/ratatoskr/secrets/postgres/ratatoskr_github.password
+        - "{{ state }}/sql/password-ratatoskr_github.sha256"
+
+    - name: "no_secret_in_output: a verbose run that generates it"
+      ansible.builtin.shell:
+        cmd: "{{ playbook }} -vvv > {{ scratch }}/secrets.log 2>&1"
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: "no_secret_in_output: every secret on the host"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          cat /etc/ratatoskr/secrets/postgres/*.password /etc/ratatoskr/*.nkey \
+              /etc/ratatoskr/secrets/telegram-webhook /etc/ratatoskr/secrets/channel-digests-service-secret \
+              /etc/ratatoskr/secrets/telegram-platform-signing-key /etc/ratatoskr/secrets/telegram-bot-token \
+            | sed '/^$/d'
+        executable: /bin/bash
+      register: host_secrets
+      changed_when: false
+      no_log: true
+
+    - name: "no_secret_in_output: none of them is in the output of a run"
+      ansible.builtin.assert:
+        that: >-
+          host_secrets.stdout_lines
+          | select('in', lookup('ansible.builtin.file', scratch ~ '/secrets.log')) | list | length == 0
+        fail_msg: a secret generated on the host appears in the playbook's output
+        quiet: true
+      no_log: true
+
+    # --- stop_as_one --------------------------------------------------------------------------------
+    - name: "stop_as_one: stop the target"
+      ansible.builtin.systemd_service:
+        name: ratatoskr.target
+        state: stopped
+
+    # `systemctl stop` returns once the target's own job is done; each unit then drains for up to
+    # its grace period, the roles ordered after Edge first. So wait for each one to reach inactive.
+    - name: "stop_as_one: every enrolled unit is stopped"
+      ansible.builtin.command: systemctl is-active {{ item.unit }}
+      register: stopped
+      until: stopped.stdout | trim in ['inactive', 'failed']
+      retries: 45
+      delay: 2
+      failed_when: stopped.stdout | trim not in ['inactive', 'failed']
+      changed_when: false
+      loop: "{{ services }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "stop_as_one: the database and the bus are still up"
+      ansible.builtin.command:
+        argv: [docker, inspect, -f, "{{ '{{' }}.State.Running{{ '}}' }}", "{{ item }}"]
+      register: containers
+      failed_when: containers.stdout | trim != 'true'
+      changed_when: false
+      loop: [shared-postgres, ratatoskr-nats]
+
+    - name: "stop_as_one: start the target again"
+      ansible.builtin.systemd_service:
+        name: ratatoskr.target
+        state: started
+
+    - name: "stop_as_one: every enrolled service is ready again"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ item.operator_port }}/health/ready"
+        status_code: 200
+      register: again
+      until: again.status == 200
+      retries: 60
+      delay: 2
+      loop: "{{ services }}"
+      loop_control:
+        label: "{{ item.name }}"

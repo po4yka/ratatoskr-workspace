@@ -1,0 +1,51 @@
+# PostgreSQL is the shared-postgres container that already runs on the host (DEPLOYMENT_TARGET.md).
+# The playbook checks that it is there and runs Platform's SQL through it; it does not create it.
+
+- name: The shared-postgres container is running
+  ansible.builtin.command:
+    argv: [docker, inspect, -f, "{{ '{{' }}.State.Running{{ '}}' }}", "{{ ratatoskr_postgres_container }}"]
+  register: ratatoskr_pg_running
+  changed_when: false
+  failed_when: ratatoskr_pg_running.rc != 0 or ratatoskr_pg_running.stdout | trim != 'true'
+
+- name: It accepts connections
+  ansible.builtin.command:
+    argv: [docker, exec, "{{ ratatoskr_postgres_container }}", pg_isready, -U, postgres]
+  register: ratatoskr_pg_ready
+  until: ratatoskr_pg_ready.rc == 0
+  retries: 30
+  delay: 2
+  changed_when: false
+
+- name: Platform's SQL files, unchanged from the pinned commit
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins.platform.path }}/deploy/postgres/{{ item }}"
+    dest: "{{ ratatoskr_state_dir }}/sources/platform-{{ item }}"
+    owner: root
+    group: root
+    mode: "0600"
+  loop: [01-database-and-roles.sql, 02-grants.sql]
+
+- name: The database and Platform's three roles (01-database-and-roles.sql)
+  ratatoskr_sql:
+    file: "{{ ratatoskr_state_dir }}/sources/platform-01-database-and-roles.sql"
+    label: 01-database-and-roles
+    container: "{{ ratatoskr_postgres_container }}"
+    database: postgres
+
+- name: Platform's role passwords, generated on the host
+  ratatoskr_secret:
+    path: "/etc/ratatoskr/secrets/postgres/{{ item }}.password"
+    encoding: urlsafe
+    bytes: 24
+  loop: [ratatoskr_edge, ratatoskr_ingest, ratatoskr_scheduler]
+  no_log: true
+
+- name: Platform's role passwords, set through psql's standard input
+  ratatoskr_sql:
+    label: "password-{{ item }}"
+    password_role: "{{ item }}"
+    password_file: "/etc/ratatoskr/secrets/postgres/{{ item }}.password"
+    container: "{{ ratatoskr_postgres_container }}"
+  loop: [ratatoskr_edge, ratatoskr_ingest, ratatoskr_scheduler]
+  no_log: true

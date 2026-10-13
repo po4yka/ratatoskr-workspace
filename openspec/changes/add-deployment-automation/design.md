@@ -30,7 +30,7 @@ See `proposal.md` for the motivation. The constraints that shape the approach:
 
 - Zero-downtime or rolling updates. One replica per service is the design, and a restart is
   acceptable.
-- Any provisioning of the operator's controller machine beyond a documented `requirements.yml`.
+- Any provisioning of the operator's controller machine beyond the tools `deploy/ansible/README.md` lists.
 - Managing the monitoring stack's lifecycle. The playbook edits three named lines and does not own
   the stack.
 
@@ -40,7 +40,9 @@ See `proposal.md` for the motivation. The constraints that shape the approach:
 
 Ansible pushes over SSH, needs only Python on the host (Debian 12 has it), and leaves no agent or
 control plane running. That keeps the host's whole budget for the services. Its modules map one to
-one onto the runbook steps (`user`, `file`, `template`, `systemd`, `ufw`, `community.docker`).
+one onto the runbook steps (`user`, `file`, `copy`, `systemd_service`, `uri`), and the runbook's
+`docker exec`, `docker compose` and `ufw` commands stay commands. Four small host-side modules in
+`library/` handle secrets, so that no secret value is ever a module argument or a return value.
 
 Alternatives:
 - **k3s with Helm:** about 500 MB of RAM and a constant CPU cost for a control plane that schedules
@@ -60,14 +62,15 @@ ADR-0009 in this repository records this decision.
 ```text
 deploy/ansible/
 ├── ansible.cfg
-├── requirements.yml              community.docker, pinned
 ├── inventories/
 │   ├── production/hosts.yml      the Pi; secrets_file points outside the repo
 │   └── molecule/                 test target, marks ratatoskr_test_target: true
 ├── group_vars/all/
 │   ├── services.json             the enrolment list (see below)
 │   └── host.yml                  paths, ports, subnets from DEPLOYMENT_TARGET.md
-├── playbooks/site.yml
+├── site.yml                      beside group_vars/, so Ansible loads them
+├── library/                      ratatoskr_secret, ratatoskr_render, ratatoskr_nkey, ratatoskr_sql
+├── filter_plugins/               ratatoskr_lock (workspace.lock)
 ├── roles/
 │   ├── preflight/                freeze guard, lock parse, artifact fetch and verify (controller)
 │   ├── host/                     users, groups, directories, tmpfiles, ufw, logrotate, target
@@ -119,7 +122,10 @@ Alternatives:
 The checks that decide whether to publish (`ExecStart=` coverage, ELF machine, `GLIBC_` ceiling, `SHA256SUMS`) are one Python block in the workflow between two marker comments. That way `release_artifact_check.rs` can run the exact block against generated fixtures, because a reusable workflow cannot be called in a way that is expected to fail.
 
 The playbook verifies on the controller, not on the Pi: `oras pull`, then
-`gh attestation verify --repo po4yka/<repo>`, then `sha256sum -c`. Only then does it copy the
+`gh attestation verify --repo po4yka/<repo> --signer-workflow
+po4yka/ratatoskr-workspace/.github/workflows/reusable-release-artifact.yml --source-digest <commit>`,
+then `sha256sum -c`. The signer is the reusable workflow, not the source repository, so
+`--signer-workflow` is required: without it `gh` refuses a valid attestation. Only then does it copy the
 binaries to the host. The Pi needs no `gh`, no `oras` and no network access to GHCR.
 
 ### D5. Dockerfiles: cache mounts and an export stage, with the base image unchanged
@@ -161,10 +167,13 @@ lift the freeze by passing a command-line flag.
 ### D8. Test strategy
 
 - **Molecule, `docker` driver, on `ubuntu-24.04-arm`.** The target is a systemd-enabled Debian 12
-  arm64 container, privileged, so that systemd and ufw work. The runner's Docker socket is mounted,
-  so the `shared-postgres` and `ratatoskr-nats` containers are siblings on the runner, and their
-  data paths are bind-mounted at the same path in both. The scenario creates `shared-postgres`
-  itself, because on the real host it already exists, and the playbook only checks for it.
+  arm64 container, privileged, so that systemd and ufw work, with its own Docker CE daemon
+  (`/var/lib/docker` and `/var/lib/containerd` are volumes, so the inner overlays work). The
+  `shared-postgres` and `ratatoskr-nats` containers therefore run inside the stand-in, beside the
+  services, as on the Pi, and their bind mounts resolve there. Mounting the runner's socket instead
+  was rejected, because the bind-mount paths would then resolve on the runner. The scenario creates
+  `shared-postgres` itself (pgvector, which Knowledge's `role.sql` needs), because on the real host
+  it already exists, and the playbook only checks for it.
 - **Phases:** converge, idempotence (zero changes), then verify. Verify covers byte-identical
   units, users, modes, the ufw rule, `ratatoskr.target` enabled, every enrolled service ready, the
   order log, and a secret scan of the recorded output.
@@ -178,10 +187,9 @@ lift the freeze by passing a command-line flag.
   → Mitigation: a privileged container with cgroup v2 mounted read-write. If ufw cannot load its
   netfilter modules there, verify asserts the rendered ufw rule file and not the live netfilter
   state, and the design says so in the scenario.
-- **[Risk]** Sibling containers make the test differ from the host, where the containers sit beside
-  the services on the same machine.
-  → Mitigation: the paths and the loopback ports are the same, and only the Docker daemon location
-  differs.
+- **[Risk]** Docker inside the stand-in needs disk: one run takes about 8 GB for the image, the
+  inner images and the artifacts.
+  → Mitigation: the CI job runs on a GitHub arm64 runner. A developer machine needs that much free.
 - **[Risk]** A GHCR outage blocks a deploy.
   → Mitigation: the controller keeps the verified artifacts it has downloaded, so a re-run with the
   same pins needs no network access.

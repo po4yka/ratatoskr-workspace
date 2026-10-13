@@ -1,0 +1,32 @@
+# One service's deploy/postgres/role.sql, as written, then its password. `ratatoskr_role` is one
+# entry of ratatoskr_database_roles. A file that fails stops the run here and names itself.
+
+- name: "{{ ratatoskr_role.role }}: role.sql, unchanged from {{ ratatoskr_role.repository }}"
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins[ratatoskr_role.repository].path }}/deploy/postgres/role.sql"
+    dest: "{{ ratatoskr_state_dir }}/sources/{{ ratatoskr_role.repository }}-role.sql"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: "{{ ratatoskr_role.role }}: run as written"
+  ratatoskr_sql:
+    file: "{{ ratatoskr_state_dir }}/sources/{{ ratatoskr_role.repository }}-role.sql"
+    label: "role-{{ ratatoskr_role.role }}"
+    container: "{{ ratatoskr_postgres_container }}"
+    database: postgres
+
+- name: "{{ ratatoskr_role.role }}: password, generated on the host"
+  ratatoskr_secret:
+    path: "/etc/ratatoskr/secrets/postgres/{{ ratatoskr_role.role }}.password"
+    encoding: urlsafe
+    bytes: 24
+  no_log: true
+
+- name: "{{ ratatoskr_role.role }}: password set through psql's standard input"
+  ratatoskr_sql:
+    label: "password-{{ ratatoskr_role.role }}"
+    password_role: "{{ ratatoskr_role.role }}"
+    password_file: "/etc/ratatoskr/secrets/postgres/{{ ratatoskr_role.role }}.password"
+    container: "{{ ratatoskr_postgres_container }}"
+  no_log: true

@@ -51,6 +51,37 @@ jobs:
       units: harness/fixtures/release-artifact/deploy/systemd
       publish: false
 
+  # The single-host playbook, converged on a disposable Debian 12 arm64 stand-in with systemd and
+  # its own Docker daemon, run a second time with zero changes, then verified (openspec
+  # host-provisioning). It installs the published, attested artifacts of the pinned commits, so it
+  # needs `oras` and `gh` and reads ghcr.io with the job's own token; it touches no real host.
+  molecule:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install oras
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+      - name: Install the pinned Molecule toolchain
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet \
+            ansible-core==2.18.19 molecule==26.10.0 'molecule-plugins[docker]==26.10.12' docker==7.2.0 # zizmor: ignore[adhoc-packages]
+          "$RUNNER_TEMP/venv/bin/ansible-galaxy" collection install community.docker:==5.3.0
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
+      - name: Converge, idempotence and verify
+        working-directory: deploy/ansible
+        env:
+          GH_TOKEN: ${{ github.token }}  # gh attestation verify reads the public attestations
+        run: molecule test
+
   snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 20

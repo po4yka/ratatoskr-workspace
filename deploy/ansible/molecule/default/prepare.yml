@@ -1,0 +1,132 @@
+# What already exists on the real host and the playbook only checks for: the shared-postgres
+# container (DEPLOYMENT_TARGET.md, PostgreSQL), and a monitoring stack. Plus a loopback stand-in for
+# the Telegram Bot API, which the webhook calls at startup.
+- name: Prepare the stand-in host
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    postgres_image: pgvector/pgvector:0.8.1-pg17-bookworm@sha256:3e8b3adfd27b5707128f60956f62a793c3c9326ea8cfaf0eab7adccb5d700b21
+  tasks:
+    - name: The inner Docker daemon is up
+      ansible.builtin.command: docker info
+      register: docker_info
+      until: docker_info.rc == 0
+      retries: 30
+      delay: 2
+      changed_when: false
+
+    # One level at a time: `file` gives every parent it creates the same mode, and a 0700
+    # /mnt/nvme would hide every service's directory below it.
+    - name: The data directory of the shared cluster
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        mode: "{{ item.mode }}"
+      loop:
+        - {path: /mnt/nvme, mode: "0755"}
+        - {path: /mnt/nvme/shared-postgres, mode: "0755"}
+        - {path: /mnt/nvme/shared-postgres/data, mode: "0700"}
+
+    - name: Is shared-postgres there already
+      ansible.builtin.command:
+        argv: [docker, ps, -aq, -f, name=^shared-postgres$]
+      register: shared_postgres
+      changed_when: false
+
+    # pgvector, because Knowledge's role.sql creates the `vector` extension. The superuser is
+    # `postgres` with local trust inside the container, which is how every psql of the playbook
+    # enters it, as on the host.
+    - name: The shared-postgres container, as the host already runs it
+      ansible.builtin.command:
+        argv:
+          - docker
+          - run
+          - -d
+          - --name
+          - shared-postgres
+          - --restart
+          - unless-stopped
+          - -p
+          - 127.0.0.1:5432:5432
+          - -e
+          - POSTGRES_HOST_AUTH_METHOD=trust
+          - -v
+          - /mnt/nvme/shared-postgres/data:/var/lib/postgresql/data
+          - "{{ postgres_image }}"
+      when: shared_postgres.stdout | length == 0
+      changed_when: true
+
+    - name: The Bot API stand-in
+      ansible.builtin.copy:
+        dest: /usr/local/bin/fake-botapi.py
+        mode: "0755"
+        content: |
+          #!/usr/bin/python3
+          # Answers getMe with the fixture of ratatoskr-telegram's boot tests; 404 for anything else.
+          import http.server, json
+          GET_ME = json.dumps({"ok": True, "result": {"id": 700100200, "is_bot": True,
+              "first_name": "Ratatoskr", "username": "ratatoskr_test_bot", "can_join_groups": True,
+              "can_read_all_group_messages": False, "supports_inline_queries": False,
+              "can_connect_to_business": False, "has_main_web_app": False}}).encode()
+          class Handler(http.server.BaseHTTPRequestHandler):
+              def answer(self):
+                  self.rfile.read(int(self.headers.get("Content-Length") or 0))
+                  ok = self.path.lower().endswith("/getme")
+                  body = GET_ME if ok else b""
+                  self.send_response(200 if ok else 404)
+                  self.send_header("Content-Type", "application/json")
+                  self.send_header("Content-Length", str(len(body)))
+                  self.end_headers()
+                  self.wfile.write(body)
+              do_GET = do_POST = answer
+          http.server.HTTPServer(("127.0.0.1", 18081), Handler).serve_forever()
+
+    - name: The Bot API stand-in runs as a unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/fake-botapi.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Telegram Bot API stand-in for the Molecule scenario
+          [Service]
+          ExecStart=/usr/local/bin/fake-botapi.py
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: The Bot API stand-in is started
+      ansible.builtin.systemd_service:
+        name: fake-botapi.service
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: A monitoring stack fixture, shaped like the host's
+      ansible.builtin.file:
+        path: /opt/monitoring-fixture
+        state: directory
+        mode: "0755"
+
+    - name: Its compose file and scrape file
+      ansible.builtin.copy:
+        dest: "/opt/monitoring-fixture/{{ item.name }}"
+        content: "{{ item.content }}"
+        mode: "0644"
+        force: false
+      loop:
+        - name: docker-compose.yml
+          content: |
+            services:
+              victoriametrics:
+                image: victoriametrics/victoria-metrics:v1.110.0
+                container_name: victoriametrics
+              grafana:
+                image: grafana/grafana:11.4.0
+        - name: promscrape.yml
+          content: |
+            scrape_configs:
+              - job_name: node
+                static_configs:
+                  - targets: ["node-exporter:9100"]
+      loop_control:
+        label: "{{ item.name }}"

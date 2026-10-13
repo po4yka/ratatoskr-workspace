@@ -98,8 +98,8 @@ artifacts and leaves the published ones in place. The manual runbooks stay corre
   plus a harness test `deploy_inventory.rs` and `docs/adr/0009-ansible-for-the-single-host.md`.
 - Changed: `Dockerfile` and `.github/workflows/` in Platform. New `Dockerfile` and workflow
   callers in the extractor and Telegram.
-- New dependencies on the controller only: `ansible-core`, the `community.docker` collection,
-  Molecule for tests, `oras` to pull artifacts, and `gh` to verify attestations. PostgreSQL is
+- New dependencies on the controller only: `ansible-core`, Molecule and its `community.docker`
+  connection for tests, `oras` to pull artifacts, and `gh` to verify attestations. PostgreSQL is
   reached through `docker exec`, as the runbook does, so no PostgreSQL collection is needed. The
   host gains nothing new.
 - GHCR stores one artifact per commit per repository.

@@ -1,0 +1,22 @@
+# The Molecule stand-in for the Raspberry Pi: Debian 12, systemd as PID 1, ufw, and Docker CE with
+# the compose plugin, which Platform's NATS compose file is started with.
+FROM debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+
+ENV container=docker DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      systemd systemd-sysv dbus python3 sudo ca-certificates curl gnupg \
+      iproute2 iptables procps ufw logrotate \
+ && install -m 0755 -d /etc/apt/keyrings \
+ && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
+      > /etc/apt/sources.list.d/docker.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io docker-compose-plugin \
+ && rm -rf /var/lib/apt/lists/* \
+ && systemctl enable docker \
+ && rm -f /lib/systemd/system/multi-user.target.wants/getty* /etc/systemd/system/getty.target.wants/*
+
+STOPSIGNAL SIGRTMIN+3
+CMD ["/lib/systemd/systemd"]

@@ -1,0 +1,42 @@
+# Each config example, copied unchanged next to the playbook's state and rendered on the host: the
+# enrolment's settings, the operator's overrides, and the database password read from the host.
+
+- name: Config examples, unchanged from the pinned repository
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins[item.repository].path }}/{{ item.config_example }}"
+    dest: "{{ ratatoskr_state_dir }}/sources/{{ item.name }}.conf.example"
+    owner: root
+    group: root
+    mode: "0600"
+  loop: "{{ ratatoskr_services }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Each service's database password, generated on the host
+  ratatoskr_secret:
+    path: "/etc/ratatoskr/secrets/postgres/{{ item }}.password"
+    encoding: urlsafe
+    bytes: 24
+  loop: "{{ ratatoskr_services | map(attribute='database_role') | unique }}"
+  no_log: true
+
+- name: Configuration files, rendered on the host
+  ratatoskr_render:
+    src: "{{ ratatoskr_state_dir }}/sources/{{ item.name }}.conf.example"
+    dest: "{{ item.config }}"
+    owner: root
+    group: "{{ item.user }}"
+    mode: "0640"
+    settings: "{{ item.settings | combine(ratatoskr_config_overrides[item.name] | default({})) }}"
+    database_role: "{{ item.database_role }}"
+  loop: "{{ ratatoskr_services }}"
+  loop_control:
+    label: "{{ item.config }}"
+  register: ratatoskr_configs
+
+- name: A service with a new configuration restarts too
+  ansible.builtin.set_fact:
+    ratatoskr_restart: "{{ ratatoskr_restart | combine({item.0.name: ratatoskr_restart[item.0.name] or item.1.changed}) }}"
+  loop: "{{ ratatoskr_services | zip(ratatoskr_configs.results) | list }}"
+  loop_control:
+    label: "{{ item.0.name }}"

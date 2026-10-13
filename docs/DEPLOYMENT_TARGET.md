@@ -397,6 +397,18 @@ repository serves that bundle**: Platform has no static route, and the port tabl
 for it. Where the bundle is served is an open decision for the owner. Whatever is chosen gets a row
 in the port table, or a route on Edge, before it is deployed.
 
+## Provisioning
+
+`deploy/ansible/` in this repository provisions this host from a clean Debian 12 install (ADR-0009,
+openspec `host-provisioning`). It installs each enrolled service from the files its own repository
+ships at the commit `workspace.lock` pins, and from the attested `linux/arm64` artifact that
+repository publishes for that commit. It runs the PostgreSQL files in the order above, generates
+every host secret on the host, and recreates the host facts listed in the next section. A second
+run changes nothing. Its README has the command and the operator's vault file.
+
+While the freeze statement at the top of this document stands, the playbook refuses this host
+before its first change. Lifting the freeze is an edit to this document, and nothing else lifts it.
+
 ## What the reflash resets
 
 Every host-side fact outside this document is a property of the current installation and returns to

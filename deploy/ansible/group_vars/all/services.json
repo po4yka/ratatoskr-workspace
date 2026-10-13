@@ -1,0 +1,115 @@
+{
+  "ratatoskr_services": [
+    {
+      "name": "edge",
+      "repository": "platform",
+      "unit": "ratatoskr-edge.service",
+      "binary": "ratatoskr-edge",
+      "user": "ratatoskr-edge",
+      "config_example": "deploy/systemd/edge.conf.example",
+      "config": "/etc/ratatoskr/edge.conf",
+      "database_role": "ratatoskr_edge",
+      "role_file": false,
+      "operator_port": 9464,
+      "settings": {
+        "RATATOSKR__IDENTITY__ASSERTION_KEY": "{file:/etc/ratatoskr/secrets/telegram-platform-signing-key.pub}",
+        "RATATOSKR__CHANNEL_DIGESTS__SERVICE_SECRET": "{file:/etc/ratatoskr/secrets/channel-digests-service-secret}"
+      }
+    },
+    {
+      "name": "ingest",
+      "repository": "platform",
+      "unit": "ratatoskr-ingest.service",
+      "binary": "ratatoskr-ingest",
+      "user": "ratatoskr-ingest",
+      "config_example": "deploy/systemd/ingest.conf.example",
+      "config": "/etc/ratatoskr/ingest.conf",
+      "database_role": "ratatoskr_ingest",
+      "role_file": false,
+      "operator_port": 9465,
+      "settings": {}
+    },
+    {
+      "name": "scheduler",
+      "repository": "platform",
+      "unit": "ratatoskr-scheduler.service",
+      "binary": "ratatoskr-scheduler",
+      "user": "ratatoskr-scheduler",
+      "config_example": "deploy/systemd/scheduler.conf.example",
+      "config": "/etc/ratatoskr/scheduler.conf",
+      "database_role": "ratatoskr_scheduler",
+      "role_file": false,
+      "operator_port": 9466,
+      "settings": {}
+    },
+    {
+      "name": "extractor",
+      "repository": "extractor",
+      "unit": "ratatoskr-extractor.service",
+      "binary": "ratatoskr-extractor",
+      "user": "ratatoskr-extractor",
+      "config_example": "deploy/systemd/extractor.conf.example",
+      "config": "/etc/ratatoskr/extractor.conf",
+      "database_role": "ratatoskr_extractor",
+      "role_file": true,
+      "operator_port": 9088,
+      "settings": {}
+    },
+    {
+      "name": "telegram-webhook",
+      "repository": "telegram",
+      "unit": "ratatoskr-telegram-webhook.service",
+      "binary": "ratatoskr-telegram-webhook",
+      "user": "ratatoskr-telegram-webhook",
+      "config_example": "deploy/systemd/webhook.conf.example",
+      "config": "/etc/ratatoskr/telegram-webhook.conf",
+      "database_role": "ratatoskr_telegram",
+      "role_file": true,
+      "operator_port": 9467,
+      "settings": {
+        "RATATOSKR__ACCESS__OWNER_TELEGRAM_USER_ID": "{{ ratatoskr_telegram_owner_user_id }}"
+      }
+    },
+    {
+      "name": "telegram-dispatcher",
+      "repository": "telegram",
+      "unit": "ratatoskr-telegram-dispatcher.service",
+      "binary": "ratatoskr-telegram-dispatcher",
+      "user": "ratatoskr-telegram-dispatcher",
+      "config_example": "deploy/systemd/dispatcher.conf.example",
+      "config": "/etc/ratatoskr/telegram-dispatcher.conf",
+      "database_role": "ratatoskr_telegram",
+      "role_file": true,
+      "operator_port": 9468,
+      "settings": {}
+    }
+  ],
+  "ratatoskr_database_roles": [
+    {"repository": "extractor", "role": "ratatoskr_extractor"},
+    {"repository": "telegram", "role": "ratatoskr_telegram"},
+    {"repository": "knowledge", "role": "ratatoskr_knowledge"},
+    {"repository": "github", "role": "ratatoskr_github"},
+    {"repository": "vault", "role": "ratatoskr_vault"},
+    {"repository": "channel-digests", "role": "ratatoskr_channel_digests"},
+    {"repository": "chatgpt", "role": "ratatoskr_chatgpt"},
+    {"repository": "claude", "role": "ratatoskr_claude"},
+    {"repository": "x", "role": "ratatoskr_x"},
+    {"repository": "instagram", "role": "ratatoskr_instagram"},
+    {"repository": "threads", "role": "ratatoskr_threads"}
+  ],
+  "ratatoskr_nats_identities": [
+    {"identity": "edge", "group": "ratatoskr-edge"},
+    {"identity": "telegram", "group": "ratatoskr-telegram-dispatcher"},
+    {"identity": "extractor", "group": "ratatoskr-extractor"},
+    {"identity": "chatgpt", "group": "root"},
+    {"identity": "claude", "group": "root"},
+    {"identity": "x", "group": "root"},
+    {"identity": "instagram", "group": "root"},
+    {"identity": "threads", "group": "root"},
+    {"identity": "extractor-browser-worker", "group": "root"},
+    {"identity": "knowledge", "group": "root"},
+    {"identity": "github", "group": "root"},
+    {"identity": "vault", "group": "root"},
+    {"identity": "channel-digests", "group": "root"}
+  ]
+}

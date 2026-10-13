@@ -209,6 +209,32 @@ the binary is correct. The repository's own arm64 smoke test, which runs before 
 evidence that the binary starts, answers readiness and stops cleanly. The GLIBC check reads the
 version strings in the binary, so a requirement loaded at run time through `dlopen` is outside it.
 
+## The provisioning gate
+
+`deploy/ansible/` is checked in two places (openspec `host-provisioning`):
+
+- `deploy_inventory.rs` in the harness fails when a pinned repository ships a
+  `deploy/systemd/ratatoskr-*.service` that `group_vars/all/services.json` does not enroll. It also
+  fails when an enrolled service names a unit, binary or config example that its pinned repository
+  lacks, when an enrolled unit does not carry `PartOf=` and `WantedBy=ratatoskr.target`, when a pinned
+  `deploy/postgres/role.sql` is not provisioned under the role it creates, and when the Ansible tree
+  holds a copy of a child deploy file, an unencrypted vault file, an nkey seed or a private key.
+  `release_artifact_callers.rs` fails when such a repository does not call the reusable
+  release-artifact workflow exactly once, pinned to a commit.
+- The `molecule` job in `ci.yml` converges the playbook on a Debian 12 arm64 stand-in with systemd
+  and its own Docker daemon, on a native arm64 runner. It requires a second run to report zero
+  changes, and then runs the verify cases in `deploy/ansible/molecule/default/verify.yml`: host facts,
+  byte-identical units, the broker's keys and seed modes, readiness of every service, the monitoring
+  lines, the provisioning order, a failing role file, no restart on a rerun, the freeze guard, a pin
+  that disagrees with the lock, a tampered artifact cache, no secret in a verbose run, and
+  `ratatoskr.target` stopping every service.
+
+What it cannot see: the stand-in is a container and not the Pi. It has no NVMe, no log2ram, no 16 KiB
+pages, no real Bot API (a loopback stand-in answers `getMe`) and no host monitoring stack (a fixture
+replaces it). Its `shared-postgres` is the pgvector image, not the host's `imresamu/postgis`, so
+whether the host's cluster can create the `vector` extension is outside this gate. The ufw case reads
+the recorded rule, not live netfilter. The freeze means none of it has run on the host.
+
 ## What each repository has
 
 All 18 repositories are public. The default branch of each repository is `main`.

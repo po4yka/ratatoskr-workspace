@@ -48,8 +48,9 @@ per-commit artifacts. The two use different tags and different media types in th
 - Enrolling a service is one entry in `deploy/ansible/group_vars/all/services.json`, once its
   repository ships a unit. `deploy_inventory.rs` fails when the enrolment and the pinned units
   disagree.
-- The controller needs `ansible-core`, `community.docker`, `oras` and `gh`. The host needs nothing
-  new.
+- The controller needs Python 3.11+, `ansible-core`, `oras` and `gh`; the Molecule test also needs
+  the `community.docker` collection for its connection. The host needs nothing new: PostgreSQL and
+  NATS are reached through `docker exec` and `docker compose`, as the deploy guides do.
 - The playbook refuses the real host while `DEPLOYMENT_TARGET.md` states the freeze. The owner lifts
   the freeze by editing that document, not by passing a flag.
 

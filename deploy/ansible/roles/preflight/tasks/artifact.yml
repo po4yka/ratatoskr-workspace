@@ -1,0 +1,55 @@
+# One repository's artifact for its pinned commit: pulled and attested once, then its checksums
+# checked on every run, so a binary changed in the cache is refused before it reaches the host.
+
+- name: "{{ ratatoskr_repository }}: where its artifact is cached"
+  ansible.builtin.set_fact:
+    ratatoskr_artifact_dir: "{{ ratatoskr_artifact_cache }}/{{ ratatoskr_repository }}/{{ ratatoskr_pins[ratatoskr_repository].commit }}"
+    ratatoskr_artifact_ref: >-
+      {{ ratatoskr_artifact_registry }}/{{ ratatoskr_pins[ratatoskr_repository].slug }}:sha-{{ ratatoskr_pins[ratatoskr_repository].commit }}
+  run_once: true
+  delegate_to: localhost
+
+- name: "{{ ratatoskr_repository }}: has it been attested already"
+  ansible.builtin.stat:
+    path: "{{ ratatoskr_artifact_dir }}/.attested"
+  register: ratatoskr_attested
+  run_once: true
+  delegate_to: localhost
+
+- name: "{{ ratatoskr_repository }}: pull and attest the artifact"
+  when: not ratatoskr_attested.stat.exists
+  run_once: true
+  delegate_to: localhost
+  block:
+    - name: "{{ ratatoskr_repository }}: pull {{ ratatoskr_artifact_ref | trim }}"
+      ansible.builtin.command:
+        argv: [oras, pull, "{{ ratatoskr_artifact_ref | trim }}", -o, "{{ ratatoskr_artifact_dir }}"]
+      changed_when: true
+
+    - name: "{{ ratatoskr_repository }}: the attestation binds it to the commit and the reusable workflow"
+      ansible.builtin.command:
+        argv:
+          - gh
+          - attestation
+          - verify
+          - "oci://{{ ratatoskr_artifact_ref | trim }}"
+          - --repo
+          - "{{ ratatoskr_pins[ratatoskr_repository].slug }}"
+          - --source-digest
+          - "{{ ratatoskr_pins[ratatoskr_repository].commit }}"
+          - --signer-workflow
+          - "{{ ratatoskr_signer_workflow }}"
+      changed_when: false
+
+    - name: "{{ ratatoskr_repository }}: remember that it was attested"
+      ansible.builtin.copy:
+        dest: "{{ ratatoskr_artifact_dir }}/.attested"
+        content: "{{ ratatoskr_artifact_ref | trim }}\n"
+        mode: "0644"
+
+- name: "{{ ratatoskr_repository }}: every binary matches SHA256SUMS"
+  ansible.builtin.command:
+    argv: [python3, "{{ role_path }}/../../files/verify_sums.py", "{{ ratatoskr_artifact_dir }}"]
+  changed_when: false
+  run_once: true
+  delegate_to: localhost

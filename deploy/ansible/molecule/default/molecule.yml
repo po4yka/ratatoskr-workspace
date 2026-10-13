@@ -1,0 +1,68 @@
+# A disposable stand-in for the host: Debian 12 arm64 with systemd as PID 1 and its own Docker
+# daemon, so PostgreSQL and NATS run as containers beside the services exactly as on the Pi, and the
+# bind mounts resolve inside it. Nothing here touches the real host (DEPLOYMENT_TARGET.md is frozen).
+#
+#   cd deploy/ansible && molecule test
+#
+# The controller needs oras and gh on PATH (the playbook verifies the published artifacts), Python
+# 3.11+, ansible-core, molecule with the docker driver, and the community.docker collection.
+dependency:
+  name: galaxy
+  enabled: false
+driver:
+  name: docker
+platforms:
+  - name: ratatoskr-host
+    dockerfile: Dockerfile.j2
+    image: ratatoskr-molecule-host
+    pre_build_image: false
+    privileged: true
+    cgroupns_mode: host
+    command: /lib/systemd/systemd
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # The inner Docker daemon needs filesystems it can put overlays on: its own state, and the
+      # containerd image store that Docker 29 uses by default.
+      - /var/lib/docker
+      - /var/lib/containerd
+provisioner:
+  name: ansible
+  env:
+    # verify.yml lives in this scenario directory and uses the playbook's module and lock filter.
+    ANSIBLE_LIBRARY: ${MOLECULE_PROJECT_DIRECTORY}/library
+    ANSIBLE_FILTER_PLUGINS: ${MOLECULE_PROJECT_DIRECTORY}/filter_plugins
+  playbooks:
+    prepare: prepare.yml
+    converge: ../../site.yml
+    verify: verify.yml
+  inventory:
+    host_vars:
+      ratatoskr-host:
+        # The only thing that lets the playbook run while DEPLOYMENT_TARGET.md says "frozen".
+        ratatoskr_test_target: true
+        # Test values, not secrets: nothing they open exists outside this container.
+        ratatoskr_operator_secrets:
+          telegram_bot_token: "123456:MOLECULE-test-token"
+        ratatoskr_telegram_owner_user_id: "700100200"
+        ratatoskr_monitoring_dir: /opt/monitoring-fixture
+        # The webhook calls getMe at startup; here it reaches the loopback stand-in from prepare.yml.
+        ratatoskr_config_overrides:
+          telegram-webhook:
+            RATATOSKR__BOT_API__BASE_URL: http://127.0.0.1:18081
+          telegram-dispatcher:
+            RATATOSKR__BOT_API__BASE_URL: http://127.0.0.1:18081
+verifier:
+  name: ansible
+scenario:
+  test_sequence:
+    - destroy
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - destroy

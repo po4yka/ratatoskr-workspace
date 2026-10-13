@@ -1,0 +1,91 @@
+# Every host fact a reflash resets and Ratatoskr depends on (DEPLOYMENT_TARGET.md "What the reflash
+# resets"): users, groups, directories, the target, logrotate and tmpfiles, and the firewall rule.
+
+- name: The shared groups
+  ansible.builtin.group:
+    name: "{{ item }}"
+    system: true
+  loop: "{{ ratatoskr_groups }}"
+
+- name: Each service user's own group, which `user` names as the primary group
+  ansible.builtin.group:
+    name: "{{ item.name }}"
+    system: true
+  loop: "{{ ratatoskr_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: One system user per service
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    group: "{{ item.name }}"
+    groups: "{{ item.groups }}"
+    append: false
+    system: true
+    create_home: false
+    shell: /usr/sbin/nologin
+  loop: "{{ ratatoskr_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: The directories, each with the one owner and mode the deploy guides agree on
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ ratatoskr_directories + [{'path': ratatoskr_state_dir, 'owner': 'root', 'group': 'root', 'mode': '0700'}] }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: The playbook's own host state
+  ansible.builtin.file:
+    path: "{{ ratatoskr_state_dir }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop: [sources, sql, nkeys]
+
+- name: The target, logrotate and tmpfiles files, unchanged from their pinned repositories
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins[item.repository].path }}/{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop: "{{ ratatoskr_host_files }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  register: ratatoskr_host_files_result
+
+- name: Create what tmpfiles.d declares, now rather than at the next boot
+  ansible.builtin.command:
+    cmd: systemd-tmpfiles --create /etc/tmpfiles.d/ratatoskr-platform.conf
+  when: ratatoskr_host_files_result.results | selectattr('changed') | map(attribute='item.dest') | select('match', '/etc/tmpfiles.d/') | list | length > 0
+  changed_when: true
+
+- name: Boot starts the deployment through ratatoskr.target
+  ansible.builtin.systemd_service:
+    name: ratatoskr.target
+    enabled: true
+    daemon_reload: true
+
+- name: The monitoring bridge reaches the operator listeners through the host firewall
+  ansible.builtin.command:
+    argv:
+      - ufw
+      - allow
+      - proto
+      - tcp
+      - from
+      - "{{ ratatoskr_monitoring_subnet }}"
+      - to
+      - any
+      - port
+      - "{{ ratatoskr_monitoring_ports }}"
+      - comment
+      - ratatoskr operator listeners, from the monitoring bridge
+  register: ratatoskr_ufw
+  changed_when: "'Skipping' not in ratatoskr_ufw.stdout"

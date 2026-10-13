@@ -1,0 +1,6 @@
+- name: Each role whose service ships no unit yet, so enrolling it later is one entry
+  ansible.builtin.include_tasks: role.yml
+  loop: "{{ ratatoskr_roles_only }}"
+  loop_control:
+    loop_var: ratatoskr_role
+    label: "{{ ratatoskr_role.role }}"

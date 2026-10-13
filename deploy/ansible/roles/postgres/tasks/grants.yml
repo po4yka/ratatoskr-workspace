@@ -1,0 +1,6 @@
+- name: Platform's grants, after Edge created the schemas they name (02-grants.sql)
+  ratatoskr_sql:
+    file: "{{ ratatoskr_state_dir }}/sources/platform-02-grants.sql"
+    label: 02-grants
+    container: "{{ ratatoskr_postgres_container }}"
+    database: ratatoskr

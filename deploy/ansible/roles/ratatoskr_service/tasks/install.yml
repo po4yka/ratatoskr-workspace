@@ -1,0 +1,83 @@
+# Each enrolled service's binary, from its verified artifact, and its unit, unchanged from the
+# pinned repository. Then the host secrets the services read, generated here and never read back.
+
+- name: Binaries, from the verified artifact of the pinned commit
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_artifact_cache }}/{{ item.repository }}/{{ ratatoskr_pins[item.repository].commit }}/{{ item.binary }}"
+    dest: "/usr/local/bin/{{ item.binary }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ ratatoskr_services }}"
+  loop_control:
+    label: "{{ item.binary }}"
+  register: ratatoskr_binaries
+
+- name: Units, unchanged from the pinned repository
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins[item.repository].path }}/deploy/systemd/{{ item.unit }}"
+    dest: "/etc/systemd/system/{{ item.unit }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ratatoskr_services }}"
+  loop_control:
+    label: "{{ item.unit }}"
+  register: ratatoskr_units
+
+- name: systemd reads the units it was given
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: ratatoskr_units is changed
+
+- name: Remember which services have a new binary or unit
+  ansible.builtin.set_fact:
+    ratatoskr_restart: "{{ ratatoskr_restart | default({}) | combine({item.0.name: item.1.changed or item.2.changed}) }}"
+  loop: "{{ ratatoskr_services | zip(ratatoskr_binaries.results, ratatoskr_units.results) | list }}"
+  loop_control:
+    label: "{{ item.0.name }}"
+
+- name: Generated host secrets
+  ratatoskr_secret:
+    path: "{{ item.path }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ ratatoskr_generated_secrets }}"
+  loop_control:
+    label: "{{ item.path }}"
+  no_log: true
+
+- name: The Telegram signing key, generated on the host by Telegram's own command
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/ratatoskr-telegram-webhook
+      - assertion-key
+      - generate
+      - /etc/ratatoskr/secrets/telegram-platform-signing-key
+    creates: /etc/ratatoskr/secrets/telegram-platform-signing-key
+  no_log: true
+
+- name: The signing key is readable by the two Telegram roles only
+  ansible.builtin.file:
+    path: /etc/ratatoskr/secrets/telegram-platform-signing-key
+    owner: root
+    group: ratatoskr-telegram-secrets
+    mode: "0640"
+
+- name: Its public key, which Edge verifies assertions with (not a secret)
+  ansible.builtin.shell:
+    cmd: >-
+      /usr/local/bin/ratatoskr-telegram-webhook assertion-key public
+      /etc/ratatoskr/secrets/telegram-platform-signing-key
+      > /etc/ratatoskr/secrets/telegram-platform-signing-key.pub
+    creates: /etc/ratatoskr/secrets/telegram-platform-signing-key.pub
+
+- name: The bot token, from the operator's vault file
+  ansible.builtin.copy:
+    dest: /etc/ratatoskr/secrets/telegram-bot-token
+    content: "{{ ratatoskr_operator_secrets.telegram_bot_token }}\n"
+    owner: root
+    group: ratatoskr-telegram-secrets
+    mode: "0640"
+  no_log: true
