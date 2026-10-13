@@ -90,6 +90,8 @@ CG_WORDS = ["aardvark", "bobcat", "civet"]
 for n in (1, 2, 3):
     write_zip(f"chatgpt-series-{n}.zip", chatgpt_series(n, CG_WORDS))
 write_zip("chatgpt-u2.zip", {"conversations.json": [conv("u2cg", "tapir")], "projects.json": [project("u2cg", "tapir", [])], "canvas.json": []})
+# One more export per provider for the in-flight deletion leg of F6 (R6-03): a conversation no earlier flow has imported.
+write_zip("chatgpt-inflight.zip", {"conversations.json": [conv("ifcg", "quokka")], "projects.json": [project("ifcg", "quokka", [])], "canvas.json": []})
 
 CL_WORDS = ["fennel", "garlic", "hyssop"]
 for n in (1, 2, 3):
@@ -98,4 +100,5 @@ for n in (1, 2, 3):
     exports["conversations"] = [claude_export(f"cs{i}", CL_WORDS[i], [])["conversations"][0] for i in range(n)]
     write_zip(f"claude-series-{n}.zip", {"export.json": exports})
 write_zip("claude-u2.zip", {"export.json": claude_export("u2cl", "okapi", [])})
+write_zip("claude-inflight.zip", {"export.json": claude_export("ifcl", "rowan", [])})
 print(sorted(p.name for p in out.iterdir()))

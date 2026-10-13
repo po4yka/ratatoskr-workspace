@@ -39,7 +39,7 @@ flow_run() {
   # The API applies the channel-digests schema when it starts; a worker that starts before that exits with Database(Schema). The first harness started both at once.
   svc_start worker
   svc_wait_ready knowledge 90
-  local T1 T2 status op rid
+  local T1 T2 status op rid run2_rid run3_rid
   T1=$(secret browser1)
   T2=$(secret browser2)
   sleep 5
@@ -105,6 +105,7 @@ flow_run() {
   untilt '[ -n "$(q ratatoskr "select run_id from channel_digests.digest_runs where operation_id='"'"'$op'"'"' and state='"'"'accepted'"'"'")" ]' 30
   rid=$(q ratatoskr "select run_id from channel_digests.digest_runs where operation_id='$op' and state='accepted'")
   assert worker_accepted_the_run_from_the_bus '[ -n "$rid" ]' "run $rid"
+  run2_rid=$rid
   "$S/bin/legb" "$(db_url ratatoskr_channel_digests)" "$rid" 2>&1 | tee "$EV/legb.txt" | sed -E 's#://[^@]*@#://<redacted>@#'
   assert recap_operation_succeeded '[ "$(pollop "$op" "$T1" 150 run2)" = succeeded ]'
   assert fake_openrouter_received_exactly_one_completion_with_two_refs '[ "$(jq -s "[.[] | select(.family==\"channel_recap\" and .answered==true)] | length" "$S/logs/fake-openrouter.jsonl")" = 1 ]' "$(tail -1 "$S/logs/fake-openrouter.jsonl" | cut -c1-200)"
@@ -140,6 +141,7 @@ flow_run() {
   op=$(jq -r .operation_id "$EV/post-run3.resp.body")
   untilt '[ -n "$(q ratatoskr "select run_id from channel_digests.digest_runs where operation_id='"'"'$op'"'"' and state='"'"'accepted'"'"'")" ]' 30
   rid=$(q ratatoskr "select run_id from channel_digests.digest_runs where operation_id='$op' and state='accepted'")
+  run3_rid=$rid
   "$S/bin/legb" "$(db_url ratatoskr_channel_digests)" "$rid" >"$EV/legb3.txt" 2>&1
   assert provider_failure_ends_the_operation_failed '[ "$(pollop "$op" "$T1" 150 run3)" = failed ] && grep -q "channel_digest.recap.provider_unavailable" "$EV/op-run3.json"' "$(jq -c "[.status,.stage,.errors]" "$EV/op-run3.json" | cut -c1-200)"
   assert run_row_failed_provider_unavailable '[ "$(q ratatoskr "select safe_failure_class from channel_digests.digest_runs where run_id='"'"'$rid'"'"'")" = provider_unavailable ]'
@@ -160,6 +162,26 @@ flow_run() {
   assert old_body_is_nulled_and_minimized_at_set '[ "$(q ratatoskr "select count(*) from channel_digests.post_revisions where revision_id = '"'"'$old_rev'"'"' and body is null and minimized_at is not null")" = 1 ]'
   assert provenance_and_digest_of_the_old_revision_stay '[ "$(q ratatoskr "select count(*) from channel_digests.post_revisions where revision_id = '"'"'$old_rev'"'"' and content_sha256 = '"'"'$(printf '%064d' 1)'"'"' and canonical_link = '"'"'https://t.me/smoke_alpha/9000001'"'"' and published_at is not null")" = 1 ]'
   assert younger_body_is_untouched '[ "$(q ratatoskr "select count(*) from channel_digests.post_revisions where revision_id = '"'"'$young_rev'"'"' and body = '"'"'young retained body'"'"' and minimized_at is null")" = 1 ]'
+  info "leg RM (R6-02): a manifest is under the same body retention as a post revision: the timer nulls the text of an old terminal run's manifest, keeps its digest and counts, and the manifest route answers 410 to matching claims"
+  local out m_old m_old_sha m_old_sources m_old_channels m_young m_young_sha manifest_body="$EV/manifest-body.bin"
+  # manifest_status MANIFEST_ID OWNER RUN DIGEST: the status of the manifest route on the digest API with the service bearer the flow renders for Knowledge and the three claims; the body goes to $manifest_body
+  manifest_status() { curl -sS -o "$manifest_body" -w '%{http_code}' -H "Authorization: Bearer $(secret digest)" -H "x-ratatoskr-owner-id: $2" -H "x-ratatoskr-digest-run-id: $3" -H "x-ratatoskr-manifest-digest: $4" "127.0.0.1:8098/v1/manifests/$1"; }
+  IFS='|' read -r m_old m_old_sha m_old_sources m_old_channels < <(q ratatoskr "select manifest_id, sha256, source_count, channel_count from channel_digests.digest_manifests where run_id = '$run2_rid'")
+  IFS='|' read -r m_young m_young_sha < <(q ratatoskr "select manifest_id, sha256 from channel_digests.digest_manifests where run_id = '$run3_rid'")
+  assert manifest_retention_has_two_manifests_committed_by_the_faulted_helper '[ -n "$m_old" ] && [ -n "$m_young" ] && [ "$m_old" != "$m_young" ]' "old=$m_old young=$m_young"
+  assert manifest_link_table_holds_the_messages_of_the_old_manifest '[ "$(q ratatoskr "select count(*) from channel_digests.digest_manifest_sources where manifest_id = '"'"'$m_old'"'"'")" -ge 1 ]'
+  assert old_manifest_is_served_before_retention '[ "$(manifest_status "$m_old" "$U1" "$run2_rid" "$m_old_sha")" = 200 ] && [ "$(shasum -a 256 <"$manifest_body" | cut -d" " -f1)" = "$m_old_sha" ]'
+  # SEEDED: the run of the first manifest is made terminal and its window is moved 40 days back, past the worker's cutoff (RETENTION__BODY_DAYS 8); the manifest and its result row are the ones the faulted helper and the real recap produced
+  out=$(q ratatoskr "update channel_digests.digest_runs set state = 'completed', window_start = now() - interval '40 days', window_end = now() - interval '39 days' where run_id = '$run2_rid' returning 1")
+  assert manifest_retention_window_rewound_by_sql_seeded '[ "$out" = 1 ]' "rows=$out"
+  untilt '[ "$(q ratatoskr "select count(*) from channel_digests.digest_manifests where manifest_id = '"'"'$m_old'"'"' and canonical_text is null and minimized_at is not null")" = 1 ]' 150
+  assert old_manifest_text_is_nulled_and_minimized_at_set '[ "$(q ratatoskr "select count(*) from channel_digests.digest_manifests where manifest_id = '"'"'$m_old'"'"' and canonical_text is null and minimized_at is not null")" = 1 ]'
+  assert old_manifest_digest_and_counts_are_unchanged '[ "$(q ratatoskr "select count(*) from channel_digests.digest_manifests where manifest_id = '"'"'$m_old'"'"' and sha256 = '"'"'$m_old_sha'"'"' and source_count = $m_old_sources and channel_count = $m_old_channels")" = 1 ]' "sha256=$m_old_sha sources=$m_old_sources channels=$m_old_channels"
+  assert minimized_manifest_route_answers_410_with_an_empty_body_to_matching_claims '[ "$(manifest_status "$m_old" "$U1" "$run2_rid" "$m_old_sha")" = 410 ] && [ ! -s "$manifest_body" ]'
+  assert minimized_manifest_route_answers_404_to_a_wrong_digest '[ "$(manifest_status "$m_old" "$U1" "$run2_rid" "$(printf "%064d" 0)")" = 404 ]'
+  assert minimized_manifest_route_answers_404_to_another_owner '[ "$(manifest_status "$m_old" "$U2" "$run2_rid" "$m_old_sha")" = 404 ]'
+  assert younger_manifest_is_untouched_and_served_with_its_exact_text '[ "$(q ratatoskr "select count(*) from channel_digests.digest_manifests where manifest_id = '"'"'$m_young'"'"' and canonical_text is not null and minimized_at is null")" = 1 ] && [ "$(manifest_status "$m_young" "$U1" "$run3_rid" "$m_young_sha")" = 200 ] && [ "$(shasum -a 256 <"$manifest_body" | cut -d" " -f1)" = "$m_young_sha" ]'
+  info "NOT RUN natively (R6-02): the withdrawal of a manifest that holds a message deleted upstream needs the MTProto provider (live credentials); the repository's tests are the evidence"
   info "NOT RUN natively (R5-07): the 100-post cap, the honest partial flag and the withdrawal by absence need the MTProto provider (live credentials); the repository's scripted-provider tests are the evidence"
   info "leg S (R4, best-effort): the scheduler fires an occurrence for the schedule the worker registered; the worker creates a scheduled run for the owner"
   pg_set_password ratatoskr_scheduler || return

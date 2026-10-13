@@ -593,13 +593,21 @@ def s14_staging_reaper():
     for i in range(len(mismatch.chunks())):
         mismatch.put(i)
     fs, fj, _ = mismatch.finalize()
-    A("reaper.digest_mismatch_session_is_refused", fs in (400, 409, 422) or mismatch.status()[0] == 404, f"finalize={fs} code={fj.get('code')}")
+    # The row is read once, at once, before the first reaper tick (SWEEP_INTERVAL_SECONDS=30) can remove it.
+    mismatch_row, mismatch_rc, mismatch_err = sql(f"select session_state from operations.ai_archive_transfers where operation_id = '{mismatch.op}'")
+    mismatch_dir_present = mismatch.token in staging_dirs()
+    declared = mismatch.sha  # the digest of the ORIGINAL bytes, fixed when the upload was built, before the first byte was flipped
+    computed = hashlib.sha256(mismatch.data).hexdigest()  # the digest of the bytes that were actually sent
+    A("reaper.digest_mismatch_session_is_refused",
+      fs == 200 and fj.get("outcome") == "digest_mismatch"
+      and fj.get("declared_sha256_hex") == declared and fj.get("computed_sha256_hex") == computed and declared != computed,
+      f"finalize={fs} outcome={fj.get('outcome')} declared={str(fj.get('declared_sha256_hex'))[:12]} (sent as {declared[:12]}) computed={str(fj.get('computed_sha256_hex'))[:12]} (actual {computed[:12]})")
+    A("reaper.mismatch_session_is_failed", mismatch_rc == 0 and mismatch_row == "failed", f"transfer row session_state={mismatch_row!r} {mismatch_err[:100]}")
+    A("reaper.mismatch_chunks_are_left_for_the_reaper", mismatch_dir_present, f"staging directory of the mismatch token present right after finalize={mismatch_dir_present}")
     fresh = Upload("chatgpt", c1, FX / "chatgpt-multichunk.zip", key=f"smoke-fresh-{os.urandom(3).hex()}")
     fresh.prepare(); fresh.open(); fresh.put(0)
     rows, rc, err = sql(f"select resumption_token || ' ' || session_state from operations.ai_archive_transfers where operation_id in ('{abandoned.op}','{mismatch.op}','{fresh.op}') order by opened_at")
     A("reaper.three_sessions_staged", rc == 0 and len(rows.splitlines()) == 3 and all(t in staging_dirs() for t in (abandoned.token, fresh.token)), f"rows={rows!r} dirs={len(staging_dirs())} {err[:100]}")
-    states = dict(line.split(" ") for line in rows.splitlines() if " " in line)
-    A("reaper.mismatch_session_is_failed", states.get(mismatch.token) == "failed" or mismatch.token not in states, f"state={states.get(mismatch.token)}")
     # SEEDED: rewind the abandoned session's clock (the schema requires expires_at to follow opened_at, so both move); an orphan directory an hour old, made by hand
     out, rc, err = sql(f"update operations.ai_archive_transfers set opened_at = now() - interval '25 hours', expires_at = now() - interval '1 minute' where operation_id = '{abandoned.op}' returning 1")
     A("reaper.expiry_rewound_by_sql_seeded", rc == 0 and out == "1", f"{out!r} {err[:160]}")
@@ -607,9 +615,13 @@ def s14_staging_reaper():
     orphan.mkdir()
     subprocess.run(["touch", "-t", time.strftime("%Y%m%d%H%M", time.localtime(time.time() - 2 * 3600)), str(orphan)])
     before = {r: staging_counter(r) for r in ("expired", "failed")}
-    gone = wait_for(lambda: abandoned.token not in staging_dirs() and orphan.name not in staging_dirs()
-                    and (mismatch.token not in staging_dirs()), 75)
-    A("reaper.abandoned_expired_failed_and_orphan_directories_removed_within_two_intervals", gone, f"dirs left={[d for d in staging_dirs()]}")
+    must_go = {"abandoned": abandoned.token, "mismatch": mismatch.token, "orphan": orphan.name}
+    gone = wait_for(lambda: not any(name in staging_dirs() for name in must_go.values()), 75)
+    still_there = [label for label, name in must_go.items() if name in staging_dirs()]
+    A("reaper.abandoned_expired_failed_and_orphan_directories_removed_within_two_intervals",
+      gone and fresh.token in staging_dirs(),
+      "removed=abandoned,mismatch,orphan kept=fresh" if gone and fresh.token in staging_dirs()
+      else f"should have been removed but remain: {still_there}; fresh directory kept={fresh.token in staging_dirs()}")
     rows_after, _, _ = sql(f"select count(*) from operations.ai_archive_transfers where operation_id in ('{abandoned.op}','{mismatch.op}')")
     A("reaper.expired_and_failed_rows_removed", rows_after == "0", f"rows={rows_after}")
     A("reaper.fresh_open_session_untouched", fresh.token in staging_dirs() and fresh.status()[0] == 200, f"status={fresh.status()[0]}")

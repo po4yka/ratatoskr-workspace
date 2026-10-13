@@ -6,8 +6,8 @@ export PYTHONDONTWRITEBYTECODE=1
 NATIVE_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 WORKSPACE_ROOT=$(cd "$NATIVE_ROOT/../.." && pwd)
 R=$WORKSPACE_ROOT/repos
-S=${RATATOSKR_SMOKE_DIR:-$HOME/.cache/ratatoskr-smoke/XR-021-r5}
-EVIDENCE_ROOT=$WORKSPACE_ROOT/evidence/XR-021-r5
+S=${RATATOSKR_SMOKE_DIR:-$HOME/.cache/ratatoskr-smoke/XR-021-r6}
+EVIDENCE_ROOT=$WORKSPACE_ROOT/evidence/XR-021-r6
 # Which source the flows build and read: empty means the commits the workspace pins (the submodule checkouts under repos/, which are never touched). A git ref such as origin/main exports that ref of every repository a flow uses into $S/src with git archive (src_prepare), so a flow can run against the heads the children publish before the workspace pins them; the submodules stay at their pins and clean.
 SMOKE_REF=${RATATOSKR_SMOKE_REF:-}
 if [[ -n "$SMOKE_REF" ]]; then R=$S/src; else R=$WORKSPACE_ROOT/repos; fi

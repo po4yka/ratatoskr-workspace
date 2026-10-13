@@ -121,14 +121,14 @@ done < <(code_lines "$native/lib/services.sh" | awk '/(^|[;&|({ \t])kill[ \t]/')
 rg --quiet --fixed-strings 'kill -KILL "$pid"' "$native/lib/services.sh" || fail "lib/services.sh lost its SIGKILL of the recorded pid"
 rg --quiet --fixed-strings 'kill -TERM "$pid"' "$native/lib/services.sh" || fail "lib/services.sh lost its SIGTERM of the recorded pid"
 rg --quiet --fixed-strings 'smoke_dir_guard' "$native/lib/common.sh" || fail "the state directory guard is gone"
-(cd "$workspace_root" && git check-ignore --quiet evidence/XR-021-r5/f0/result.txt) || fail "evidence/XR-021-r5 is not gitignored"
+(cd "$workspace_root" && git check-ignore --quiet evidence/XR-021-r6/f0/result.txt) || fail "evidence/XR-021-r6 is not gitignored"
 
 # --- Round 4 fixes (R4-12): each is a defect the first honest read of the harness found --------------------------
 # The state directory and the evidence root name the round; none of the harness may still name the previous one.
-previous_round="XR-021-r$((5 - 1))"
+previous_round="XR-021-r$((6 - 1))"
 stale=$(rg --files-with-matches --fixed-strings "$previous_round" "$native" "$workspace_root/integration/tests" || true)
 [[ -z "$stale" ]] || fail "a file still names $previous_round: $stale"
-rg --quiet --fixed-strings 'XR-021-r5' "$native/lib/common.sh" || fail "lib/common.sh does not default to the round 5 state directory"
+rg --quiet --fixed-strings 'XR-021-r6' "$native/lib/common.sh" || fail "lib/common.sh does not default to the round 6 state directory"
 
 # assert evaluates the caller's condition in the caller's scope, so its own locals must not shadow a caller variable.
 shadow=$(EV="$scratch/shadow-ev" bash -c 'mkdir -p "$EV"; source "$1"
@@ -210,6 +210,66 @@ rg --quiet --fixed-strings 'fresh(j)' "$native/fixtures/f1_scenario.py" || fail 
 rg --quiet --fixed-strings '.sha256' "$native/fixtures/f1_scenario.py" || fail "f1_scenario.py does not record the digest of what it uploads"
 rg --quiet --fixed-strings '.sha256' "$native/lib/services.sh" || fail "upload_archive does not record the digest of what it uploads"
 
+# --- Round 6 (R6-04 rules 2 to 4): the F1 reaper assertions assert what their names say -----------------------------
+# The scan reads the Python AST, so the assertion is found whatever its layout, and it is proved on a good and a bad scratch scenario before it is trusted on the real file.
+cat >"$scratch/scan_f1.py" <<'PYEOF'
+import ast, sys
+
+def calls(tree):
+    found = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "A" and node.args and isinstance(node.args[0], ast.Constant):
+            found[node.args[0].value] = " ".join(ast.unparse(arg) for arg in node.args[1:])  # the condition and the detail, never the name
+    return found
+
+source = open(sys.argv[1], encoding="utf-8").read()
+found = calls(ast.parse(source))
+problems = []
+refused = found.get("reaper.digest_mismatch_session_is_refused")
+failed = found.get("reaper.mismatch_session_is_failed")
+if refused is None:
+    problems.append("reaper.digest_mismatch_session_is_refused is not asserted")
+else:
+    for needle in ("outcome", "digest_mismatch", "declared_sha256_hex", "computed_sha256_hex"):
+        if needle not in refused:
+            problems.append(f"the refused assertion does not mention {needle}")
+    for banned in ("in (400, 409, 422)", "404"):
+        if banned in refused:
+            problems.append(f"the refused assertion still accepts {banned}")
+if failed is None:
+    problems.append("reaper.mismatch_session_is_failed is not asserted")
+elif "not in states" in failed or "not in" in failed:
+    problems.append("the failed assertion still passes when the row is gone (not in ...)")
+if "dirs left=" in source:
+    problems.append("a PASS detail still prints dirs left=")
+print("; ".join(problems))
+sys.exit(1 if problems else 0)
+PYEOF
+cat >"$scratch/f1_bad.py" <<'PYEOF'
+A("reaper.digest_mismatch_session_is_refused", fs in (400, 409, 422) or mismatch.status()[0] == 404, f"finalize={fs}")
+A("reaper.mismatch_session_is_failed", states.get(mismatch.token) == "failed" or mismatch.token not in states, "x")
+A("reaper.abandoned", gone, f"dirs left={[d for d in staging_dirs()]}")
+PYEOF
+cat >"$scratch/f1_good.py" <<'PYEOF'
+A(
+    "reaper.digest_mismatch_session_is_refused",
+    fs == 200 and fj.get("outcome") == "digest_mismatch" and fj.get("declared_sha256_hex") == declared and fj.get("computed_sha256_hex") == computed and declared != computed,
+    "x",
+)
+A("reaper.mismatch_session_is_failed", row == "failed", "x")
+A("reaper.abandoned", gone, "removed=abandoned,mismatch,orphan kept=fresh")
+PYEOF
+status=0
+"$PY" -I "$scratch/scan_f1.py" "$scratch/f1_good.py" >/dev/null || status=$?
+[[ $status == 0 ]] || fail "the F1 scan rejects a scenario that asserts exactly what the names say"
+status=0
+bad=$("$PY" -I "$scratch/scan_f1.py" "$scratch/f1_bad.py") || status=$?
+[[ $status == 1 ]] || fail "the F1 scan accepts a scenario with the old assertions"
+for symptom in "still accepts in (400, 409, 422)" "still accepts 404" "not in" "dirs left="; do
+  rg --quiet --fixed-strings "$symptom" <<<"$bad" || fail "the F1 scan did not name the symptom '$symptom' on the old assertions: $bad"
+done
+f1_findings=$("$PY" -I "$scratch/scan_f1.py" "$native/fixtures/f1_scenario.py") || fail "f1_scenario.py: $f1_findings"
+
 # --- syntax, and shellcheck when installed -----------------------------------------------------------------------
 for script in "${scripts[@]}"; do
   bash -n "$script" || fail "syntax error in $script"
@@ -271,7 +331,7 @@ for built in "$scratch/fx"/*; do
   cmp -s "$built" "$scratch/fx2/$(basename "$built")" || fail "archives.py is not deterministic: $(basename "$built") differs between two builds"
 done
 for archive in chatgpt-conversations-only chatgpt-full chatgpt-asset-missing chatgpt-multichunk chatgpt-series-1 chatgpt-series-2 chatgpt-series-3 chatgpt-u2 \
-  claude-complete claude-nofiles claude-reference-only claude-badkb claude-series-1 claude-series-2 claude-series-3 claude-u2; do
+  chatgpt-inflight claude-inflight claude-complete claude-nofiles claude-reference-only claude-badkb claude-series-1 claude-series-2 claude-series-3 claude-u2; do
   "$PY" -I -c 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None and z.namelist()' "$scratch/fx/$archive.zip" || fail "archive $archive.zip is not a valid ZIP"
 done
 "$PY" -I -c '

@@ -7,7 +7,7 @@
 #   run.sh --prune                remove what earlier runs left under $RATATOSKR_SMOKE_DIR (nothing else)
 #   run.sh FLOW [FLOW...]         run flows one at a time, in the order given
 #
-# This is a manual, machine-dependent run, not a CI gate. State lives in $RATATOSKR_SMOKE_DIR (default $HOME/.cache/ratatoskr-smoke/XR-021-r5); evidence summaries go to the gitignored evidence/XR-021-r5/<flow>/. See README.md.
+# This is a manual, machine-dependent run, not a CI gate. State lives in $RATATOSKR_SMOKE_DIR (default $HOME/.cache/ratatoskr-smoke/XR-021-r6); evidence summaries go to the gitignored evidence/XR-021-r6/<flow>/. See README.md.
 # RATATOSKR_SMOKE_REF=origin/main runs the flows against that ref of every repository a flow uses (exported with git archive into the state directory) instead of the commits the workspace pins; the pinned submodules are never touched.
 
 set -uo pipefail

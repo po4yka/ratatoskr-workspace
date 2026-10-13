@@ -325,6 +325,68 @@ f6_concurrency() {
   assert no_committed_export_references_a_missing_blob '[ "$missing" = 0 ]' "exports whose raw blob is missing: $missing"
 }
 
+# f6_in_flight PROVIDER: R6-03. An export is imported and its conversation is deleted as soon as the import has committed, while the importer's pump has the conversation's facts queued or in flight. Whichever side wins the race, the outbox keeps no row of the conversation and the stream keeps no fact message of it. The race is NOT forced here (a hit of the pump's 5 s window needs a paused pump, which only the repository tests of R6-03 rule 7 have); this leg shows that the shipped pair of processes ends in the same state either way.
+f6_in_flight() {
+  local provider=$1 dev=$2 file account conv req rid word stream_count outbox_count
+  "$PY" -I "$NATIVE_ROOT/fixtures/archives.py" "$S/fx" >/dev/null
+  if [[ $provider == chatgpt ]]; then
+    file=$S/fx/chatgpt-inflight.zip word=Quokka
+    account=$(q ratatoskr "select id from chatgpt_archive.accounts where external_ref='smoke-chatgpt-account-2'")
+  else
+    file=$S/fx/claude-inflight.zip word=Rowan
+    account=00000000-0000-7000-8000-0000000000b2
+  fi
+  assert "in_flight_${provider}_fixture_and_account_found" '[ -f "$file" ] && [ -n "$account" ]' "fixture $(basename "$file") account $account"
+  [[ -f "$file" && -n "$account" ]] || return
+  (upload_archive "$provider" "$file" "$dev" >/dev/null 2>&1) &
+  local upload=$!
+  if [[ $provider == chatgpt ]]; then
+    untilt '[ -n "$(q ratatoskr "select id from chatgpt_archive.conversations where account_id = '"'"'$account'"'"' and title like '"'"'$word%'"'"'")" ]' 90
+    conv=$(q ratatoskr "select id from chatgpt_archive.conversations where account_id = '$account' and title like '$word%'")
+  else
+    untilt '[ -n "$(q ratatoskr "select conversation_id from claude_archive.conversations where account_id = '"'"'$account'"'"' and title like '"'"'$word%'"'"'")" ]' 90
+    conv=$(q ratatoskr "select conversation_id from claude_archive.conversations where account_id = '$account' and title like '$word%'")
+  fi
+  assert "in_flight_${provider}_import_committed_its_conversation" '[ -n "$conv" ]' "conversation $conv"
+  if [[ -z "$conv" ]]; then wait "$upload"; return; fi
+  # no pause: the deletion is issued the moment the import has committed
+  req=$(uuid4)
+  if [[ $provider == chatgpt ]]; then
+    cg plan --tenant "$account" --request "$req" --conversation "$conv" >"$EV/in-flight-chatgpt-plan.json"
+    cg execute --tenant "$account" --request "$req" --confirm >"$EV/in-flight-chatgpt-exec.json"
+    assert in_flight_chatgpt_deletion_completed '[ "$(jq -r .status "$EV/in-flight-chatgpt-exec.json")" = completed ]' "$(jq -c .totals "$EV/in-flight-chatgpt-exec.json" | cut -c1-200)"
+  else
+    cl plan --tenant "$account" --request-key "f6-in-flight-claude" --scope conversation --target "$conv" >"$EV/in-flight-claude-plan.json"
+    rid=$(q ratatoskr "select request_id from claude_archive.privacy_deletion_requests where request_key='f6-in-flight-claude'")
+    cl execute --tenant "$account" --request-id "$rid" --confirm >"$EV/in-flight-claude-exec.json"
+    assert in_flight_claude_deletion_completed '[ "$(q ratatoskr "select state from claude_archive.privacy_deletion_requests where request_id='"'"'$rid'"'"'")" = completed ]'
+  fi
+  wait "$upload"
+  info "in-flight $provider: the upload has ended (the import may have been cut short by the deletion; either end is acceptable, the assertions below are about what is left behind)"
+  if [[ $provider == chatgpt ]]; then
+    outbox_count='q ratatoskr "select count(*) from chatgpt_archive.outbox_events where aggregate_id::text = '"'"'$conv'"'"' and event_type like '"'"'ai_archive.conversation.%'"'"'"'
+  else
+    outbox_count='q ratatoskr "select count(*) from claude_archive.outbox_events where aggregate_id = '"'"'$conv'"'"' and event_type like '"'"'ai_archive.conversation.%'"'"'"'
+  fi
+  stream_count='{ probe messages "$S/nk/edge.nkey" ratatoskr_events evt.ai_archive.conversation.added.v1; probe messages "$S/nk/edge.nkey" ratatoskr_events evt.ai_archive.conversation.updated.v1; } | jq -s --arg c "$conv" "[.[] | select(.aggregate_id | tostring | contains(\$c))] | length"'
+  untilt '[ "$(eval "$outbox_count")" = 0 ] && [ "$(eval "$stream_count")" = 0 ]' 60
+  assert "in_flight_${provider}_outbox_holds_no_row_of_the_deleted_conversation" '[ "$(eval "$outbox_count")" = 0 ]' "conversation fact rows of $conv in the outbox: $(eval "$outbox_count")"
+  assert "in_flight_${provider}_stream_holds_no_fact_message_of_the_deleted_conversation" '[ "$(eval "$stream_count")" = 0 ]' "conversation.added and .updated messages naming $conv on ratatoskr_events, counted within 60 s of the deletion: $(eval "$stream_count")"
+}
+
+f6_in_flight_all() {
+  info "in-flight deletion (R6-03): a conversation is deleted the moment its import commits, with the pump publishing; for ChatGPT and for Claude"
+  local browser2 code_value dev2
+  browser2=$(secret browser2)
+  call f-pairing-code POST "$EDGE/v1/devices/pairing-codes" "$browser2" '{"expected_kind":"export_agent","label":"smoke"}' >/dev/null
+  code_value=$(jq -r .code "$EV/f-pairing-code.resp.body")
+  call f-pair POST "$EDGE/v1/devices/pair" "" "$(jq -nc --arg c "$code_value" '{code:$c,kind:"export_agent",display_name:"smoke export agent 3"}')" >/dev/null
+  dev2=$(jq -r .credential "$EV/f-pair.resp.body")
+  f6_in_flight chatgpt "$dev2"
+  f6_in_flight claude "$dev2"
+  info "NOT FORCED natively (R6-03): the race is not forced; a hit of the pump's 5 s in-flight window needs a paused pump, and the deterministic proof is the repository tests of R6-03 rule 7"
+}
+
 flow_run() {
   infra_resume || { assert infra_resume 'false' "PostgreSQL or NATS did not resume the state of F1"; return; }
   svc_start edge
@@ -353,6 +415,7 @@ flow_run() {
   f6_foreign_ack
   f6_mapping_change
   f6_concurrency
+  f6_in_flight_all
   f6_tenant_job
   assert the_durables_drained_at_the_end '[ "$(pending ratatoskr_knowledge_ai_archive)" = 0 ]' "ai_archive pending+ack-pending: $(pending ratatoskr_knowledge_ai_archive)"
 }
