@@ -1623,6 +1623,9 @@ round_5:
     workspace_commits_before_this_record:
       - "4d95fa7 fix: make the native smoke run against the round 5 heads and pass for real"
       - "9dd4dcb docs: record the round 5 native smoke run"
+    published:
+      pushed: "plain fast-forward of origin/main from 0b50401 to 97a68d7ad81faf57fc1f5428a47f6602d32269cd on 2026-10-13: 4d95fa7, 9dd4dcb, e4c3f63 (specs, harness checks, documentation, archive of rounds 3 and 4) and 97a68d7 (the fourteen pins, workspace.lock, EXPECTED_PINS, this changeset block)"
+      hosted_ci_of_97a68d7: "the five required check runs concluded success on 2026-10-13: fleet / invariants, openspec / specs, zizmor / audit, deny and snapshot (workflows fleet, openspec, zizmor and workspace snapshot)"
     manifest: "workspace.toml unchanged (it names no revisions); workspace.lock regenerated with ./ws lock generate"
     integration_profile_not_changed: "integration/run-export-agent-product.sh was not edited: its NATS configuration is rendered from the pinned Platform ratatoskr.conf, and export_agent_product_profile_test.sh passes at the Round 5 pins"
   harness_results:
@@ -1767,3 +1770,7 @@ round_5:
     - repository: "child repositories"
       kind: "none"
       detail: "no flow was stopped by a service defect and nothing is reported against a child repository as a blocker."
+    - repository: "ratatoskr-workspace (scheduled workflow)"
+      kind: "pre-existing observation, not part of this change"
+      where: ".github/workflows/drift.yml, issue 20"
+      detail: "the weekly drift check has failed since 2026-10-05 (runs 37308964584 and 38254422070): the wrappers of the child repositories pin .github/workflows/reusable-advisories.yml at b7bd2a15b4ed, which is not the revision on main, and every wrapper must raise the SHA. The fix is an edit in each child repository, which this change does not make. Open; the next scheduled run will show whether the pins of this change alter the result."

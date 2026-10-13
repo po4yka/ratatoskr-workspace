@@ -52,8 +52,8 @@ Dependency order. Every child repository pushed its Round 5 commits directly to 
 ## 8. Verification
 
 - [x] 8.1 Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` and `cargo test --workspace --all-features --locked` in `harness/`, `./ws manifest check`, `./ws lock check`, `./ws status`, `./ws doctor`, `openspec validate --all --strict`, `git diff --check`, and the integration contract tests that do not need Docker.
-- [ ] 8.2 Publish and confirm the hosted CI of the pushed commits. Recorded in the changeset after the run is read.
+- [x] 8.2 Publish and confirm the hosted CI of the pushed commits: e4c3f63 (specs, checks, documentation) and 97a68d7ad81faf57fc1f5428a47f6602d32269cd (the fourteen pins) were pushed to `origin/main` as a plain fast-forward on 2026-10-13, and the five required checks of 97a68d7 (fleet / invariants, openspec / specs, zizmor / audit, deny, snapshot) concluded success. The commit that records this result is checked the same way and named in the changeset.
 
 ## 9. Archive
 
-- [ ] 9.1 NOT DONE: `xr-021-fleet-round-3` and `xr-021-fleet-round-4` are archived first, in that order, because this change restates their run-report text in a MODIFIED delta. This change is archived only when every task is ticked; task 6.2 and task 8.2 are open, so it is not archived. An archive with an unticked task is the false close that `openspec validate --archived` exists to refuse.
+- [ ] 9.1 NOT DONE: `xr-021-fleet-round-3` and `xr-021-fleet-round-4` are archived first, in that order, because this change restates their run-report text in a MODIFIED delta. This change is archived only when every task is ticked; task 6.2 is open, so it is not archived. An archive with an unticked task is the false close that `openspec validate --archived` exists to refuse.
