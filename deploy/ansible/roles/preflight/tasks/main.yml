@@ -24,7 +24,7 @@
   ansible.builtin.assert:
     that:
       - ratatoskr_operator_secrets.telegram_bot_token | default('') | length > 0
-      - ratatoskr_telegram_owner_user_id | default('') | string | regex_search('^[0-9]+$')
+      - ratatoskr_telegram_owner_user_id | default('') | string is match('^[0-9]+$')
     fail_msg: >-
       {{ ratatoskr_secrets_file }} must set ratatoskr_operator_secrets.telegram_bot_token and
       ratatoskr_telegram_owner_user_id.

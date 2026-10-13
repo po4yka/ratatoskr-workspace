@@ -61,6 +61,14 @@
       vars:
         ratatoskr_start: "{{ ratatoskr_services | rejectattr('name', 'equalto', 'edge') | list }}"
 
+    # Each service is started on its own, in the order above, and that leaves the target inactive.
+    # While it is inactive, `systemctl stop ratatoskr.target` stops nothing. Starting it now only
+    # joins the services that already run, as a boot does; it restarts none of them.
+    - name: The services run as one, under ratatoskr.target
+      ansible.builtin.systemd_service:
+        name: ratatoskr.target
+        state: started
+
     - name: The database roles of services that ship no unit yet
       ansible.builtin.include_role:
         name: postgres

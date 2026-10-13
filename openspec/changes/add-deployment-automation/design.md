@@ -175,8 +175,8 @@ lift the freeze by passing a command-line flag.
   `shared-postgres` itself (pgvector, which Knowledge's `role.sql` needs), because on the real host
   it already exists, and the playbook only checks for it.
 - **Phases:** converge, idempotence (zero changes), then verify. Verify covers byte-identical
-  units, users, modes, the ufw rule, `ratatoskr.target` enabled, every enrolled service ready, the
-  order log, and a secret scan of the recorded output.
+  units, users, modes, the ufw rule, `ratatoskr.target` enabled and active, every enrolled service
+  ready, the order log, and a secret scan of the recorded output.
 - **The harness test `deploy_inventory.rs`** runs in the existing workspace CI with no containers.
   It checks enrolment against the pinned units, the target lines, and the absence of copied or
   secret files.

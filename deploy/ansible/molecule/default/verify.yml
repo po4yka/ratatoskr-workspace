@@ -385,6 +385,14 @@
       no_log: true
 
     # --- stop_as_one --------------------------------------------------------------------------------
+    # The converge must leave the deployment as a boot leaves it. While the target is inactive,
+    # `systemctl stop ratatoskr.target` is a no-op and every unit keeps running.
+    - name: "stop_as_one: the converge left ratatoskr.target active"
+      ansible.builtin.command: systemctl is-active ratatoskr.target
+      register: target
+      failed_when: target.stdout | trim != 'active'
+      changed_when: false
+
     - name: "stop_as_one: stop the target"
       ansible.builtin.systemd_service:
         name: ratatoskr.target

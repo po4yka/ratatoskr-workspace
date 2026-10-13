@@ -94,4 +94,4 @@ From a clean Debian 12 arm64 install, provisioning SHALL recreate every host fac
 #### Scenario: A clean target is converged
 
 - **WHEN** Molecule converges a fresh Debian 12 arm64 container
-- **THEN** the verify step finds every user, group, directory mode, ufw rule and unit that `DEPLOYMENT_TARGET.md` and the services' deploy guides require, and `ratatoskr.target` is enabled
+- **THEN** the verify step finds every user, group, directory mode, ufw rule and unit that `DEPLOYMENT_TARGET.md` and the services' deploy guides require, and `ratatoskr.target` is enabled and active, so that `systemctl stop ratatoskr.target` stops every enrolled service
