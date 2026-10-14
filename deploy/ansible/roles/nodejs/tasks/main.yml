@@ -1,6 +1,9 @@
 # Node.js from the NodeSource repository of one major version, and obsidian-headless (`ob`) at the
-# version spike 3.2 recorded. The tarball is checked against both recorded checksums before npm
-# installs it, and npm installs it again only when the installed version differs.
+# version spike 3.2 recorded. npm installs the tree of ob from the committed lockfile, which records
+# the integrity of every package, into a prefix that only root writes, and runs no lifecycle script,
+# so nothing downloads at install time. The one native module, that of better-sqlite3, is the
+# release prebuilt for the Node.js ABI and the host architecture, checked against its recorded
+# sha256 before it is put in place.
 
 - name: The directory of apt signing keys
   ansible.builtin.file:
@@ -36,7 +39,36 @@
     state: present
     update_cache: true
 
-- name: The directory of checked npm tarballs
+- name: The committed lockfile pins the obsidian-headless and better-sqlite3 that the host records
+  ansible.builtin.assert:
+    that:
+      - ratatoskr_ob_locked['node_modules/obsidian-headless'].version == ratatoskr_obsidian_headless.version
+      - ratatoskr_ob_locked['node_modules/obsidian-headless'].integrity == ratatoskr_obsidian_headless.integrity
+      - ratatoskr_ob_locked['node_modules/better-sqlite3'].version == ratatoskr_better_sqlite3.version
+    quiet: true
+  vars:
+    ratatoskr_ob_locked: "{{ (lookup('ansible.builtin.file', 'obsidian-headless/package-lock.json') | from_json).packages }}"
+
+- name: The Node.js ABI and architecture, which select the prebuilt native module
+  ansible.builtin.command:
+    argv: [node, -p, "process.versions.modules + ' ' + process.arch"]
+  register: ratatoskr_node_target
+  changed_when: false
+
+- name: A prebuilt native module is recorded for that ABI and architecture
+  ansible.builtin.assert:
+    that:
+      - ratatoskr_node_target.stdout.split() | first == ratatoskr_better_sqlite3.abi | string
+      - ratatoskr_node_target.stdout.split() | last in ratatoskr_better_sqlite3.prebuilt
+    fail_msg: "no better-sqlite3 prebuilt is recorded for Node.js ABI and architecture {{ ratatoskr_node_target.stdout }}"
+    quiet: true
+
+- name: The name of the prebuilt native module
+  ansible.builtin.set_fact:
+    ratatoskr_better_sqlite3_arch: "{{ ratatoskr_node_target.stdout.split() | last }}"
+    ratatoskr_better_sqlite3_prebuilt: "better-sqlite3-v{{ ratatoskr_better_sqlite3.version }}-node-v{{ ratatoskr_better_sqlite3.abi }}-linux-{{ ratatoskr_node_target.stdout.split() | last }}"
+
+- name: The directory of checked downloads
   ansible.builtin.file:
     path: "{{ ratatoskr_state_dir }}/npm"
     state: directory
@@ -44,47 +76,113 @@
     group: root
     mode: "0700"
 
-- name: The obsidian-headless tarball, checked against its recorded sha256
+- name: The prebuilt native module, checked against its recorded sha256
   ansible.builtin.get_url:
-    url: "https://registry.npmjs.org/obsidian-headless/-/obsidian-headless-{{ ratatoskr_obsidian_headless.version }}.tgz"
-    dest: "{{ ratatoskr_state_dir }}/npm/obsidian-headless-{{ ratatoskr_obsidian_headless.version }}.tgz"
-    checksum: "sha256:{{ ratatoskr_obsidian_headless.sha256 }}"
+    url: "https://github.com/WiseLibs/better-sqlite3/releases/download/v{{ ratatoskr_better_sqlite3.version }}/{{ ratatoskr_better_sqlite3_prebuilt }}.tar.gz"
+    dest: "{{ ratatoskr_state_dir }}/npm/{{ ratatoskr_better_sqlite3_prebuilt }}.tar.gz"
+    checksum: "sha256:{{ ratatoskr_better_sqlite3.prebuilt[ratatoskr_better_sqlite3_arch].sha256 }}"
     owner: root
     group: root
     mode: "0600"
 
-- name: The tarball has the recorded npm integrity
+- name: The directory the prebuilt is unpacked in
+  ansible.builtin.file:
+    path: "{{ ratatoskr_state_dir }}/npm/{{ ratatoskr_better_sqlite3_prebuilt }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: The prebuilt, unpacked
+  ansible.builtin.unarchive:
+    src: "{{ ratatoskr_state_dir }}/npm/{{ ratatoskr_better_sqlite3_prebuilt }}.tar.gz"
+    dest: "{{ ratatoskr_state_dir }}/npm/{{ ratatoskr_better_sqlite3_prebuilt }}"
+    remote_src: true
+    creates: "{{ ratatoskr_state_dir }}/npm/{{ ratatoskr_better_sqlite3_prebuilt }}/build/Release/better_sqlite3.node"
+
+- name: The prefix of ob, which only root writes
+  ansible.builtin.file:
+    path: "{{ ratatoskr_ob_prefix }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: The manifest and the lockfile of ob
+  ansible.builtin.copy:
+    src: "obsidian-headless/{{ item }}"
+    dest: "{{ ratatoskr_ob_prefix }}/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [package.json, package-lock.json]
+  register: ratatoskr_ob_files
+
+# A later npm command in the prefix refuses lifecycle scripts as well.
+- name: npm runs no lifecycle script in the prefix
+  ansible.builtin.copy:
+    dest: "{{ ratatoskr_ob_prefix }}/.npmrc"
+    content: "ignore-scripts=true\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Whether the installed tree is the committed lockfile
   ansible.builtin.command:
     argv:
       - python3
       - -c
       - >-
-        import base64, hashlib, sys;
-        print('sha512-' + base64.b64encode(hashlib.sha512(open(sys.argv[1], 'rb').read()).digest()).decode())
-      - "{{ ratatoskr_state_dir }}/npm/obsidian-headless-{{ ratatoskr_obsidian_headless.version }}.tgz"
-  register: ratatoskr_obsidian_integrity
-  changed_when: false
-  failed_when: ratatoskr_obsidian_integrity.stdout | trim != ratatoskr_obsidian_headless.integrity
-
-- name: The globally installed npm packages
-  ansible.builtin.command:
-    argv: [npm, ls, --global, --json, --depth, "0"]
-  register: ratatoskr_npm_global
+        import json, sys;
+        pinned = lambda path: {key: [entry.get(field) for field in ('version', 'resolved', 'integrity')]
+        for key, entry in json.load(open(path))['packages'].items() if key};
+        sys.exit(0 if pinned(sys.argv[1]) == pinned(sys.argv[2]) else 1)
+      - "{{ ratatoskr_ob_prefix }}/package-lock.json"
+      - "{{ ratatoskr_ob_prefix }}/node_modules/.package-lock.json"
+  register: ratatoskr_ob_tree
   changed_when: false
   failed_when: false
 
-# npm also fetches the two dependencies at the exact versions the package names, and the install
-# script of better-sqlite3 fetches its prebuilt arm64 module.
-- name: obsidian-headless, installed from the checked tarball
+# npm ci fetches each package at the version, URL and integrity of the lockfile, and refuses a
+# package whose bytes do not match.
+- name: The packages of ob, from the lockfile, with no lifecycle script
   ansible.builtin.command:
-    argv:
-      - npm
-      - install
-      - --global
-      - --no-audit
-      - --no-fund
-      - "{{ ratatoskr_state_dir }}/npm/obsidian-headless-{{ ratatoskr_obsidian_headless.version }}.tgz"
-  vars:
-    ratatoskr_npm_packages: "{{ (ratatoskr_npm_global.stdout | default('{}', true) | from_json).dependencies | default({}) }}"
-  when: ratatoskr_npm_packages['obsidian-headless'].version | default('') != ratatoskr_obsidian_headless.version
+    argv: [npm, ci, --omit=dev, --ignore-scripts, --no-audit, --no-fund]
+    chdir: "{{ ratatoskr_ob_prefix }}"
+  when: ratatoskr_ob_tree.rc != 0 or ratatoskr_ob_files is changed
   changed_when: true
+
+- name: The directory where bindings looks for the native module
+  ansible.builtin.file:
+    path: "{{ ratatoskr_ob_prefix }}/node_modules/better-sqlite3/build/Release"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: The native module of better-sqlite3, from the checked prebuilt
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_state_dir }}/npm/{{ ratatoskr_better_sqlite3_prebuilt }}/build/Release/better_sqlite3.node"
+    dest: "{{ ratatoskr_ob_prefix }}/node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: The native module in place
+  ansible.builtin.stat:
+    path: "{{ ratatoskr_ob_prefix }}/node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+    checksum_algorithm: sha256
+  register: ratatoskr_better_sqlite3_module
+
+- name: The native module has its recorded sha256
+  ansible.builtin.assert:
+    that: ratatoskr_better_sqlite3_module.stat.checksum == ratatoskr_better_sqlite3.prebuilt[ratatoskr_better_sqlite3_arch].module_sha256
+    fail_msg: "better_sqlite3.node has sha256 {{ ratatoskr_better_sqlite3_module.stat.checksum }}"
+    quiet: true
+
+- name: /usr/bin/ob, which the notes units start
+  ansible.builtin.file:
+    src: "{{ ratatoskr_ob_prefix }}/node_modules/obsidian-headless/cli.js"
+    dest: /usr/bin/ob
+    state: link

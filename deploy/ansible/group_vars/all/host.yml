@@ -89,17 +89,30 @@ ratatoskr_host_files:
   - {repository: telegram, src: deploy/logrotate/ratatoskr-telegram, dest: /etc/logrotate.d/ratatoskr-telegram, mode: "0644"}
 
 # Node.js and the Obsidian Headless client (`ob`) that the notes template units run, at the version
-# and checksums spike 3.2 recorded (add-notes-vault-connections). ADR-0010: ob is installed from npm
-# on the host and never baked into a published image. NodeSource packages put node in /usr/bin and
-# npm's global prefix at /usr, so `npm install --global` gives /usr/bin/ob, which the units start.
+# and integrity spike 3.2 recorded (add-notes-vault-connections). ADR-0010: ob is installed from npm
+# on the host and never baked into a published image. The tree of ob is the committed lockfile in
+# roles/nodejs/files/obsidian-headless, installed in ratatoskr_ob_prefix, and /usr/bin/ob, which
+# the units start, links to its cli.js.
 ratatoskr_nodejs_major: 22
 ratatoskr_nodesource_key_url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
 # Key 6F71 F525 2828 41EE DAF8 51B4 2F59 B5F9 9B1B E0B4, "NSolid <nsolid-gpg@nodesource.com>".
 ratatoskr_nodesource_key_sha256: b42e0321dabdc24e892115da705cf061167eac12a317f23d329862d0aa0a271d
+ratatoskr_ob_prefix: /opt/ratatoskr-ob
 ratatoskr_obsidian_headless:
   version: 0.0.14
-  sha256: ef75298ed3a356dcb2a4de98c6efe10b2ac64b00556007118b6ac70535e73156
   integrity: sha512-S1d/hxLKvCUG2g5tRyXFkzPqMs3Ntw1tDyzoF2yfHGRuB4B+Mi3X2vgT8LbfQKrkEEi3LfJRdXtYzAVHcbpccw==
+# The native module of better-sqlite3, which ob loads. npm runs no install script, so the release
+# prebuilt for the Node.js ABI (NODE_MODULE_VERSION 127 is Node.js 22) and the host architecture is
+# put in place instead. Each archive sha256 equals the digest GitHub records for the release asset.
+# The Pi and the CI runner of Molecule are arm64; record another architecture before the playbook
+# runs on it.
+ratatoskr_better_sqlite3:
+  version: 12.11.1
+  abi: 127
+  prebuilt:
+    arm64:
+      sha256: 00f8035f4322c14ab4dbb3ee6f4b6c9ca25209fe2a77ac2759cd09dd42587d48
+      module_sha256: c3352cb3b127d28c8163e827dbb8575bef3b5cdff4b2206d562197b5c448f3ea
 
 # Host secrets the playbook generates; each is created once and never read back.
 ratatoskr_generated_secrets:

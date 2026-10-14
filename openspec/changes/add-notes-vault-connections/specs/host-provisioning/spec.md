@@ -42,3 +42,17 @@ The playbook SHALL install each unit of `ratatoskr_template_units` byte-identica
 
 - **WHEN** Molecule runs the verify case `notes_sync_unit` on the converged stand-in
 - **THEN** every notes template unit in the inventory is installed, byte-identical, not enabled and with no instance loaded, and `pkcheck` allows `ratatoskr-notes` to start and stop exactly those units with a UUID instance, and refuses another instance name, an unlisted unit, a unit-file change and another user
+
+### Requirement: The npm tree of ob is pinned and checked before use
+
+The playbook SHALL install `obsidian-headless` and its dependencies from a committed lockfile with a sha512 integrity for each package, into a prefix that only root writes, with no lifecycle script. The native module of `better-sqlite3` SHALL be the release prebuilt for the Node.js ABI and host architecture, checked against its recorded sha256 before use. `/usr/bin/ob` SHALL link to the `cli.js` of that prefix.
+
+#### Scenario: The ob tree on the stand-in
+
+- **WHEN** Molecule runs the verify case `notes_sync_unit` on the converged stand-in
+- **THEN** the tree in `/opt/ratatoskr-ob` equals the committed lockfile package by package, the native module has the recorded sha256, npm keeps no prebuilt download in its cache, and no file of the prefix is another user's or writable by group or other
+
+#### Scenario: No prebuilt is recorded for the host
+
+- **WHEN** the playbook runs on a host whose Node.js ABI and architecture have no recorded prebuilt
+- **THEN** the playbook stops before it downloads a native module
