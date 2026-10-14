@@ -20,10 +20,10 @@ repositories:
       - "a9289e27bcf53f496b5917889580965d97ff2358 feat(notes-contracts): mark the notes events user_content and match the blob media type"
   - id: ratatoskr-notes
     role: new-service-connections-index-sync-supervisor
-    branch: main@cea01d589e2d3980c995deffb2ef4c3635061d88
+    branch: main@10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/notes at cea01d589e2d3980c995deffb2ef4c3635061d88 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced after tasks 5.6 to 5.15). The cleanup and login template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6 and 14.7)
+    pin: repos/notes at 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced after tasks 5.6 to 5.19). The cleanup and login template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6 and 14.7)
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"
@@ -42,6 +42,10 @@ repositories:
       - "1de29dab0aa24328adaba39eb40c19d5ae83518a fix(notes): open the key file once and refuse a leading dash"
       - "4ddf1dec49e966491f62ef04ecca0270865629ce test(notes): stale credentials, a dropped connect and a running login"
       - "cea01d589e2d3980c995deffb2ef4c3635061d88 fix(notes): finish a dropped connect and remove stale credentials"
+      - "9af4b3b786c6de73d794300f0b582e34118f74b1 test(notes): a stop, a disconnect and the limit during a login"
+      - "18a91140fda8c41a448e524a505a8e0bf889035d fix(notes): fail logins at a stop, check the row, bound the logins"
+      - "e546728c9121145d77005d76cdf94f3afe435f23 test(notes): serve stops and starts logins, and a disconnect answers 404"
+      - "10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 fix(notes): serve takes its bus and stop signal, and a disconnect answers 404"
   - id: ratatoskr-platform
     role: edge-route-durables-identity-device-kind-authority
     branch: obs-023/notes-vault-connections
