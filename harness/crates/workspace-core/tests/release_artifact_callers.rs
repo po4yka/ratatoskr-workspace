@@ -219,6 +219,80 @@ fn a_template_unit_that_starts_a_repository_binary_is_caught() {
 }
 
 #[test]
+fn a_template_unit_that_starts_a_repository_binary_through_a_wrapper_is_caught() {
+    let unit = |exec: &str| {
+        vec![(
+            "deploy/systemd/ratatoskr-notes-sync@.service".to_owned(),
+            format!("[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n{exec}\n"),
+        )]
+    };
+    // The shell itself is a host binary. The notes login unit runs ob, cat and builtins through it.
+    for exec in [
+        "ExecStart=/bin/sh -c 'set -- --email \"$$(cat \"$$CREDENTIALS_DIRECTORY/email\")\"; \
+         mfa=\"$$(cat \"$$CREDENTIALS_DIRECTORY/mfa\")\"; if [ -n \"$$mfa\" ]; then set -- \"$$@\" \
+         --mfa \"$$mfa\"; fi; /usr/bin/ob login \"$$@\" < \"$$CREDENTIALS_DIRECTORY/password\" || \
+         exit 10; test -s \"$$XDG_CONFIG_HOME/obsidian-headless/auth_token\" || exit 11'",
+        "ExecStart=/bin/sh -c '/usr/bin/ob sync-setup --vault \"$$(cat \
+         \"$$CREDENTIALS_DIRECTORY/vault\")\" --device-name ratatoskr-%i < \
+         \"$$CREDENTIALS_DIRECTORY/e2e\"; status=$$?; case $$status in 0) exit 0 ;; 2) exit 12 ;; \
+         *) exit 10 ;; esac'",
+        "ExecStart=/usr/bin/env -i HOME=/x /usr/bin/ob sync",
+        "ExecStart=/bin/sh -ec 'exec /usr/bin/ob sync 2>/dev/null'",
+    ] {
+        assert_eq!(
+            repository_binaries(&unit(exec)),
+            Vec::<String>::new(),
+            "{exec}"
+        );
+    }
+
+    assert_eq!(
+        repository_binaries(&unit("ExecStart=/usr/bin/env ratatoskr-notes sync %i")),
+        vec![
+            "deploy/systemd/ratatoskr-notes-sync@.service: ExecStart= starts ratatoskr-notes, \
+             which is not a host or npm binary"
+                .to_owned()
+        ]
+    );
+    assert_eq!(
+        repository_binaries(&unit(
+            "ExecStart=/bin/sh -c '/usr/local/bin/ratatoskr-notes sync %i'"
+        )),
+        vec![
+            "deploy/systemd/ratatoskr-notes-sync@.service: ExecStart= starts \
+             /usr/local/bin/ratatoskr-notes, which is not a host or npm binary"
+                .to_owned()
+        ]
+    );
+    // systemd puts /usr/local/bin/ first in PATH, so a bare name in a shell command is caught
+    // unless the shell runs it as a builtin, and every form below hides one command.
+    for exec in [
+        "ExecStart=/bin/bash -c 'ratatoskr-notes sync'",
+        "ExecStart=/usr/bin/env -i HOME=/x -u PATH ratatoskr-notes",
+        "ExecStart=/usr/bin/env -S 'ratatoskr-notes sync'",
+        "ExecStart=/bin/sh -c 'exec ratatoskr-notes sync'",
+        "ExecStart=/bin/sh -c 'command ratatoskr-notes'",
+        "ExecStart=/bin/sh -c 'ob sync'",
+        "ExecStart=/bin/sh -c 'test -d /x && /usr/local/bin/ratatoskr-notes'",
+        "ExecStart=/bin/sh -c 'x=$$(ratatoskr-notes id); /usr/bin/ob \"$$x\"'",
+        "ExecStart=/bin/sh -c '/usr/bin/ob `ratatoskr-notes id`'",
+        "ExecStart=/bin/sh -c \"/usr/bin/ob x | ratatoskr-notes y\"",
+        "ExecStart=/bin/sh -ec 'if true; then ratatoskr-notes; fi'",
+        "ExecStart=/bin/sh -c '(cd /x; ratatoskr-notes)'",
+        "ExecStart=/bin/sh -c '$$CMD sync'",
+        "ExecStart=/bin/sh -c 'eval ratatoskr-notes'",
+        "ExecStart=/bin/sh -c '/usr/bin/env ratatoskr-notes'",
+        "ExecStart=/bin/sh -c '/bin/sh -c ratatoskr-notes'",
+        "ExecStart=/bin/sh /usr/local/lib/ratatoskr/notes.sh",
+        "ExecStart=@/bin/sh sh -c ratatoskr-notes",
+        "ExecStart=/bin/sh -c \\\n    'ratatoskr-notes sync'",
+        "Environment=PATH=/srv/bin:/usr/bin\nExecStart=/bin/sh -c 'cat /x'",
+    ] {
+        assert_eq!(repository_binaries(&unit(exec)).len(), 1, "{exec}");
+    }
+}
+
+#[test]
 fn a_moving_ref_and_a_second_call_are_both_caught() {
     let pinned = format!("{CALLEE}{}", "a".repeat(40));
     let one = vec![(
