@@ -81,6 +81,23 @@
   when: ratatoskr_notes_journal_tmpfiles.changed
   changed_when: true
 
+- name: The size limits of the notes journal namespace, which the workspace owns
+  ansible.builtin.copy:
+    src: journald@ratatoskr-notes-sync.conf
+    dest: /etc/systemd/journald@ratatoskr-notes-sync.conf
+    owner: root
+    group: root
+    mode: "0644"
+  register: ratatoskr_notes_journald_conf
+
+# The instance reads the file only when it starts. It starts when the first sync unit logs, so a
+# restart is needed only when it already runs; try-restart leaves a stopped instance stopped.
+- name: A running journald instance of the namespace reads the new limits
+  ansible.builtin.command:
+    cmd: systemctl try-restart systemd-journald@ratatoskr-notes-sync.service
+  when: ratatoskr_notes_journald_conf.changed
+  changed_when: true
+
 - name: Boot starts the deployment through ratatoskr.target
   ansible.builtin.systemd_service:
     name: ratatoskr.target
