@@ -149,6 +149,7 @@ Tasks 14.6 and 14.7 wait until `add-deployment-automation` (DPL-022) is merged a
 - [x] 14.14 RED: in `deploy_inventory.rs`, add `a_template_unit_manager_that_is_not_a_host_user_is_caught`, with a fixture `host.yml` and a manager that is not in it, and `every_template_unit_manager_is_a_host_user` over `services.json` and the real `host.yml`. Confirm that both fail because nothing reads `ratatoskr_users`: the `manager` of `ratatoskr_template_units` is never checked.
 - [x] 14.15 GREEN: read the `name:` of each `ratatoskr_users` entry of `host.yml`, and refuse a template unit whose `manager` is not one of them. Verify 14.14.
 - [x] 14.16 Correct the fleet counts that the notes pin made stale: 18 product repositories and 19 with the workspace, in `docs/REQUIREMENTS.md`, `docs/TESTING.md`, `docs/README.md`, `docs/fleet-map.html` (which does not draw notes yet, and now says so), the comments of `.github/workflows/drift.yml` and the context of `openspec/config.yaml`. No test: documentation and comments. Counts that record a past measurement or a past rollout stay as they are.
+- [x] 14.17 Measure the fleet again for `docs/QUALITY_GATES.md` with read-only `gh api` calls, and record what was measured: 19 repositories, 19 of 19 for each file and setting that `ratatoskr-notes` has, and 18 of 19 for Dependabot alerts, Dependabot security updates and `sha_pinning_required`, which are off on `ratatoskr-notes`. No test: documentation of a measurement. Turning the three settings on is a repository-owner action and is not part of this task.
 
 ## 15. Integration
 
