@@ -4,8 +4,10 @@
 //!
 //! A repository that copies the steps instead, calls the workflow twice, or follows a moving ref
 //! such as `@main` fails here, by name. A repository without a unit, or with template units
-//! (`*@.service`) only, is not asked to publish, and a template unit may start only a host or npm
-//! binary, also through `env` or the `-c` string of a shell.
+//! (`*@.service`) only, is not asked to publish. Each command setting of a template unit must start
+//! a program of `TEMPLATE_UNIT_PROGRAMS` by its exact path, and each command of a `/bin/sh -c`
+//! string must be such a program, a shell builtin, or `cat`. A command or a setting that the check
+//! cannot read to that end fails here: `repository_binaries` lists what the check reads.
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
 
@@ -57,17 +59,16 @@ fn publishes(units: &[&str]) -> bool {
     units.iter().any(|unit| !unit.ends_with("@.service"))
 }
 
-/// The directories a template unit may start a binary from: those of Debian packages, and the npm
-/// prefix of `ob` that the `nodejs` role installs. The playbook installs a binary of the artifact
-/// in `/usr/local/bin/`, and systemd also searches `/usr/local/bin/` for a bare name, so a template
-/// unit that starts either would need the artifact it is exempt from.
-const HOST_BINARY_DIRECTORIES: [&str; 5] = [
-    "/usr/bin/",
-    "/bin/",
-    "/usr/sbin/",
-    "/sbin/",
-    "/opt/ratatoskr-ob/",
-];
+/// The programs that a template unit may start, by exact path: the programs that the notes template
+/// units start. The playbook installs a binary of the artifact in `/usr/local/bin/`, so a template
+/// unit that starts one would need the artifact it is exempt from. A program in this list must not
+/// start a program that its arguments name, because the check does not read them. `/bin/sh` is the
+/// one exception: the check reads its `-c` string and holds each command of it to this list.
+/// To add a program is a one-line edit that a reviewer must approve against that rule.
+const TEMPLATE_UNIT_PROGRAMS: [&str; 3] = ["/usr/bin/ob", "/bin/rm", SHELL];
+
+/// The one shell whose `-c` string the check reads. On Debian it is dash.
+const SHELL: &str = "/bin/sh";
 
 /// The unit settings that start a command.
 const COMMAND_SETTINGS: [&str; 7] = [
@@ -82,11 +83,23 @@ const COMMAND_SETTINGS: [&str; 7] = [
 
 /// The prefixes that systemd reads before the binary of a command setting. `@` moves `argv[0]` to
 /// the second word. A `|` prefix starts the command through the login shell of the user, so it is
-/// not here, and the check refuses it as a path outside the host directories.
+/// not here, and the check refuses it as a program that is not in `TEMPLATE_UNIT_PROGRAMS`.
 const COMMAND_PREFIXES: [char; 5] = ['-', '@', ':', '+', '!'];
 
-/// The shells, by file name, whose `-c` string the check reads.
-const SHELLS: [&str; 3] = ["sh", "dash", "bash"];
+/// The options of `/bin/sh` that the check reads. Another option can change what the shell runs:
+/// `-i`, for example, makes the shell read the file that ENV names first.
+const SHELL_OPTIONS: [char; 4] = ['c', 'e', 'u', 'x'];
+
+/// The settings that can give a command a PATH, ENV or `BASH_ENV` from outside the unit text. A
+/// wrong PATH makes `cat` find another program, and ENV or `BASH_ENV` names a file that a shell
+/// runs first. `Environment=` and `PassEnvironment=` are refused only when they name one of the
+/// three or hold a C escape, which systemd decodes and the check does not.
+const ENVIRONMENT_SETTINGS: [&str; 4] = [
+    "Environment",
+    "PassEnvironment",
+    "EnvironmentFile",
+    "ExecSearchPath",
+];
 
 /// The reserved words of a shell that open or close a compound command. The word after one of
 /// them starts a command.
@@ -94,19 +107,22 @@ const SHELL_KEYWORDS: [&str; 13] = [
     "if", "then", "else", "elif", "fi", "do", "done", "while", "until", "{", "}", "!", "esac",
 ];
 
-/// The shell builtins that start no other command. The shell runs them without a search of PATH.
+/// The builtins of dash that start no other command. The shell runs them without a search of PATH.
 /// `exec` and `command` start the word after them, and `eval`, `.`, `source` and `trap` run a
-/// string, so none of these is in the list.
-const SHELL_BUILTINS: [&str; 22] = [
-    ":", "[", "break", "cd", "continue", "echo", "exit", "export", "false", "local", "printf",
-    "pwd", "read", "readonly", "return", "set", "shift", "test", "true", "umask", "unset", "wait",
+/// string, so none of these is in the list. dash has no `[[`, so it is not here either: dash
+/// searches PATH for a program of that name.
+const SHELL_BUILTINS: [&str; 25] = [
+    ":", "[", "break", "cd", "continue", "echo", "exit", "export", "false", "getopts", "kill",
+    "local", "printf", "pwd", "read", "readonly", "return", "set", "shift", "test", "true",
+    "ulimit", "umask", "unset", "wait",
 ];
 
 /// The host tools that a shell string may name without a path. systemd gives a unit the PATH
 /// `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin`, so the shell finds a binary in
 /// `/usr/local/bin/` first. A bare name is safe only while no artifact installs a binary of that
 /// name there, which `no_artifact_binary_has_the_name_of_a_bare_host_tool` holds `services.json`
-/// to, and while the unit does not set its own PATH.
+/// to, and while nothing changes PATH: the check refuses a unit that can set PATH and a script that
+/// names it.
 const BARE_HOST_TOOLS: [&str; 1] = ["cat"];
 
 /// The control and redirection operators of a shell, the longest first.
@@ -120,44 +136,71 @@ const REDIRECTIONS: [&str; 12] = [
     "<<<", "<<-", "&>>", "<<", ">>", "<&", ">&", "<>", ">|", "&>", "<", ">",
 ];
 
-/// The commands of a template unit that start something other than a host or npm binary. Each
-/// argument is `(path, unit text)`. The check follows `env` to the command it starts and reads
-/// every command of a `sh -c` string, so a wrapper cannot hide a binary of the artifact.
+/// The findings for a template unit. Each argument is `(path, unit text)`. The check passes a
+/// unit only when it can read every program that the unit starts:
+///
+/// - each command setting starts a program of `TEMPLATE_UNIT_PROGRAMS`, by its exact path;
+/// - `/bin/sh` has `-c` and a string, and only the options of `SHELL_OPTIONS`;
+/// - each command of that string, also inside `$(...)`, `` `...` `` and a nested `/bin/sh -c`, is
+///   a builtin of `SHELL_BUILTINS`, a tool of `BARE_HOST_TOOLS`, or a program of
+///   `TEMPLATE_UNIT_PROGRAMS` by its exact path;
+/// - no command setting holds a backslash, a `$` variable or a `;` word, which systemd decodes,
+///   expands or reads as a second command before the program starts;
+/// - no string names PATH, holds a process substitution or a specifier other than `%i`;
+/// - no setting of `ENVIRONMENT_SETTINGS` can set PATH, ENV or `BASH_ENV`, and no line continues on
+///   the next line.
+///
+/// The check does not read drop-in files, the environment of the service manager, or what a
+/// program of `TEMPLATE_UNIT_PROGRAMS` does with its arguments. The reader of a shell string is not
+/// a full shell parser: it reads the grammar that the notes units use and the forms that the
+/// fixtures below hold.
 fn repository_binaries(units: &[(String, String)]) -> Vec<String> {
     let mut findings = Vec::new();
     for (path, text) in units {
-        let settings: Vec<(&str, &str)> = text
-            .lines()
-            .filter_map(|line| line.trim().split_once('='))
-            .map(|(setting, value)| (setting.trim(), value))
-            .collect();
-        let mut commands = Commands {
-            bare_tools: !settings.iter().any(|(setting, value)| {
-                matches!(*setting, "ExecSearchPath" | "EnvironmentFile")
-                    || (*setting == "Environment" && value.contains("PATH="))
-            }),
-            refused: Vec::new(),
-        };
-        for (setting, command) in &settings {
+        let mut settings = Vec::new();
+        for line in text.lines().map(str::trim) {
+            if line.starts_with(['#', ';']) {
+                continue;
+            }
+            if line.ends_with('\\') {
+                findings.push(format!(
+                    "{path}: a line continues on the next line, which the check does not read"
+                ));
+            } else if let Some((setting, value)) = line.split_once('=') {
+                settings.push((setting.trim(), value));
+            }
+        }
+        for (setting, value) in &settings {
+            if ENVIRONMENT_SETTINGS.contains(setting)
+                && (matches!(*setting, "EnvironmentFile" | "ExecSearchPath")
+                    || ["PATH", "ENV", "\\"]
+                        .iter()
+                        .any(|name| value.contains(name)))
+            {
+                findings.push(format!(
+                    "{path}: {setting}= can set PATH, ENV or BASH_ENV, which the check does not \
+                     read"
+                ));
+            }
             if !COMMAND_SETTINGS.contains(setting) {
                 continue;
             }
-            if command.trim_end().ends_with('\\') {
-                commands.refused.push(
-                    "a command that continues on the next line, which the check does not read"
-                        .to_owned(),
-                );
-            } else {
-                let command = command.trim_start();
-                let binary = command.trim_start_matches(COMMAND_PREFIXES);
-                let mut words = systemd_words(binary);
-                let prefixes = command.strip_suffix(binary).unwrap_or_default();
-                if prefixes.contains('@') && words.len() > 1 {
-                    words.remove(1);
+            let mut commands = Commands {
+                refused: Vec::new(),
+            };
+            let command = value.trim_start();
+            let binary = command.trim_start_matches(COMMAND_PREFIXES);
+            match systemd_words(binary) {
+                Ok(mut words) => {
+                    let prefixes = command.strip_suffix(binary).unwrap_or_default();
+                    if prefixes.contains('@') && words.len() > 1 {
+                        words.remove(1);
+                    }
+                    commands.program(&words);
                 }
-                commands.program(&words);
+                Err(reason) => commands.refused.push(reason.to_owned()),
             }
-            for reason in commands.refused.drain(..) {
+            for reason in commands.refused {
                 findings.push(format!("{path}: {setting}= starts {reason}"));
             }
         }
@@ -165,40 +208,46 @@ fn repository_binaries(units: &[(String, String)]) -> Vec<String> {
     findings
 }
 
-/// The words of a command setting, as systemd splits them: at white space, without the quotes and
-/// the backslash escapes, and with `$$` read as `$`.
-fn systemd_words(command: &str) -> Vec<String> {
+/// The words of a command setting, as systemd splits them: at white space, without the quotes, and
+/// with `$$` read as `$`. A backslash, a `$` variable and a `;` word are refused: systemd decodes
+/// the escape, puts the value of the variable in the word, or starts a second command, and the
+/// check does not follow any of them.
+fn systemd_words(command: &str) -> Result<Vec<String>, &'static str> {
+    if command.contains('\\') {
+        return Err("a command with a backslash, which systemd decodes and the check does not");
+    }
     let mut words = Vec::new();
     let mut word: Option<String> = None;
+    let mut quoted = false;
     let mut quote = None;
-    let mut chars = command.chars();
+    // A space at the end closes the last word.
+    let mut chars = command.chars().chain([' ']).peekable();
     while let Some(c) = chars.next() {
         match (quote, c) {
-            (None, c) if c.is_whitespace() => words.extend(word.take()),
+            (None, c) if c.is_whitespace() => {
+                if !quoted && word.as_deref() == Some(";") {
+                    return Err("a second command after a ; word, which the check does not read");
+                }
+                words.extend(word.take());
+                quoted = false;
+            }
             (None, '\'' | '"') => {
                 quote = Some(c);
+                quoted = true;
                 word.get_or_insert_with(String::new);
             }
             (Some(open), c) if c == open => quote = None,
-            (_, '\\') => word.get_or_insert_with(String::new).extend(chars.next()),
+            (_, '$') if chars.next_if_eq(&'$').is_none() => {
+                return Err(
+                    "a command with a $ variable, which systemd expands and the check \
+                            does not read",
+                );
+            }
             (_, c) => word.get_or_insert_with(String::new).push(c),
         }
     }
     words.extend(word);
-    words
-        .into_iter()
-        .map(|word| word.replace("$$", "$"))
-        .collect()
-}
-
-/// Whether a program word is an absolute path under the host directories that no expansion can
-/// change.
-fn host_binary(word: &str) -> bool {
-    HOST_BINARY_DIRECTORIES
-        .iter()
-        .any(|directory| word.starts_with(directory))
-        && !word.split('/').any(|part| part == "..")
-        && !word.contains(['$', '`', '*', '?', '['])
+    Ok(words)
 }
 
 /// A word of a shell string without its quotes and backslash escapes.
@@ -293,86 +342,45 @@ enum Token {
     Operator(String),
 }
 
-/// Reads the commands that a command setting starts, and keeps the reason for each one that is
-/// not a host or npm binary.
+/// Reads the commands that a command setting starts, and keeps the reason for each one that the
+/// check refuses.
 struct Commands {
-    /// Whether a bare host tool finds its host binary: not when the unit sets its own PATH.
-    bare_tools: bool,
     refused: Vec<String>,
 }
 
 impl Commands {
-    /// A command as systemd or `env` starts it: the program, then its arguments.
+    /// A command as systemd or a shell starts it: the program, then its arguments.
     fn program(&mut self, words: &[String]) {
         let Some((program, arguments)) = words.split_first() else {
             return;
         };
-        if !host_binary(program) {
-            self.refused
-                .push(format!("{program}, which is not a host or npm binary"));
-            return;
-        }
-        let name = program.rsplit('/').next().unwrap_or_default();
-        if name == "env" {
-            self.env(program, arguments);
-        } else if SHELLS.contains(&name) {
+        if !TEMPLATE_UNIT_PROGRAMS.contains(&program.as_str()) {
+            self.refused.push(format!(
+                "{program}, which is not a program that a template unit may start"
+            ));
+        } else if program == SHELL {
             self.shell(program, arguments);
         }
     }
 
-    /// `env [OPTION]... [NAME=VALUE]... COMMAND`: the command that `env` starts. GNU `env` reads
-    /// each word with a `=` before the command as a variable. An option that the check does not
-    /// know, such as `-S`, which splits a string into a new command, is refused.
-    fn env(&mut self, program: &str, arguments: &[String]) {
-        let mut index = 0;
-        while let Some(word) = arguments.get(index) {
-            match word.as_str() {
-                "-i" | "--ignore-environment" | "-0" | "--null" | "-" | "-v" | "--debug" => {
-                    index += 1;
-                }
-                "-u" | "--unset" | "-C" | "--chdir" => index += 2,
-                "--" => {
-                    index += 1;
-                    break;
-                }
-                word if word.starts_with("--unset=") || word.starts_with("--chdir=") => {
-                    index += 1;
-                }
-                word if word.starts_with('-') => {
-                    self.refused
-                        .push(format!("{program} {word}, which the check does not read"));
-                    return;
-                }
-                word if word.contains('=') => index += 1,
-                _ => break,
-            }
-        }
-        while arguments.get(index).is_some_and(|word| word.contains('=')) {
-            index += 1;
-        }
-        self.program(arguments.get(index..).unwrap_or_default());
-    }
-
-    /// `sh [OPTION]... -c STRING [NAME [ARGUMENT]...]`: the commands of the string. A shell
-    /// without `-c` reads a file or its standard input, which the check does not read.
+    /// `/bin/sh [OPTION]... -c STRING [NAME [ARGUMENT]...]`: the commands of the string. A shell
+    /// without `-c` reads a file or its standard input, and an option outside `SHELL_OPTIONS` can
+    /// change what it runs, so the check refuses both.
     fn shell(&mut self, program: &str, arguments: &[String]) {
         let mut string = false;
         let mut index = 0;
-        while let Some(word) = arguments.get(index) {
-            match word.strip_prefix(['-', '+']) {
-                Some("-") => {
-                    index += 1;
-                    break;
-                }
-                Some("o") => index += 2,
-                Some(flags)
-                    if !flags.is_empty() && flags.chars().all(|c| c.is_ascii_alphabetic()) =>
-                {
-                    string |= word.starts_with('-') && flags.contains('c');
-                    index += 1;
-                }
-                _ => break,
+        while let Some(options) = arguments.get(index).and_then(|word| word.strip_prefix('-')) {
+            index += 1;
+            if options == "-" {
+                break;
             }
+            if options.is_empty() || !options.chars().all(|c| SHELL_OPTIONS.contains(&c)) {
+                self.refused.push(format!(
+                    "{program} -{options}, which the check does not read"
+                ));
+                return;
+            }
+            string |= options.contains('c');
         }
         match arguments.get(index) {
             Some(script) if string => self.script(script),
@@ -384,8 +392,28 @@ impl Commands {
 
     /// The commands of a shell string: the first word of each simple command after its
     /// assignments, redirections and reserved words, and the commands of each `$(...)` and
-    /// `` `...` ``.
+    /// `` `...` ``. A string that names PATH can make a bare tool find another program, and
+    /// systemd replaces a specifier other than `%i` with text that the check does not read, so the
+    /// check refuses both and reads no further.
     fn script(&mut self, script: &str) {
+        if script
+            .split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+            .any(|word| word == "PATH")
+        {
+            self.refused
+                .push("a string that names PATH, which the check does not follow".to_owned());
+            return;
+        }
+        let mut chars = script.chars();
+        while let Some(c) = chars.next() {
+            if c == '%' && !matches!(chars.next(), Some('%' | 'i')) {
+                self.refused.push(
+                    "a string with a specifier other than %i, which the check does not read"
+                        .to_owned(),
+                );
+                return;
+            }
+        }
         let mut words: Vec<String> = Vec::new();
         // The next word is the file of a redirection.
         let mut target = false;
@@ -442,14 +470,7 @@ impl Commands {
                 let options = rest.iter().take_while(|word| word.starts_with('-')).count();
                 self.shell_command(rest.get(options..).unwrap_or_default());
             }
-            name if SHELL_BUILTINS.contains(&name) => {}
-            name if BARE_HOST_TOOLS.contains(&name) => {
-                if !self.bare_tools {
-                    self.refused.push(format!(
-                        "{name}, which the PATH of the unit can find outside the host directories"
-                    ));
-                }
-            }
+            name if SHELL_BUILTINS.contains(&name) || BARE_HOST_TOOLS.contains(&name) => {}
             _ => self.program(&words.iter().map(|word| unquote(word)).collect::<Vec<_>>()),
         }
     }
@@ -476,6 +497,16 @@ impl Commands {
                     index = quote_close(&chars, index, '\n');
                 }
                 ';' | '&' | '|' | '(' | ')' | '<' | '>' => {
+                    if c == '('
+                        && index
+                            .checked_sub(1)
+                            .and_then(|at| chars.get(at))
+                            .is_some_and(|before| matches!(before, '<' | '>'))
+                    {
+                        self.refused.push(
+                            "a process substitution, which the check does not read".to_owned(),
+                        );
+                    }
                     // A file descriptor, as the 2 of 2>/dev/null, is not a word.
                     if matches!(c, '<' | '>') && word.chars().all(|c| c.is_ascii_digit()) {
                         word.clear();
@@ -629,7 +660,7 @@ fn a_repository_that_ships_only_template_units_is_not_asked_to_publish() {
 }
 
 #[test]
-fn every_template_unit_starts_only_a_host_or_npm_binary() {
+fn every_template_unit_starts_only_an_allowed_program() {
     let manifest = committed_manifest();
     let mut findings = Vec::new();
     for repository in manifest.repositories() {

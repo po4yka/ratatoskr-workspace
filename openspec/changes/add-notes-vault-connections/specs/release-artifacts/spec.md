@@ -10,7 +10,7 @@ notes cleanup unit starts `/usr/bin/ob`, which npm installs, and `/bin/rm`.
 
 ### Requirement: Every commit on main of a deployable repository has an artifact
 
-A repository that ships a systemd unit other than a template unit (`*@.service`) SHALL publish, for every commit that reaches `main`, one `linux/arm64` artifact at `ghcr.io/po4yka/<repository>` tagged `sha-<full commit SHA>`. The artifact SHALL hold every binary that the repository's units other than template units start, a `SHA256SUMS` file and an SPDX SBOM. A template unit SHALL start only a binary of a Debian package or of the npm prefix of `ob`, never a binary that the repository builds.
+A repository that ships a systemd unit other than a template unit (`*@.service`) SHALL publish, for every commit that reaches `main`, one `linux/arm64` artifact at `ghcr.io/po4yka/<repository>` tagged `sha-<full commit SHA>`. The artifact SHALL hold every binary that the repository's units other than template units start, a `SHA256SUMS` file and an SPDX SBOM. A template unit SHALL start only a program of a reviewed allow-list of exact paths, never a binary that the repository builds. The allow-list holds the programs that the notes template units start: `/usr/bin/ob`, `/bin/rm`, and `/bin/sh` with `-c`.
 
 #### Scenario: The artifact of a pinned commit is located
 
@@ -24,13 +24,18 @@ A repository that ships a systemd unit other than a template unit (`*@.service`)
 
 #### Scenario: A template unit starts a binary that the repository builds
 
-- **WHEN** a command setting (`ExecStart=`, `ExecStartPre=`, `ExecStartPost=`, `ExecCondition=`, `ExecReload=`, `ExecStop=` or `ExecStopPost=`) of a pinned `deploy/systemd/*@.service` names a bare command or a path outside `/usr/bin/`, `/bin/`, `/usr/sbin/`, `/sbin/` and `/opt/ratatoskr-ob/`
-- **THEN** `release_artifact_callers.rs` fails and names the repository, the unit and the binary
+- **WHEN** a command setting (`ExecStart=`, `ExecStartPre=`, `ExecStartPost=`, `ExecCondition=`, `ExecReload=`, `ExecStop=` or `ExecStopPost=`) of a pinned `deploy/systemd/*@.service` starts a program that is not on the allow-list by its exact path, such as a bare name, `/usr/local/bin/ratatoskr-notes`, or a host program that starts the program in its arguments, such as `/usr/bin/timeout`, `/usr/bin/env` or `/bin/bash`
+- **THEN** `release_artifact_callers.rs` fails and names the repository, the unit and the program
 
-#### Scenario: A template unit starts a binary that the repository builds through a wrapper
+#### Scenario: A template unit starts a binary that the repository builds through a shell
 
-- **WHEN** such a command setting starts `env` or a shell (`sh`, `dash` or `bash`) from a host directory, and the command after the options and variables of `env`, or a command word of the `-c` string of the shell, is a bare name or a path outside those directories
-- **THEN** `release_artifact_callers.rs` fails and names the command. A shell builtin passes, and so does a bare host tool such as `cat` while no binary in `services.json` has its name and the unit sets no PATH of its own, because systemd puts `/usr/local/bin/` first in PATH. A shell without `-c`, an `env` option that the check does not know, such as `-S`, and a command line that continues on the next line also fail, because the check cannot read the command that they start
+- **WHEN** such a command setting starts `/bin/sh -c`, and a command word of the string, also inside `$(...)`, a backtick substitution or a nested `/bin/sh -c`, is not a builtin of dash, `cat`, or a program on the allow-list by its exact path
+- **THEN** `release_artifact_callers.rs` fails and names the command. `cat` passes while no binary in `services.json` has its name, because systemd puts `/usr/local/bin/` first in PATH
+
+#### Scenario: A template unit holds a form that the check cannot read
+
+- **WHEN** a command setting holds a backslash, a `$` variable or a `;` word; `/bin/sh` has no `-c` or an option other than `-c`, `-e`, `-u` and `-x`; the string names PATH, holds a process substitution or a specifier other than `%i`; a line continues on the next line; or `EnvironmentFile=`, `ExecSearchPath=`, or an `Environment=` or `PassEnvironment=` that names PATH, ENV or BASH_ENV or holds a backslash, can set them
+- **THEN** `release_artifact_callers.rs` fails, because systemd or the shell could start a program that the check does not see
 
 ### Requirement: The publishing workflow is defined once
 
