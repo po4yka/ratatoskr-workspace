@@ -30,11 +30,11 @@ A repository that ships a systemd unit other than a template unit (`*@.service`)
 #### Scenario: A template unit starts a binary that the repository builds through a shell
 
 - **WHEN** such a command setting starts `/bin/sh -c`, and a command word of the string, also inside `$(...)`, a backtick substitution or a nested `/bin/sh -c`, is not a builtin of dash, `cat`, or a program on the allow-list by its exact path
-- **THEN** `release_artifact_callers.rs` fails and names the command. `cat` passes while no binary in `services.json` has its name, because systemd puts `/usr/local/bin/` first in PATH
+- **THEN** `release_artifact_callers.rs` fails and names the command. `cat` passes while no binary in `services.json` has its name, because systemd puts `/usr/local/bin/` first in PATH. No binary in `services.json` may be named `node` either, because `/usr/bin/ob` starts `#!/usr/bin/env node`
 
 #### Scenario: A template unit holds a form that the check cannot read
 
-- **WHEN** a command setting holds a backslash, a `$` variable or a `;` word; `/bin/sh` has no `-c` or an option other than `-c`, `-e`, `-u` and `-x`; the string names PATH, holds a process substitution or a specifier other than `%i`; a line continues on the next line; or `EnvironmentFile=`, `ExecSearchPath=`, or an `Environment=` or `PassEnvironment=` that names PATH, ENV or BASH_ENV or holds a backslash, can set them
+- **WHEN** a command setting holds a backslash, a `$` variable or a `;` word; `/bin/sh` has no `-c` or an option other than `-c`, `-e`, `-u` and `-x`; the string names PATH, holds a process substitution or a specifier other than `%i`; a line continues on the next line; `EnvironmentFile=` or `ExecSearchPath=` is set; an `Environment=` or `PassEnvironment=` sets a variable other than `HOME` and `XDG_CONFIG_HOME`, such as PATH, ENV, `BASH_ENV`, `NODE_OPTIONS`, `NODE_PATH`, `NODE_ENV` or `LD_PRELOAD`, or holds a word that the check cannot read; or `BindPaths=`, `BindReadOnlyPaths=`, `RootDirectory=`, `RootImage=`, `RootImageOptions=`, `MountImages=`, `ExtensionImages=`, `ExtensionDirectories=` or `TemporaryFileSystem=` is set
 - **THEN** `release_artifact_callers.rs` fails, because systemd or the shell could start a program that the check does not see
 
 ### Requirement: The publishing workflow is defined once

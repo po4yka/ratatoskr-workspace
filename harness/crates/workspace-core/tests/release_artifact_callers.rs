@@ -6,8 +6,10 @@
 //! such as `@main` fails here, by name. A repository without a unit, or with template units
 //! (`*@.service`) only, is not asked to publish. Each command setting of a template unit must start
 //! a program of `TEMPLATE_UNIT_PROGRAMS` by its exact path, and each command of a `/bin/sh -c`
-//! string must be such a program, a shell builtin, or `cat`. A command or a setting that the check
-//! cannot read to that end fails here: `repository_binaries` lists what the check reads.
+//! string must be such a program, a shell builtin, or `cat`. A template unit may set only the
+//! variables of `ENVIRONMENT_NAMES`, and no setting that mounts a file system or changes the root.
+//! A command or a setting that the check cannot read to that end fails here:
+//! `repository_binaries` lists what the check reads.
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
 
@@ -90,15 +92,35 @@ const COMMAND_PREFIXES: [char; 5] = ['-', '@', ':', '+', '!'];
 /// `-i`, for example, makes the shell read the file that ENV names first.
 const SHELL_OPTIONS: [char; 4] = ['c', 'e', 'u', 'x'];
 
-/// The settings that can give a command a PATH, ENV or `BASH_ENV` from outside the unit text. A
-/// wrong PATH makes `cat` find another program, and ENV or `BASH_ENV` names a file that a shell
-/// runs first. `Environment=` and `PassEnvironment=` are refused only when they name one of the
-/// three or hold a C escape, which systemd decodes and the check does not.
-const ENVIRONMENT_SETTINGS: [&str; 4] = [
-    "Environment",
-    "PassEnvironment",
-    "EnvironmentFile",
-    "ExecSearchPath",
+/// The variables that `Environment=` and `PassEnvironment=` may set: the directory where ob keeps
+/// its configuration. A variable that is not here is refused, because many of them make a program
+/// run code that the check does not see: PATH makes `cat` or `node` find another program, ENV and
+/// `BASH_ENV` name a file that a shell runs first, `NODE_OPTIONS` and `NODE_PATH` make node load
+/// a module before ob, and `LD_PRELOAD`, `LD_LIBRARY_PATH` and `LD_AUDIT` make the dynamic linker
+/// load a library. `NODE_ENV` is not here either: node does not read it, but a package can make a
+/// file path from its value. `UnsetEnvironment=` only removes a variable, so the check does not
+/// read it. To add a name is a one-line edit that a reviewer must approve against that rule.
+const ENVIRONMENT_NAMES: [&str; 2] = ["HOME", "XDG_CONFIG_HOME"];
+
+/// The settings that can set a variable from outside the unit text, or change where systemd
+/// searches for a program, which the check does not read.
+const ENVIRONMENT_FILES: [&str; 2] = ["EnvironmentFile", "ExecSearchPath"];
+
+/// The settings of systemd 252, the version of Debian 12, that mount a file system or a directory
+/// over the file system of the service, or give it another root. Each can put another file at
+/// `/usr/bin/ob`, `/bin/sh`, `/bin/rm` or `/usr/bin/env`. The settings that only restrict, such as
+/// `ProtectSystem=`, `ReadOnlyPaths=`, `ReadWritePaths=`, `InaccessiblePaths=` and `PrivateTmp=`,
+/// are not here: the notes units use `ReadWritePaths=`.
+const MOUNT_SETTINGS: [&str; 9] = [
+    "BindPaths",
+    "BindReadOnlyPaths",
+    "RootDirectory",
+    "RootImage",
+    "RootImageOptions",
+    "MountImages",
+    "ExtensionImages",
+    "ExtensionDirectories",
+    "TemporaryFileSystem",
 ];
 
 /// The reserved words of a shell that open or close a compound command. The word after one of
@@ -125,6 +147,13 @@ const SHELL_BUILTINS: [&str; 25] = [
 /// names it.
 const BARE_HOST_TOOLS: [&str; 1] = ["cat"];
 
+/// The programs that a program of `TEMPLATE_UNIT_PROGRAMS` finds through PATH. `/usr/bin/ob`
+/// starts with `#!/usr/bin/env node`, so ob resolves node through PATH, and env finds a node in
+/// `/usr/local/bin/` first. No artifact binary may have one of these names. Unlike a tool of
+/// `BARE_HOST_TOOLS`, a shell string may not start one by its name, because `node -e` runs a
+/// string that the check does not read.
+const PATH_PROGRAMS: [&str; 1] = ["node"];
+
 /// The control and redirection operators of a shell, the longest first.
 const SHELL_OPERATORS: [&str; 21] = [
     "<<<", "<<-", "&>>", ";;", ";&", "&&", "||", "<<", ">>", "<&", ">&", "<>", ">|", "&>", ";",
@@ -147,8 +176,9 @@ const REDIRECTIONS: [&str; 12] = [
 /// - no command setting holds a backslash, a `$` variable or a `;` word, which systemd decodes,
 ///   expands or reads as a second command before the program starts;
 /// - no string names PATH, holds a process substitution or a specifier other than `%i`;
-/// - no setting of `ENVIRONMENT_SETTINGS` can set PATH, ENV or `BASH_ENV`, and no line continues on
-///   the next line.
+/// - `Environment=` and `PassEnvironment=` set only the variables of `ENVIRONMENT_NAMES`, in words
+///   that the check can read, and the unit has no setting of `ENVIRONMENT_FILES`;
+/// - the unit has no setting of `MOUNT_SETTINGS`, and no line continues on the next line.
 ///
 /// The check does not read drop-in files, the environment of the service manager, or what a
 /// program of `TEMPLATE_UNIT_PROGRAMS` does with its arguments. The reader of a shell string is not
@@ -171,15 +201,28 @@ fn repository_binaries(units: &[(String, String)]) -> Vec<String> {
             }
         }
         for (setting, value) in &settings {
-            if ENVIRONMENT_SETTINGS.contains(setting)
-                && (matches!(*setting, "EnvironmentFile" | "ExecSearchPath")
-                    || ["PATH", "ENV", "\\"]
+            if ENVIRONMENT_FILES.contains(setting) {
+                findings.push(format!(
+                    "{path}: {setting}= can set PATH or another variable, which the check does not \
+                     read"
+                ));
+            }
+            if matches!(*setting, "Environment" | "PassEnvironment")
+                && !environment_names(setting, value).is_some_and(|names| {
+                    names
                         .iter()
-                        .any(|name| value.contains(name)))
+                        .all(|name| ENVIRONMENT_NAMES.contains(&name.as_str()))
+                })
             {
                 findings.push(format!(
-                    "{path}: {setting}= can set PATH, ENV or BASH_ENV, which the check does not \
-                     read"
+                    "{path}: {setting}= sets a variable that is not one of {ENVIRONMENT_NAMES:?}, \
+                     or that the check cannot read"
+                ));
+            }
+            if MOUNT_SETTINGS.contains(setting) {
+                findings.push(format!(
+                    "{path}: {setting}= can put another file at the path of a program, which the \
+                     check does not read"
                 ));
             }
             if !COMMAND_SETTINGS.contains(setting) {
@@ -248,6 +291,25 @@ fn systemd_words(command: &str) -> Result<Vec<String>, &'static str> {
     }
     words.extend(word);
     Ok(words)
+}
+
+/// The names of the variables that an `Environment=` or `PassEnvironment=` value sets, or `None`
+/// when the check cannot read one. The check splits the value with `systemd_words`, which also
+/// refuses a backslash and a `$`. Each word of `Environment=` must be `NAME=VALUE`, and each word
+/// of `PassEnvironment=` must be `NAME`.
+fn environment_names(setting: &str, value: &str) -> Option<Vec<String>> {
+    systemd_words(value)
+        .ok()?
+        .into_iter()
+        .map(|word| {
+            let name = if setting == "PassEnvironment" {
+                word
+            } else {
+                word.split_once('=')?.0.to_owned()
+            };
+            shell_assignment(&format!("{name}=")).then_some(name)
+        })
+        .collect()
 }
 
 /// A word of a shell string without its quotes and backslash escapes.
@@ -702,11 +764,14 @@ fn artifact_binaries() -> Vec<String> {
         .collect()
 }
 
-/// The bare host tools that a binary of these names in `/usr/local/bin/` would hide.
+/// The bare host tools and the programs of `PATH_PROGRAMS` that a binary of these names in
+/// `/usr/local/bin/` would hide.
 fn hidden_host_tools(binaries: &[String]) -> Vec<String> {
     binaries
         .iter()
-        .filter(|binary| BARE_HOST_TOOLS.contains(&binary.as_str()))
+        .filter(|binary| {
+            BARE_HOST_TOOLS.contains(&binary.as_str()) || PATH_PROGRAMS.contains(&binary.as_str())
+        })
         .cloned()
         .collect()
 }
