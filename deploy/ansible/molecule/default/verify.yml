@@ -19,6 +19,7 @@
     - name: The enrolment, the pins and the host facts the cases compare against
       ansible.builtin.set_fact:
         services: "{{ (lookup('ansible.builtin.file', project ~ '/group_vars/all/services.json') | from_json).ratatoskr_services }}"
+        template_units: "{{ (lookup('ansible.builtin.file', project ~ '/group_vars/all/services.json') | from_json).ratatoskr_template_units }}"
         pins: "{{ lookup('ansible.builtin.file', workspace ~ '/workspace.lock') | ratatoskr_lock }}"
 
     - name: A scratch directory on the controller
@@ -122,6 +123,252 @@
       loop: "{{ installed.results | zip(pinned_units.results) | list }}"
       loop_control:
         label: "{{ item.0.item.unit }}"
+
+    # --- notes_sync_unit ---------------------------------------------------------------------------
+    # The template units of ratatoskr-notes that its pin ships (services.json lists them), the
+    # Obsidian Headless client they run, its user, and the polkit rule through which the notes
+    # service user starts and stops their instances (add-notes-vault-connections, design D3). The
+    # expected values are the ones spike 3.2 recorded, not the playbook's variables.
+    - name: "notes_sync_unit: the notes template units that the inventory lists"
+      ansible.builtin.set_fact:
+        notes_templates: "{{ template_units | selectattr('repository', 'equalto', 'notes') | list }}"
+
+    - name: "notes_sync_unit: checksum of each installed template unit"
+      ansible.builtin.stat:
+        path: "/etc/systemd/system/{{ item.unit }}"
+        checksum_algorithm: sha256
+      register: notes_installed
+      loop: "{{ notes_templates }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "notes_sync_unit: checksum of each pinned template unit"
+      ansible.builtin.stat:
+        path: "{{ workspace }}/{{ pins[item.repository].path }}/deploy/systemd/{{ item.unit }}"
+        checksum_algorithm: sha256
+      register: notes_pinned
+      delegate_to: localhost
+      become: false
+      loop: "{{ notes_templates }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "notes_sync_unit: every listed template unit is installed, byte-identical to its pin"
+      ansible.builtin.assert:
+        that:
+          - item.0.stat.exists
+          - item.0.stat.checksum == item.1.stat.checksum
+        fail_msg: "{{ item.0.item.unit }} is missing or differs from notes"
+        quiet: true
+      loop: "{{ notes_installed.results | zip(notes_pinned.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item.unit }}"
+
+    - name: "notes_sync_unit: no template unit is enabled"
+      ansible.builtin.command: systemctl is-enabled {{ item.unit }}
+      register: notes_enabled
+      changed_when: false
+      failed_when: notes_enabled.stdout | trim not in ['static', 'disabled']
+      loop: "{{ notes_templates }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "notes_sync_unit: no instance of a template unit was started"
+      ansible.builtin.command:
+        argv: [systemctl, list-units, --all, --plain, --no-legend, "{{ item.unit | replace('@.service', '@*') }}"]
+      register: notes_instances
+      changed_when: false
+      failed_when: notes_instances.stdout | trim | length > 0
+      loop: "{{ notes_templates }}"
+      loop_control:
+        label: "{{ item.unit }}"
+
+    - name: "notes_sync_unit: the Node.js version"
+      ansible.builtin.command: node --version
+      register: notes_node
+      changed_when: false
+
+    - name: "notes_sync_unit: Node.js is version 22"
+      ansible.builtin.assert:
+        that: notes_node.stdout is match('v22\.')
+        fail_msg: "node --version: {{ notes_node.stdout }}"
+
+    - name: "notes_sync_unit: the globally installed npm packages"
+      ansible.builtin.command: npm ls --global --json --depth 0
+      register: notes_npm
+      changed_when: false
+
+    - name: "notes_sync_unit: the obsidian-headless tarball kept on the host"
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - >-
+            import base64, hashlib, sys;
+            print('sha512-' + base64.b64encode(hashlib.sha512(open(sys.argv[1], 'rb').read()).digest()).decode())
+          - "{{ state }}/npm/obsidian-headless-0.0.14.tgz"
+      register: notes_tarball
+      changed_when: false
+
+    - name: "notes_sync_unit: the native module of ob loads"
+      ansible.builtin.command:
+        argv:
+          - node
+          - -e
+          - new (require('/usr/lib/node_modules/obsidian-headless/node_modules/better-sqlite3'))(':memory:').close()
+      changed_when: false
+
+    - name: "notes_sync_unit: /usr/bin/ob, which the units start"
+      ansible.builtin.command: readlink -f /usr/bin/ob
+      register: notes_ob
+      changed_when: false
+
+    - name: "notes_sync_unit: obsidian-headless 0.0.14, with the integrity recorded by spike 3.2"
+      ansible.builtin.assert:
+        that:
+          - (notes_npm.stdout | from_json).dependencies['obsidian-headless'].version == '0.0.14'
+          - notes_tarball.stdout | trim == 'sha512-S1d/hxLKvCUG2g5tRyXFkzPqMs3Ntw1tDyzoF2yfHGRuB4B+Mi3X2vgT8LbfQKrkEEi3LfJRdXtYzAVHcbpccw=='
+          - notes_ob.stdout | trim == '/usr/lib/node_modules/obsidian-headless/cli.js'
+        fail_msg: "{{ notes_npm.stdout }} {{ notes_tarball.stdout }} {{ notes_ob.stdout }}"
+
+    - name: "notes_sync_unit: the user that runs ob"
+      ansible.builtin.command: id -nG ratatoskr-notes-sync
+      register: notes_sync_user
+      changed_when: false
+
+    - name: "notes_sync_unit: ratatoskr-notes-sync shares no group with another user"
+      ansible.builtin.assert:
+        that: notes_sync_user.stdout.split() == ['ratatoskr-notes-sync']
+        fail_msg: "id -nG ratatoskr-notes-sync: {{ notes_sync_user.stdout }}"
+
+    # pkcheck asks polkitd what systemd asks it for StartUnit and StopUnit: the action, the unit and
+    # the verb, for a process of the subject user. Exit 0 allows; 1 or 2 refuses; another code is an
+    # error and fails the case.
+    - name: "notes_sync_unit: ratatoskr-notes starts and stops exactly the listed units, with a UUID instance only"
+      ansible.builtin.shell:
+        executable: /bin/bash
+        cmd: |
+          set -uo pipefail
+          uuid=3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b
+          listed=" {{ notes_templates | map(attribute='unit') | join(' ') }} "
+          wrong=""
+          check() {  # user action unit verb allowed|refused
+            setpriv --reuid="$1" --regid="$1" --init-groups sleep 30 &
+            local pid=$!
+            sleep 0.5
+            pkcheck --action-id "org.freedesktop.systemd1.$2" --process "$pid" \
+              --detail unit "$3" --detail verb "$4" >/dev/null 2>&1
+            local rc=$?
+            kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+            case "$5:$rc" in
+              allowed:0|refused:1|refused:2) ;;
+              *) wrong="$wrong$1 $2 $3 $4: exit $rc, want $5"$'\n' ;;
+            esac
+          }
+          for template in ratatoskr-notes-sync@.service ratatoskr-notes-login@.service ratatoskr-notes-cleanup@.service; do
+            instance="${template/@./@$uuid.}"
+            case "$listed" in *" $template "*) want=allowed ;; *) want=refused ;; esac
+            check ratatoskr-notes manage-units "$instance" start "$want"
+            check ratatoskr-notes manage-units "$instance" stop "$want"
+            check ratatoskr-notes manage-units "${template/@./@not-a-uuid.}" start refused
+            check ratatoskr-notes manage-units "${template/@./@${uuid^^}.}" start refused
+            check ratatoskr-notes manage-units "${template/@./@$uuid-0.}" start refused
+            check ratatoskr-notes manage-unit-files "$instance" enable refused
+            check ratatoskr-notes-sync manage-units "$instance" start refused
+          done
+          check ratatoskr-notes manage-units ratatoskr-edge.service stop refused
+          printf '%s' "$wrong"
+          [ -z "$wrong" ]
+      changed_when: false
+
+    # --- notes_blob_read_group ---------------------------------------------------------------------
+    # The blob root of ratatoskr-notes is setgid with the read group, and Knowledge is its only
+    # member (design D12). The playbook creates no ratatoskr-x user while X is not enrolled, so the
+    # case refuses a read by EVERY ratatoskr-* user outside the group, which includes ratatoskr-x
+    # whenever it exists. The fixture blob is written as ratatoskr-notes writes, with umask 0027.
+    - name: "notes_blob_read_group: the group"
+      ansible.builtin.command: getent group ratatoskr-notes-blobs
+      register: notes_blob_group
+      changed_when: false
+
+    - name: "notes_blob_read_group: Knowledge is the only member"
+      ansible.builtin.assert:
+        that: notes_blob_group.stdout.split(':')[3] | trim == 'ratatoskr-knowledge'
+        fail_msg: "{{ notes_blob_group.stdout }}"
+
+    - name: "notes_blob_read_group: the blob root"
+      ansible.builtin.stat:
+        path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes
+      register: notes_blob_root
+
+    - name: "notes_blob_read_group: owned by ratatoskr-notes, setgid with the read group, mode 2750"
+      ansible.builtin.assert:
+        that:
+          - notes_blob_root.stat.isdir
+          - notes_blob_root.stat.pw_name == 'ratatoskr-notes'
+          - notes_blob_root.stat.gr_name == 'ratatoskr-notes-blobs'
+          - notes_blob_root.stat.mode == '2750'
+        fail_msg: "{{ notes_blob_root.stat }}"
+
+    - name: "notes_blob_read_group: a blob, written by ratatoskr-notes with umask 0027"
+      ansible.builtin.command:
+        argv:
+          - setpriv
+          - --reuid=ratatoskr-notes
+          - --regid=ratatoskr-notes
+          - --init-groups
+          - /bin/sh
+          - -c
+          - >-
+            umask 0027
+            && mkdir -p /mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256/00
+            && printf fixture > /mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256/00/molecule-fixture
+      changed_when: true
+
+    - name: "notes_blob_read_group: the blob and its directories"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: notes_blob
+      loop:
+        - /mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256
+        - /mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256/00
+        - /mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256/00/molecule-fixture
+
+    - name: "notes_blob_read_group: each inherits the read group; directories 2750, the blob 0640"
+      ansible.builtin.assert:
+        that:
+          - item.stat.gr_name == 'ratatoskr-notes-blobs'
+          - item.stat.mode == ('2750' if item.stat.isdir else '0640')
+        fail_msg: "{{ item.item }}: {{ item.stat.gr_name }} {{ item.stat.mode }}"
+        quiet: true
+      loop: "{{ notes_blob.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "notes_blob_read_group: Knowledge reads the blob, and no other ratatoskr-* user can"
+      ansible.builtin.shell:
+        executable: /bin/bash
+        cmd: |
+          set -uo pipefail
+          blob=/mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256/00/molecule-fixture
+          wrong=""
+          reads() { setpriv --reuid="$1" --regid="$1" --init-groups cat "$blob" >/dev/null 2>&1; }
+          reads ratatoskr-knowledge || wrong="${wrong}ratatoskr-knowledge cannot read the blob"$'\n'
+          others=0
+          for user in $(getent passwd | cut -d: -f1 | grep '^ratatoskr-'); do
+            case "$user" in ratatoskr-notes|ratatoskr-knowledge) continue ;; esac
+            others=$((others + 1))
+            if reads "$user"; then wrong="${wrong}${user} reads the blob"$'\n'; fi
+          done
+          [ "$others" -gt 0 ] || wrong="${wrong}no ratatoskr-* user outside the group to try"$'\n'
+          printf '%s' "$wrong"
+          [ -z "$wrong" ]
+      changed_when: false
+
+    - name: "notes_blob_read_group: remove the fixture blob"
+      ansible.builtin.file:
+        path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256
+        state: absent
 
     # --- nats_up and seed_modes ---------------------------------------------------------------------
     - name: "nats_up: the broker answers its health check"
