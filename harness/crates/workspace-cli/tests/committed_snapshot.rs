@@ -69,7 +69,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 18] = [
     (
         "notes",
         "repos/notes",
-        "cea01d589e2d3980c995deffb2ef4c3635061d88",
+        "10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8",
     ),
     (
         "platform",
