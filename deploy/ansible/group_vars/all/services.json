@@ -84,7 +84,9 @@
       "settings": {}
     }
   ],
-  "ratatoskr_template_units": [],
+  "ratatoskr_template_units": [
+    {"repository": "notes", "unit": "ratatoskr-notes-cleanup@.service", "manager": "ratatoskr-notes"}
+  ],
   "ratatoskr_database_roles": [
     {"repository": "extractor", "role": "ratatoskr_extractor"},
     {"repository": "telegram", "role": "ratatoskr_telegram"},
@@ -96,7 +98,8 @@
     {"repository": "claude", "role": "ratatoskr_claude"},
     {"repository": "x", "role": "ratatoskr_x"},
     {"repository": "instagram", "role": "ratatoskr_instagram"},
-    {"repository": "threads", "role": "ratatoskr_threads"}
+    {"repository": "threads", "role": "ratatoskr_threads"},
+    {"repository": "notes", "role": "ratatoskr_notes"}
   ],
   "ratatoskr_nats_identities": [
     {"identity": "edge", "group": "ratatoskr-edge"},
