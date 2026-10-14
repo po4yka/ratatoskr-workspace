@@ -54,6 +54,13 @@ fn publishes(units: &[&str]) -> bool {
     units.iter().any(|unit| !unit.ends_with("@.service"))
 }
 
+/// The commands of a template unit that start something other than a host or npm binary. Each
+/// argument is `(path, unit text)`.
+fn repository_binaries(units: &[(String, String)]) -> Vec<String> {
+    let _ = units;
+    Vec::new()
+}
+
 #[test]
 fn every_repository_that_ships_a_unit_publishes_through_the_reusable_workflow() {
     let manifest = committed_manifest();
@@ -104,6 +111,59 @@ fn a_repository_that_ships_only_template_units_is_not_asked_to_publish() {
     assert!(!publishes(&[template]));
     assert!(publishes(&[service]));
     assert!(publishes(&[template, service]));
+}
+
+#[test]
+fn every_template_unit_starts_only_a_host_or_npm_binary() {
+    let manifest = committed_manifest();
+    let mut findings = Vec::new();
+    for repository in manifest.repositories() {
+        let root = repository_root(repository);
+        assert!(
+            is_checked_out(&root),
+            "repository `{}` is not checked out at {}; run `git submodule update --init {}`",
+            repository.id,
+            root.display(),
+            repository.path
+        );
+        for finding in repository_binaries(&tracked_files(&root, "deploy/systemd/*@.service")) {
+            findings.push(format!("{}: {finding}", repository.id));
+        }
+    }
+    assert!(findings.is_empty(), "{}", findings.join("\n"));
+}
+
+#[test]
+fn a_template_unit_that_starts_a_repository_binary_is_caught() {
+    let unit = |exec: &str| {
+        vec![(
+            "deploy/systemd/ratatoskr-notes-sync@.service".to_owned(),
+            format!("[Unit]\nDescription=x\n\n[Service]\nType=simple\n{exec}\n"),
+        )]
+    };
+    let host = unit(
+        "ExecStartPre=+/bin/mkdir -p /run/x\nExecStart=-/usr/bin/ob sync --path /x/%i\n\
+         ExecStart=/opt/ratatoskr-ob/node_modules/obsidian-headless/cli.js\nExecStop=",
+    );
+    assert_eq!(repository_binaries(&host), Vec::<String>::new());
+
+    let built = unit("ExecStart=/usr/local/bin/ratatoskr-notes sync %i");
+    assert_eq!(
+        repository_binaries(&built),
+        vec![
+            "deploy/systemd/ratatoskr-notes-sync@.service: ExecStart= starts \
+             /usr/local/bin/ratatoskr-notes, which is not a host or npm binary"
+                .to_owned()
+        ]
+    );
+    for exec in [
+        "ExecStartPre=ratatoskr-notes migrate",
+        "ExecStartPost=@/usr/local/lib/ratatoskr/notes x",
+        "ExecStop=/usr/bin/../local/bin/ratatoskr-notes stop",
+        "ExecStopPost=!!/srv/ratatoskr-notes",
+    ] {
+        assert_eq!(repository_binaries(&unit(exec)).len(), 1, "{exec}");
+    }
 }
 
 #[test]

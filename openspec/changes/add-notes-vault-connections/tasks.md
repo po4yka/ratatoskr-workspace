@@ -144,6 +144,8 @@ Tasks 14.6 and 14.7 wait until `add-deployment-automation` (DPL-022) is merged a
 - [ ] 14.9 GREEN: add `obsidian-plugin` to the required fleet and the harness test lists (18 to 19), add the submodule at the merge of 1.5, and run `./ws lock generate`. Verify 14.8 and `./ws doctor`.
 - [ ] 14.10 RED: in `release_artifact_check.rs`, add a fixture whose `deploy/systemd/` holds a service unit and a template unit that starts `/usr/bin/ob`. Confirm that the artifact check of `reusable-release-artifact.yml` refuses it because it reads the template unit. This pair must merge before notes ships `ratatoskr-notes.service` and calls the workflow.
 - [ ] 14.11 GREEN: the artifact check skips `*@.service`, as the release-artifacts delta of this change states. Verify 14.10 and the existing fixtures.
+- [x] 14.12 RED: in `release_artifact_callers.rs`, add `a_template_unit_that_starts_a_repository_binary_is_caught`, whose fixture template unit starts `/usr/local/bin/ratatoskr-notes`, and `every_template_unit_starts_only_a_host_or_npm_binary` over every pinned `deploy/systemd/*@.service`. Confirm that the fixture test fails because nothing reads the command lines of a template unit: `publishes()` exempts a `*@.service` by its file name alone.
+- [ ] 14.13 GREEN: read every command line (`ExecStart=`, `ExecStartPre=`, `ExecStartPost=`, `ExecCondition=`, `ExecReload=`, `ExecStop=`, `ExecStopPost=`) of a template unit, and refuse a binary that is not an absolute path under `/usr/bin/`, `/bin/`, `/usr/sbin/`, `/sbin/` or the npm prefix of `ob`. The playbook installs a binary of the artifact in `/usr/local/bin/`, and systemd also searches `/usr/local/bin/` for a bare name. Verify 14.12 against the notes pin.
 
 ## 15. Integration
 
