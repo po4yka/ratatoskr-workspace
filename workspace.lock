@@ -129,11 +129,11 @@ id = "notes"
 path = "repos/notes"
 remote = "https://github.com/po4yka/ratatoskr-notes.git"
 default_branch = "main"
-commit = "301c53bfc1f6575b4cce68f22b09197b96b30583"
+commit = "ae01361cfba16a78aafb87bc74dab492321f3515"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "b8296202f2f58d142c272a66ccd8361ff2519f15aaeabb24235163130f1dfc02" },
+  { path = "Cargo.lock", kind = "file", sha256 = "47f6adbd5ddff8521f96d3dda7b8cb104269804abfb7d3ce97180d79067e1d54" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "1393a3f18882941a3334e4a1111e88e9588f58fecc59922190ab0a857afcc9a9" },
-  { path = "schema.sql", kind = "file", sha256 = "e01ce248b19b76bc0af2a740b7511e83823f60d37dd1df873c2b693e433e2b12" },
+  { path = "schema.sql", kind = "file", sha256 = "9f4a362b8c39c0a7efa83955d1c5aaf233ab3547c89e2f5af05b2692818398f0" },
 ]
 
 [[repositories]]

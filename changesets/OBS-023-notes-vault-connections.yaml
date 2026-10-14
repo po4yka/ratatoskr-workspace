@@ -20,10 +20,10 @@ repositories:
       - "a9289e27bcf53f496b5917889580965d97ff2358 feat(notes-contracts): mark the notes events user_content and match the blob media type"
   - id: ratatoskr-notes
     role: new-service-connections-index-sync-supervisor
-    branch: main@301c53bfc1f6575b4cce68f22b09197b96b30583
+    branch: main@ae01361cfba16a78aafb87bc74dab492321f3515
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/notes at 301c53bfc1f6575b4cce68f22b09197b96b30583 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, and to 301c53b after tasks 6.11 to 6.22 and a test-only fix, which apply owner decisions A (the journal namespace ratatoskr-notes-sync) and B (the trees and clients roots) of 2026-10-14; the host role provisions both). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. Notes opens no NATS connection at this pin, and the relay of notes task 7.6 adds it, so bus_acl.rs keeps NOTES in WIRING_PENDING until then
+    pin: repos/notes at ae01361cfba16a78aafb87bc74dab492321f3515 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, to 301c53bfc1f6575b4cce68f22b09197b96b30583 after tasks 6.11 to 6.22 and a test-only fix, and to ae01361 after group 7 (the index, the file events and the outbox relay, the read routes, the connect that answers 202 at once, and the device claims), which apply owner decisions A (the journal namespace ratatoskr-notes-sync) and B (the trees and clients roots) of 2026-10-14; the host role provisions both). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. From ae01361 on, the outbox relay of notes task 7.6 opens the NATS connection with the inbox prefix _INBOX_notes, so bus_acl.rs has no WIRING_PENDING exemption
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"
@@ -72,6 +72,18 @@ repositories:
       - "4834ff302bb375691e428d061bd3afb5726d27a9 fix(deps): update rustls to 0.23.46 for RUSTSEC-2026-0346 to 0349"
       - "b03c1f750c612686931bbcc4d336adfa6391291b ci: pin the shared fleet workflows at 75b3ed8"
       - "301c53bfc1f6575b4cce68f22b09197b96b30583 test(notes): find the unreadable journal line among the lines of every test"
+      - "60dfcb6e7490dc6ed642462dc6e183775e929d77 test(notes-index): compare the index with the Obsidian engine output"
+      - "f6d33cd78a6323170a843991679d4080395c6372 feat(notes-index): parse notes and resolve links with Obsidian's rules"
+      - "f6d76915e31e8dcffaeedcfea70bdd0db648fe79 test(notes-index): a case-fold collision, an excluded path and an NFD path"
+      - "76aad289c0147717d5fa55d21af27129ee294a40 feat(notes-index): NFC paths, path keys, collisions and exclusions"
+      - "c3778e8b5304fcd8ebad07c5dd0311b1453a4ac8 test(notes): file changes publish one event each with a gapless sequence"
+      - "0c8384b6482532f155e981ad52428f909ece5997 feat(notes): record file revisions, publish their events and relay the outbox"
+      - "e1e00ed4fadf8fcfdf6550260a77b2652379a37f test(notes): a foreign file is not found and a file route refuses writes"
+      - "c77da1e56a4f0c655e3269c334edcff0a0a60c0e feat(notes): serve the files, the bytes and the index of a connection"
+      - "859131a5bce3e3c38ecf883091b4041b7b90e873 test(notes): the connect answers 202 at once and reports its phases"
+      - "76bed3c40d0ae8f9f35847da41cc5ac0ee0b7a90 feat(notes): answer the connect at once and report its operation"
+      - "3f22adbe1c12d7f77caea459db39572a423ab41c test(notes): a device connect needs the device claims of Edge"
+      - "ae01361cfba16a78aafb87bc74dab492321f3515 feat(notes): read the device claims of Edge on a device connect"
   - id: ratatoskr-platform
     role: edge-route-durables-identity-device-kind-authority
     branch: main@352ed77c464834c5467a315045679d5a4485663a

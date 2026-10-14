@@ -121,11 +121,6 @@ const INBOX_PREFIXES: [(&str, &str); 13] = [
     ("NOTES", "_INBOX_notes"),
 ];
 
-/// Notes writes its events to an outbox and opens no NATS connection at its pin; the relay of
-/// notes task 7.6 adds the connection and its inbox prefix. The wiring test skips the identity
-/// until then, and reports a stale row when the owner wires the prefix.
-const WIRING_PENDING: [&str; 1] = ["NOTES"];
-
 const COMMANDS: &str = "ratatoskr_commands";
 const EVENTS: &str = "ratatoskr_events";
 
@@ -609,13 +604,8 @@ fn the_owner_repository_uses_the_prefix_literal() {
     for (identity, prefix) in INBOX_PREFIXES {
         let owner = owner_of(identity);
         let sources = by_owner.entry(owner).or_insert_with(|| sources_of(owner));
-        let problem = inbox_wiring_problem(sources, prefix);
-        match (problem, WIRING_PENDING.contains(&identity)) {
-            (Some(problem), false) => problems.push(format!("{owner} ({identity}): {problem}")),
-            (None, true) => problems.push(format!(
-                "{owner} ({identity}) wires `{prefix}` now; remove it from WIRING_PENDING"
-            )),
-            _ => {}
+        if let Some(problem) = inbox_wiring_problem(sources, prefix) {
+            problems.push(format!("{owner} ({identity}): {problem}"));
         }
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));

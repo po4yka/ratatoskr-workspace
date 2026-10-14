@@ -69,7 +69,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "notes",
         "repos/notes",
-        "301c53bfc1f6575b4cce68f22b09197b96b30583",
+        "ae01361cfba16a78aafb87bc74dab492321f3515",
     ),
     (
         "obsidian-plugin",
