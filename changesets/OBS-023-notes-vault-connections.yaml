@@ -54,7 +54,32 @@ repositories:
     branch: obs-023/notes-vault-connections
   - id: ratatoskr-obsidian-plugin
     role: new-client-plugin-channel
-    branch: obs-023/notes-vault-connections
+    branch: main@a6afdbce2247c9298a328a5a9033a281ef35618b
+    created: 2026-10-14, public, ruleset "protect main" (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate; no deny job, because the stack is TypeScript)
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    pin: repos/clients/obsidian-plugin at a6afdbce2247c9298a328a5a9033a281ef35618b (tasks 14.8 and 14.9). A client ships no systemd unit, so no release artifact, deploy inventory or port row applies
+    commits:
+      - "22e84836e779f0cdf95e49c103963ce7d1e96d53 chore: create the repository with the Obsidian sample plugin layout"
+      - "8724f392d8a060a6c288fa3a60b47a85fe81226f test(batcher): a rename arrives as one renamed change"
+      - "d981fe8a34c09a1856b02c57ebe76970c2ec2ca3 feat(batcher): turn vault events into ordered changes with a device sequence"
+      - "69b8fe0d7b582a656fcccd0533e44d2e06529237 test(batcher): a folder rename, an outside rename and an NFC path"
+      - "2a77133c252527a89192eda4ca57b3ce59e2bbc3 feat(batcher): skip folder events, pair outside renames, send NFC paths"
+      - "452eef66448ce2b1a2fbacc893bb208a8a1f1b72 test(credential): the credential is never written into the vault"
+      - "911cc4e45124d0718e75f85d156d0770c6afb961 feat(credential): keep the device credential outside the vault folder"
+      - "6e76c8cab531b6d770250fa827d9bc990b1afa3d test(sync): a sync connection makes the plugin status-only"
+      - "f58bb865efae7197ee1a4fb8783d482876c1a97a feat(sync): pair, connect, upload, send batches, and reconcile by manifest"
+      - "dde988deef8228340e57c99cdadf5543702acd19 docs(readme): pairing, credential storage, what is sent and read"
+      - "906a104fc3e461eaab9792eaf108820296bb5059 test(origin): a changed Edge address sends no secret to the new host"
+      - "223ec11261e4cc3a94021eff7008b48fea86f866 fix(origin): bind the credential to the Edge origin of the pairing"
+      - "ceb026d02f8621d0c72da00bcca9438b30b87970 test(transport): a redirect to another origin sends no secret there"
+      - "6966a29ee5d38406ce49e4a680edaa0eaa79dcaf fix(transport): follow no redirect on desktop"
+      - "09458a86389cb217d7bb0225708cb38732708e43 test(sync): a channel mismatch on every route, and a manifest at each start"
+      - "c7b964094dec9fa3c64243e8a4af52bd8b781b70 fix(sync): stop for a channel mismatch on every route; manifest at start"
+      - "88130570ac0c47f31543a7b70d3ca52e127da127 test(sync): events keep their order, and a file that is gone"
+      - "bfa1e6a722ac283fdb6acaf03e56a1f92303a4f0 fix(sync): accept events one after the other; a read failure asks for a manifest"
+      - "81eabb6283a8a4472c35ecbdd6844706904325d8 fix(credential, batcher): delete the secret; pair empty files by name"
+      - "0f780a68130a482c3b4c907003f190db68980a39 test: pin cli status-only, session renewal, the 3 s window and HTTPS"
+      - "a6afdbce2247c9298a328a5a9033a281ef35618b docs(readme): mobile storage, the cli case, every data.json field"
   - id: ratatoskr-export-agent
     role: cli-channel
     branch: obs-023/notes-vault-connections

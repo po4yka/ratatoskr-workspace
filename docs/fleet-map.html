@@ -342,7 +342,7 @@ tr.dim-row { opacity: 0.35; }
       <h1>Ratatoskr fleet map</h1>
       <button class="theme-toggle" id="theme" type="button" aria-label="Switch colour theme">Theme: system</button>
     </div>
-    <p class="lede">Eighteen repositories, pinned together by <code>ratatoskr-workspace</code>. The map draws seventeen of them: <code>ratatoskr-notes</code> is pinned and not drawn yet. Read from top to bottom like the tree the squirrel runs on: the surfaces people touch, the platform trunk that carries every event, the bounded contexts on its branches, and the wire contracts at the roots. Every arrow points from a repository to what it relies on.</p>
+    <p class="lede">Nineteen repositories, pinned together by <code>ratatoskr-workspace</code>. The map draws seventeen of them: <code>ratatoskr-notes</code> and <code>ratatoskr-obsidian-plugin</code> are pinned and not drawn yet. Read from top to bottom like the tree the squirrel runs on: the surfaces people touch, the platform trunk that carries every event, the bounded contexts on its branches, and the wire contracts at the roots. Every arrow points from a repository to what it relies on.</p>
     <p class="source">Source: <code>workspace.toml</code> (dependencies, profiles, contracts) and each child <code>README.md</code> and source, plus the port table in <code>docs/DEPLOYMENT_TARGET.md</code>. Verified on 2026-10-13 against workspace <code>main</code> at <code>643b965</code> and the <code>origin/main</code> head of every child: the Round 5 pins, except knowledge <code>b5f2bbd</code>, github <code>da4f679</code>, channel-digests <code>a7cec3a</code>, chatgpt <code>0b142eb</code> and claude <code>049922d</code>, which carry the Round 6 changes. Solid lines are manifest dependencies. Dashed lines are relationships the READMEs describe that the manifest does not list.</p>
   </header>
 
@@ -632,9 +632,9 @@ tr.dim-row { opacity: 0.35; }
   const WORKSPACE = {
     role: "The integration and orchestration superproject. It pins a compatible set of child commits as Git submodules, describes their topology in workspace.toml, records the resolved snapshot in workspace.lock, and validates the fleet. It owns no runtime domain data or business logic.",
     facts: [
-      "18 gitlinks under repos/: one per repository on this map, and repos/notes",
+      "19 gitlinks under repos/: one per repository on this map, repos/notes and repos/clients/obsidian-plugin",
       "ws CLI (Rust, harness/): manifest check, lock generate / check, doctor, status, fleet init",
-      "drift.yml compares the shared fleet files across all 19 repositories weekly",
+      "drift.yml compares the shared fleet files across all 20 repositories weekly",
       "web-operational is the one integration profile implemented today",
       "Deployment target: one Raspberry Pi 5 (aarch64); cloudflared is the only public path",
     ],
@@ -742,7 +742,7 @@ tr.dim-row { opacity: 0.35; }
   const tab = el("g", { class: "tab", tabindex: "0", role: "button", "aria-pressed": "false", "aria-label": "ratatoskr-workspace: show what the workspace holds", "data-id": "workspace" }, tiers);
   const tabBox = el("rect", { x: 6, y: 6, height: 26, rx: 3 }, tab);
   const tabText = el("text", { x: 18, y: 23.5 }, tab);
-  tabText.textContent = "ratatoskr-workspace · pins all 18 · workspace.toml · workspace.lock";
+  tabText.textContent = "ratatoskr-workspace · pins all 19 · workspace.toml · workspace.lock";
   tabBox.setAttribute("width", tabText.getBBox().width + 24);
 
   // edges
