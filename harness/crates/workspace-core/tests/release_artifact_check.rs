@@ -184,6 +184,28 @@ fn a_file_that_no_unit_starts_is_refused() {
     assert_refused(&case, "stray");
 }
 
+/// A template unit (`*@.service`) starts a host program, such as `/usr/bin/ob` that npm installs,
+/// and never a binary that the repository builds (openspec `release-artifacts`). The check must not
+/// ask the export stage for it.
+#[test]
+fn a_template_unit_is_not_read() {
+    let case = Case::new("template");
+    let a = good();
+    case.unit("svc-a.service", "/usr/local/bin/svc-a")
+        .unit(
+            "ratatoskr-notes-sync@.service",
+            "/usr/bin/ob sync --path /var/lib/ratatoskr-notes/vaults/%i --continuous",
+        )
+        .binary("svc-a", &a);
+    let (success, output) = case.run();
+    assert!(
+        success,
+        "the check read the template unit and refused the artifact:\n{output}"
+    );
+    let sums = fs::read_to_string(case.out().join("SHA256SUMS")).expect("SHA256SUMS written");
+    assert_eq!(sums, format!("{}  svc-a\n", hex(&a)));
+}
+
 #[test]
 fn a_complete_export_is_accepted_and_summed() {
     let case = Case::new("complete");
