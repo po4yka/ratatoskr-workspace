@@ -494,6 +494,34 @@
         path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256
         state: absent
 
+    # --- notes_connections_root ---------------------------------------------------------------------
+    # The working trees and the ob client state of the sync connections. Only ratatoskr-notes-sync,
+    # which the notes template units run ob as, may enter it: ob-home holds the Sync token and the
+    # end-to-end key in plain text. The login unit has the path in ReadWritePaths= with no `-`, so
+    # systemd fails the unit when the directory does not exist.
+    - name: "notes_connections_root: the root and its parent"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /mnt/nvme/ratatoskr/notes
+        - /mnt/nvme/ratatoskr/notes/connections
+      register: notes_connections
+
+    - name: "notes_connections_root: the parent is root's, mode 0755; the root is ratatoskr-notes-sync's, mode 0700"
+      ansible.builtin.assert:
+        that:
+          - notes_connections.results[0].stat.isdir | default(false)
+          - notes_connections.results[0].stat.pw_name == 'root'
+          - notes_connections.results[0].stat.mode == '0755'
+          - notes_connections.results[1].stat.isdir | default(false)
+          - notes_connections.results[1].stat.pw_name == 'ratatoskr-notes-sync'
+          - notes_connections.results[1].stat.gr_name == 'ratatoskr-notes-sync'
+          - notes_connections.results[1].stat.mode == '0700'
+        fail_msg: >-
+          {% for result in notes_connections.results %}{{ result.item }}:
+          {{ result.stat.pw_name | default('') }}:{{ result.stat.gr_name | default('') }}
+          {{ result.stat.mode | default('missing') }}; {% endfor %}
+
     # --- nats_up and seed_modes ---------------------------------------------------------------------
     - name: "nats_up: the broker answers its health check"
       ansible.builtin.uri:
