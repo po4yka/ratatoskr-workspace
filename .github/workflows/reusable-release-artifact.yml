@@ -2,8 +2,9 @@
 #
 # A repository whose `deploy/systemd/` holds a unit calls this from its own workflow, pinned to a
 # commit of this repository, after its own arm64 smoke test has passed. For that commit it publishes
-# `ghcr.io/po4yka/<repository>:sha-<commit>`: an OCI artifact that holds every binary a unit starts,
-# `SHA256SUMS` and an SPDX SBOM, with a GitHub build-provenance attestation beside it. The playbook in
+# `ghcr.io/po4yka/<repository>:sha-<commit>`: an OCI artifact that holds every binary a unit starts
+# (a template unit, `*@.service`, starts only a host program and is not read), `SHA256SUMS` and an
+# SPDX SBOM, with a GitHub build-provenance attestation beside it. The playbook in
 # `deploy/ansible/` installs nothing else (openspec `release-artifacts`, ADR-0009).
 #
 # Not an image. The services run under systemd, so the binary is what is deployed; the repository's
@@ -84,6 +85,10 @@ jobs:
 
           wanted = set()
           for unit in sorted(units.glob("*.service")):
+              # A template unit (*@.service) starts only a host program, never a binary that the
+              # repository builds (openspec release-artifacts), so the artifact does not hold it.
+              if unit.name.endswith("@.service"):
+                  continue
               for line in unit.read_text().splitlines():
                   if not line.startswith("ExecStart="):
                       continue
