@@ -20,10 +20,10 @@ repositories:
       - "a9289e27bcf53f496b5917889580965d97ff2358 feat(notes-contracts): mark the notes events user_content and match the blob media type"
   - id: ratatoskr-notes
     role: new-service-connections-index-sync-supervisor
-    branch: main@d4586b4d837ecfc3bbc5746484e2e7e7385d5add
+    branch: main@301c53bfc1f6575b4cce68f22b09197b96b30583
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/notes at d4586b4d837ecfc3bbc5746484e2e7e7385d5add (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, and to d4586b4 after group 6 by task 14.4). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. Notes opens no NATS connection at this pin, and the relay of notes task 7.6 adds it, so bus_acl.rs keeps NOTES in WIRING_PENDING until then
+    pin: repos/notes at 301c53bfc1f6575b4cce68f22b09197b96b30583 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, and to 301c53b after tasks 6.11 to 6.22 and a test-only fix, which apply owner decisions A (the journal namespace ratatoskr-notes-sync) and B (the trees and clients roots) of 2026-10-14; the host role provisions both). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. Notes opens no NATS connection at this pin, and the relay of notes task 7.6 adds it, so bus_acl.rs keeps NOTES in WIRING_PENDING until then
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"
@@ -57,12 +57,27 @@ repositories:
       - "7051a655f1c637e24c977d6875a8f111026fbc50 feat(notes): an expired Sync login stops the unit and waits for the owner"
       - "83b78fd64069341303a618a48293b6b5e87b6b28 refactor(notes): move the route failures and the disconnect record out of api.rs"
       - "d4586b4d837ecfc3bbc5746484e2e7e7385d5add docs(notes): record group 6 in the proposal and the project status"
+      - "7c47cd8b85befcfd17e4469956721d8ff4e4c06e test(notes): an unreadable journal is reported and an ended follower starts again"
+      - "fa0efc81e1c01d00250704c9b4b99bbd53f971d9 fix(notes): follow the journal namespace of the sync units with one restarted follower"
+      - "08d7f14aa6fac197ccab58aa2756fee938e07bdb test(notes): a linked folder in a working tree leaks no outside content"
+      - "c4922cc9413a37fdb2c01ff87d116151e9d89e6f fix(notes): read a working tree only beneath its root and never through a link"
+      - "c44fe2f5b046fd89a911dda256c8ebdae7600d50 test(notes): a strict umask cannot drop the setgid bit of a blob directory"
+      - "601d79a0045d1a205ea635d83b888a55e38c00c0 fix(notes): the blob store refuses a umask that can remove the setgid bit"
+      - "32e0fe0c12843191aaa5e10d880d5928849797a3 test(notes): the units and the path builder follow owner decisions A and B"
+      - "c9981e1895e61237831663650e6f8f6d800b7b42 feat(notes): split the working trees and the client states into two roots"
+      - "c0d81f5972af4c3bf6ac6d8209a33658688568f6 test(notes): a working tree that is a link leaks no outside content"
+      - "37a4105226622fa2f900b80b8b898004c912fee1 fix(notes): the watcher holds the root of its tree and never opens it through a link"
+      - "a1c3cd470ac3f28dd51e9e8bce3049216d804dac test(notes): a strict umask fails the start of the service"
+      - "8e9d3ef360212f630b1673c1c63e151722fe996d fix(notes): open the blob store at the start, so a strict umask stops it"
+      - "4834ff302bb375691e428d061bd3afb5726d27a9 fix(deps): update rustls to 0.23.46 for RUSTSEC-2026-0346 to 0349"
+      - "b03c1f750c612686931bbcc4d336adfa6391291b ci: pin the shared fleet workflows at 75b3ed8"
+      - "301c53bfc1f6575b4cce68f22b09197b96b30583 test(notes): find the unreadable journal line among the lines of every test"
   - id: ratatoskr-platform
     role: edge-route-durables-identity-device-kind-authority
-    branch: main@6ccae27343d3ae24c86ceaa2e42a2aba489f76aa
+    branch: main@352ed77c464834c5467a315045679d5a4485663a
     base: 47c7fe47147735c61cac61eb87cb0bf6079c772c
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/platform at 6ccae27343d3ae24c86ceaa2e42a2aba489f76aa (task 14.4, before Knowledge). Platform provisions ratatoskr_knowledge_notes_files and ratatoskr_knowledge_notes_vaults and grants them in the KNOWLEDGE stanza before Knowledge reads them, so bus_durables.rs keeps both in OWNER_PENDING and bus_acl.rs keeps the Knowledge copy in FRAGMENT_PENDING until the Knowledge pin of task 14.4
+    pin: repos/platform at 352ed77c464834c5467a315045679d5a4485663a (task 14.4, before Knowledge; first pinned at 6ccae27343d3ae24c86ceaa2e42a2aba489f76aa, advanced after the connect follow-ups 9.7 to 9.17). Platform provisions ratatoskr_knowledge_notes_files and ratatoskr_knowledge_notes_vaults and grants them in the KNOWLEDGE stanza before Knowledge reads them, so bus_durables.rs keeps both in OWNER_PENDING and bus_acl.rs keeps the Knowledge copy in FRAGMENT_PENDING until the Knowledge pin of task 14.4
     commits:
       - "3784a276aad64b19f2ee840ab82558cba857133e docs(openspec): open the notes vault connection change"
       - "f403d472d8c43cfd94305bb7bab35cee45f91c32 test(public-api): require the notes route, its device claim and a connect that keeps no body"
@@ -71,6 +86,19 @@ repositories:
       - "0505b7175b5b9b7bb9c87d9e076083acb9aa53b2 feat(operations): mint the notes connect operation for the notes lane only"
       - "9ab03719d0a0353d3293096e74621cad05f70893 test(eventing): require the NOTES identity and the two Knowledge note durables"
       - "6ccae27343d3ae24c86ceaa2e42a2aba489f76aa feat(eventing): add the NOTES identity and the two Knowledge note durables"
+      - "2da3d6e1e045a5300381ad7ab8843dc11146ae87 test(public-api): require a failed connect to end its operation"
+      - "4b3adc9dcb8046cff983f04620e5e5c621715c5b feat(public-api): fail the connect operation when its forward fails"
+      - "23116d825eb87bfa775b20834960759cdf88aa1e docs(public-api): describe the notes connect in the OpenAPI document"
+      - "619f118d34be05adcaacc396e560f83596d574af test(public-api): require the connect budgets at Edge and in the configuration"
+      - "181a04e41cf5d06b06cde52634fa48c3a2c59920 feat(public-api): hold the connect budgets at Edge and in the configuration"
+      - "cc1d47f8f3f7772eb102401537c581eea9f52cef test(operations): require one transition from two concurrent failures"
+      - "2a84508aa503d6a44bde7576607c9b45fb9b3310 fix(operations): lock the operation row in the one transition applier"
+      - "93bb57c601eabf594db595bd0b0b626cc610eaaf test(public-api): require a connect failure that survives the client"
+      - "4164fb943e34009e3c35cad3f66f8aa7936408fe fix(public-api): end a failed connect even when the client leaves"
+      - "b90f15b99f14b5c0519c95d496929ab7079590a7 fix(deps): update rustls to 0.23.46 for RUSTSEC-2026-0346 to 0349"
+      - "48111478119da5b25cbd95ae61aaa1b7c624b9d8 test(public-api): require a stalled connect answer to end in budget"
+      - "1cf78eaff4370cdc62c1eb2836d40b34ffc8fcc8 fix(public-api): bound the connect task by the notes response budget"
+      - "352ed77c464834c5467a315045679d5a4485663a ci: pin the shared fleet workflows at 75b3ed8"
   - id: ratatoskr-knowledge
     role: notes-intake-consumer
     branch: obs-023/notes-vault-connections
@@ -144,6 +172,8 @@ security:
   secrets: The Obsidian account password and the end-to-end password are stored only as ciphertext under /etc/ratatoskr/notes-secrets.key; the MFA code is never stored. Edge proxies the connect body and persists or logs none of it. Login and cleanup run as oneshot template units (ratatoskr-notes-login@, ratatoskr-notes-cleanup@) that get secrets through LoadCredential=; spike 3.2 found that ob reads both passwords from standard input, so only the one-time MFA code is in argv. No secret enters argv of a visible process, logs, events or operation records.
   device_channels: Edge mints a device-kind claim; ratatoskr-notes enforces the owner (404) and the channel (notes.channel_mismatch). One device per plugin or cli connection. The plugin credential never enters the vault folder.
   blob_access: The notes blob root belongs to the group ratatoskr-notes-blobs (setgid, umask 0027); the Knowledge service user is the only member in this change.
+  tree_access: The working trees are under /mnt/nvme/ratatoskr/notes/trees (owner ratatoskr-notes-sync, group ratatoskr-notes-trees, setgid 2750, units with UMask=0027); ratatoskr-notes is the only member of the group. The ob client states, which hold the Sync token and the end-to-end key in plain text, are under /mnt/nvme/ratatoskr/notes/clients (ratatoskr-notes-sync, 0700). Owner decision B of 2026-10-14.
+  journal_access: The sync units log to the journal namespace ratatoskr-notes-sync. A tmpfiles.d ACL gives the group ratatoskr-notes read access to that namespace only; ratatoskr-notes is not in systemd-journal. Owner decision A of 2026-10-14.
   server_access: The host can read every connected vault, end-to-end encrypted vaults included. The connect flow says so before it asks for the end-to-end password.
   freeze: The real host is not touched until the owner lifts the freeze in docs/DEPLOYMENT_TARGET.md.
 privacy: Note content is user content. It leaves ratatoskr-notes only as BlobRefs that Knowledge resolves read-only. Disconnect removes the working tree, the client state, the ciphertext and all Knowledge-derived data.
@@ -159,7 +189,7 @@ verification:
   - the connection, secret custody, sync supervisor (including pull_only_connection_never_pushes_a_local_edit), blob root, index, file event, read API and device channel tests in ratatoskr-notes
   - notes_routes.rs (device_claim_names_the_device_kind, connect_body_is_not_persisted_or_logged), report_authority.rs and nats_permissions.rs in ratatoskr-platform
   - credential.test.ts (credential_never_written_to_data_json) in ratatoskr-obsidian-plugin
-  - the Molecule verify cases notes_sync_unit and notes_blob_read_group in ratatoskr-workspace
+  - the Molecule verify cases notes_sync_unit, notes_blob_read_group, notes_trees_and_clients and notes_journal_namespace in ratatoskr-workspace
   - notes_intake.rs in ratatoskr-knowledge
   - committed_snapshot.rs and bus_acl.rs in ratatoskr-workspace
   - integration/tests/notes_sync_connect.sh and notes_channel_equivalence.sh

@@ -69,7 +69,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "notes",
         "repos/notes",
-        "d4586b4d837ecfc3bbc5746484e2e7e7385d5add",
+        "301c53bfc1f6575b4cce68f22b09197b96b30583",
     ),
     (
         "obsidian-plugin",
@@ -79,7 +79,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "platform",
         "repos/platform",
-        "6ccae27343d3ae24c86ceaa2e42a2aba489f76aa",
+        "352ed77c464834c5467a315045679d5a4485663a",
     ),
     (
         "telegram",
