@@ -5,14 +5,16 @@
 //! A repository that copies the steps instead, calls the workflow twice, or follows a moving ref
 //! such as `@main` fails here, by name. A repository without a unit, or with template units
 //! (`*@.service`) only, is not asked to publish, and a template unit may start only a host or npm
-//! binary.
+//! binary, also through `env` or the `-c` string of a shell.
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
 
 #[path = "support/checkout.rs"]
 mod checkout;
 
-use checkout::{committed_manifest, is_checked_out, repository_root, tracked_files};
+use checkout::{
+    committed_manifest, is_checked_out, repository_root, tracked_files, workspace_root,
+};
 
 const CALLEE: &str = "po4yka/ratatoskr-workspace/.github/workflows/reusable-release-artifact.yml@";
 
@@ -78,39 +80,500 @@ const COMMAND_SETTINGS: [&str; 7] = [
     "ExecStopPost",
 ];
 
+/// The prefixes that systemd reads before the binary of a command setting. `@` moves `argv[0]` to
+/// the second word. A `|` prefix starts the command through the login shell of the user, so it is
+/// not here, and the check refuses it as a path outside the host directories.
+const COMMAND_PREFIXES: [char; 5] = ['-', '@', ':', '+', '!'];
+
+/// The shells, by file name, whose `-c` string the check reads.
+const SHELLS: [&str; 3] = ["sh", "dash", "bash"];
+
+/// The reserved words of a shell that open or close a compound command. The word after one of
+/// them starts a command.
+const SHELL_KEYWORDS: [&str; 13] = [
+    "if", "then", "else", "elif", "fi", "do", "done", "while", "until", "{", "}", "!", "esac",
+];
+
+/// The shell builtins that start no other command. The shell runs them without a search of PATH.
+/// `exec` and `command` start the word after them, and `eval`, `.`, `source` and `trap` run a
+/// string, so none of these is in the list.
+const SHELL_BUILTINS: [&str; 22] = [
+    ":", "[", "break", "cd", "continue", "echo", "exit", "export", "false", "local", "printf",
+    "pwd", "read", "readonly", "return", "set", "shift", "test", "true", "umask", "unset", "wait",
+];
+
+/// The host tools that a shell string may name without a path. systemd gives a unit the PATH
+/// `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin`, so the shell finds a binary in
+/// `/usr/local/bin/` first. A bare name is safe only while no artifact installs a binary of that
+/// name there, which `no_artifact_binary_has_the_name_of_a_bare_host_tool` holds `services.json`
+/// to, and while the unit does not set its own PATH.
+const BARE_HOST_TOOLS: [&str; 1] = ["cat"];
+
+/// The control and redirection operators of a shell, the longest first.
+const SHELL_OPERATORS: [&str; 21] = [
+    "<<<", "<<-", "&>>", ";;", ";&", "&&", "||", "<<", ">>", "<&", ">&", "<>", ">|", "&>", ";",
+    "&", "|", "(", ")", "<", ">",
+];
+
+/// The shell operators whose next word is a file, not a command.
+const REDIRECTIONS: [&str; 12] = [
+    "<<<", "<<-", "&>>", "<<", ">>", "<&", ">&", "<>", ">|", "&>", "<", ">",
+];
+
 /// The commands of a template unit that start something other than a host or npm binary. Each
-/// argument is `(path, unit text)`.
+/// argument is `(path, unit text)`. The check follows `env` to the command it starts and reads
+/// every command of a `sh -c` string, so a wrapper cannot hide a binary of the artifact.
 fn repository_binaries(units: &[(String, String)]) -> Vec<String> {
     let mut findings = Vec::new();
     for (path, text) in units {
-        for line in text.lines() {
-            let Some((setting, command)) = line.trim().split_once('=') else {
-                continue;
-            };
-            if !COMMAND_SETTINGS.contains(&setting.trim()) {
+        let settings: Vec<(&str, &str)> = text
+            .lines()
+            .filter_map(|line| line.trim().split_once('='))
+            .map(|(setting, value)| (setting.trim(), value))
+            .collect();
+        let mut commands = Commands {
+            bare_tools: !settings.iter().any(|(setting, value)| {
+                matches!(*setting, "ExecSearchPath" | "EnvironmentFile")
+                    || (*setting == "Environment" && value.contains("PATH="))
+            }),
+            refused: Vec::new(),
+        };
+        for (setting, command) in &settings {
+            if !COMMAND_SETTINGS.contains(setting) {
                 continue;
             }
-            let Some(binary) = command
-                .trim_start()
-                .trim_start_matches(['-', '@', ':', '+', '!'])
-                .split_whitespace()
-                .next()
-            else {
-                continue;
-            };
-            let host = HOST_BINARY_DIRECTORIES
-                .iter()
-                .any(|directory| binary.starts_with(directory))
-                && !binary.split('/').any(|part| part == "..");
-            if !host {
-                findings.push(format!(
-                    "{path}: {}= starts {binary}, which is not a host or npm binary",
-                    setting.trim()
-                ));
+            if command.trim_end().ends_with('\\') {
+                commands.refused.push(
+                    "a command that continues on the next line, which the check does not read"
+                        .to_owned(),
+                );
+            } else {
+                let command = command.trim_start();
+                let binary = command.trim_start_matches(COMMAND_PREFIXES);
+                let mut words = systemd_words(binary);
+                let prefixes = command.strip_suffix(binary).unwrap_or_default();
+                if prefixes.contains('@') && words.len() > 1 {
+                    words.remove(1);
+                }
+                commands.program(&words);
+            }
+            for reason in commands.refused.drain(..) {
+                findings.push(format!("{path}: {setting}= starts {reason}"));
             }
         }
     }
     findings
+}
+
+/// The words of a command setting, as systemd splits them: at white space, without the quotes and
+/// the backslash escapes, and with `$$` read as `$`.
+fn systemd_words(command: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut word: Option<String> = None;
+    let mut quote = None;
+    let mut chars = command.chars();
+    while let Some(c) = chars.next() {
+        match (quote, c) {
+            (None, c) if c.is_whitespace() => words.extend(word.take()),
+            (None, '\'' | '"') => {
+                quote = Some(c);
+                word.get_or_insert_with(String::new);
+            }
+            (Some(open), c) if c == open => quote = None,
+            (_, '\\') => word.get_or_insert_with(String::new).extend(chars.next()),
+            (_, c) => word.get_or_insert_with(String::new).push(c),
+        }
+    }
+    words.extend(word);
+    words
+        .into_iter()
+        .map(|word| word.replace("$$", "$"))
+        .collect()
+}
+
+/// Whether a program word is an absolute path under the host directories that no expansion can
+/// change.
+fn host_binary(word: &str) -> bool {
+    HOST_BINARY_DIRECTORIES
+        .iter()
+        .any(|directory| word.starts_with(directory))
+        && !word.split('/').any(|part| part == "..")
+        && !word.contains(['$', '`', '*', '?', '['])
+}
+
+/// A word of a shell string without its quotes and backslash escapes.
+fn unquote(word: &str) -> String {
+    let mut text = String::new();
+    let mut quote = None;
+    let mut chars = word.chars();
+    while let Some(c) = chars.next() {
+        match (quote, c) {
+            (None, '\'' | '"') => quote = Some(c),
+            (Some(open), c) if c == open => quote = None,
+            (None | Some('"'), '\\') => text.extend(chars.next()),
+            (_, c) => text.push(c),
+        }
+    }
+    text
+}
+
+/// Whether a word of a shell command is a variable assignment, `NAME=VALUE`.
+fn shell_assignment(word: &str) -> bool {
+    word.split_once('=').is_some_and(|(name, _)| {
+        name.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
+            && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    })
+}
+
+/// The index of the closing `quote` at or after `index`, or the end of the string.
+fn quote_close(chars: &[char], index: usize, quote: char) -> usize {
+    (index..chars.len())
+        .find(|&at| chars.get(at) == Some(&quote))
+        .unwrap_or(chars.len())
+}
+
+/// The index of the `` ` `` that closes a command substitution whose text starts at `index`.
+fn backtick_close(chars: &[char], mut index: usize) -> usize {
+    while let Some(&c) = chars.get(index) {
+        match c {
+            '`' => return index,
+            '\\' => index += 2,
+            _ => index += 1,
+        }
+    }
+    chars.len()
+}
+
+/// The index of the `"` that closes a double-quoted string whose text starts at `index`.
+fn double_close(chars: &[char], mut index: usize) -> usize {
+    while let Some(&c) = chars.get(index) {
+        match c {
+            '"' => return index,
+            '\\' => index += 2,
+            '$' if chars.get(index + 1) == Some(&'(') => {
+                index = substitution_close(chars, index + 2) + 1;
+            }
+            '`' => index = backtick_close(chars, index + 1) + 1,
+            _ => index += 1,
+        }
+    }
+    chars.len()
+}
+
+/// The index of the `)` that closes a `$(` whose text starts at `index`.
+fn substitution_close(chars: &[char], mut index: usize) -> usize {
+    let mut depth = 0_usize;
+    while let Some(&c) = chars.get(index) {
+        match c {
+            ')' if depth == 0 => return index,
+            ')' => {
+                depth -= 1;
+                index += 1;
+            }
+            '(' => {
+                depth += 1;
+                index += 1;
+            }
+            '\\' => index += 2,
+            '\'' => index = quote_close(chars, index + 1, '\'') + 1,
+            '"' => index = double_close(chars, index + 1) + 1,
+            '`' => index = backtick_close(chars, index + 1) + 1,
+            '$' if chars.get(index + 1) == Some(&'(') => {
+                index = substitution_close(chars, index + 2) + 1;
+            }
+            _ => index += 1,
+        }
+    }
+    chars.len()
+}
+
+/// A word or an operator of a shell string. A word keeps its quotes.
+enum Token {
+    Word(String),
+    Operator(String),
+}
+
+/// Reads the commands that a command setting starts, and keeps the reason for each one that is
+/// not a host or npm binary.
+struct Commands {
+    /// Whether a bare host tool finds its host binary: not when the unit sets its own PATH.
+    bare_tools: bool,
+    refused: Vec<String>,
+}
+
+impl Commands {
+    /// A command as systemd or `env` starts it: the program, then its arguments.
+    fn program(&mut self, words: &[String]) {
+        let Some((program, arguments)) = words.split_first() else {
+            return;
+        };
+        if !host_binary(program) {
+            self.refused
+                .push(format!("{program}, which is not a host or npm binary"));
+            return;
+        }
+        let name = program.rsplit('/').next().unwrap_or_default();
+        if name == "env" {
+            self.env(program, arguments);
+        } else if SHELLS.contains(&name) {
+            self.shell(program, arguments);
+        }
+    }
+
+    /// `env [OPTION]... [NAME=VALUE]... COMMAND`: the command that `env` starts. GNU `env` reads
+    /// each word with a `=` before the command as a variable. An option that the check does not
+    /// know, such as `-S`, which splits a string into a new command, is refused.
+    fn env(&mut self, program: &str, arguments: &[String]) {
+        let mut index = 0;
+        while let Some(word) = arguments.get(index) {
+            match word.as_str() {
+                "-i" | "--ignore-environment" | "-0" | "--null" | "-" | "-v" | "--debug" => {
+                    index += 1;
+                }
+                "-u" | "--unset" | "-C" | "--chdir" => index += 2,
+                "--" => {
+                    index += 1;
+                    break;
+                }
+                word if word.starts_with("--unset=") || word.starts_with("--chdir=") => {
+                    index += 1;
+                }
+                word if word.starts_with('-') => {
+                    self.refused
+                        .push(format!("{program} {word}, which the check does not read"));
+                    return;
+                }
+                word if word.contains('=') => index += 1,
+                _ => break,
+            }
+        }
+        while arguments.get(index).is_some_and(|word| word.contains('=')) {
+            index += 1;
+        }
+        self.program(arguments.get(index..).unwrap_or_default());
+    }
+
+    /// `sh [OPTION]... -c STRING [NAME [ARGUMENT]...]`: the commands of the string. A shell
+    /// without `-c` reads a file or its standard input, which the check does not read.
+    fn shell(&mut self, program: &str, arguments: &[String]) {
+        let mut string = false;
+        let mut index = 0;
+        while let Some(word) = arguments.get(index) {
+            match word.strip_prefix(['-', '+']) {
+                Some("-") => {
+                    index += 1;
+                    break;
+                }
+                Some("o") => index += 2,
+                Some(flags)
+                    if !flags.is_empty() && flags.chars().all(|c| c.is_ascii_alphabetic()) =>
+                {
+                    string |= word.starts_with('-') && flags.contains('c');
+                    index += 1;
+                }
+                _ => break,
+            }
+        }
+        match arguments.get(index) {
+            Some(script) if string => self.script(script),
+            _ => self.refused.push(format!(
+                "{program} without -c, which the check does not read"
+            )),
+        }
+    }
+
+    /// The commands of a shell string: the first word of each simple command after its
+    /// assignments, redirections and reserved words, and the commands of each `$(...)` and
+    /// `` `...` ``.
+    fn script(&mut self, script: &str) {
+        let mut words: Vec<String> = Vec::new();
+        // The next word is the file of a redirection.
+        let mut target = false;
+        // The words are the patterns of a `case` item, up to its `)`.
+        let mut pattern = false;
+        for token in self.tokens(script) {
+            match token {
+                Token::Word(_) if target => target = false,
+                Token::Word(word) if pattern => pattern = word != "esac",
+                Token::Word(word) => words.push(word),
+                Token::Operator(operator) if REDIRECTIONS.contains(&operator.as_str()) => {
+                    target = true;
+                }
+                Token::Operator(operator) if pattern => pattern = operator != ")",
+                Token::Operator(operator) => {
+                    pattern = self.simple_command(&words) || operator == ";;" || operator == ";&";
+                    words.clear();
+                }
+            }
+        }
+        self.simple_command(&words);
+    }
+
+    /// One simple command of a shell string, as words with their quotes. Returns whether it is the
+    /// head of a `case`, `case WORD in`, after which the patterns of an item come.
+    fn simple_command(&mut self, words: &[String]) -> bool {
+        let mut words = words;
+        while let Some((first, rest)) = words.split_first() {
+            if !SHELL_KEYWORDS.contains(&first.as_str()) && !shell_assignment(first) {
+                break;
+            }
+            words = rest;
+        }
+        match words.first().map(String::as_str) {
+            None | Some("for" | "select") => false,
+            Some("case") => words.len() == 3 && words.last().is_some_and(|word| word == "in"),
+            Some(_) => {
+                self.shell_command(words);
+                false
+            }
+        }
+    }
+
+    /// A command that a shell runs: a builtin, `exec` or `command` and the command after it, a bare
+    /// host tool, or a program.
+    fn shell_command(&mut self, words: &[String]) {
+        let Some((first, rest)) = words.split_first() else {
+            return;
+        };
+        let name = unquote(first);
+        match name.as_str() {
+            "exec" => self.shell_command(rest),
+            "command" => {
+                let options = rest.iter().take_while(|word| word.starts_with('-')).count();
+                self.shell_command(rest.get(options..).unwrap_or_default());
+            }
+            name if SHELL_BUILTINS.contains(&name) => {}
+            name if BARE_HOST_TOOLS.contains(&name) => {
+                if !self.bare_tools {
+                    self.refused.push(format!(
+                        "{name}, which the PATH of the unit can find outside the host directories"
+                    ));
+                }
+            }
+            _ => self.program(&words.iter().map(|word| unquote(word)).collect::<Vec<_>>()),
+        }
+    }
+
+    /// The words and operators of a shell string. A newline is the operator `;`, and a comment is
+    /// dropped. The commands of each command substitution are read on the way.
+    fn tokens(&mut self, script: &str) -> Vec<Token> {
+        let chars: Vec<char> = script.chars().collect();
+        let mut tokens = Vec::new();
+        let mut word = String::new();
+        let mut index = 0;
+        while let Some(&c) = chars.get(index) {
+            match c {
+                ' ' | '\t' | '\n' => {
+                    if !word.is_empty() {
+                        tokens.push(Token::Word(std::mem::take(&mut word)));
+                    }
+                    if c == '\n' {
+                        tokens.push(Token::Operator(";".to_owned()));
+                    }
+                    index += 1;
+                }
+                '#' if word.is_empty() => {
+                    index = quote_close(&chars, index, '\n');
+                }
+                ';' | '&' | '|' | '(' | ')' | '<' | '>' => {
+                    // A file descriptor, as the 2 of 2>/dev/null, is not a word.
+                    if matches!(c, '<' | '>') && word.chars().all(|c| c.is_ascii_digit()) {
+                        word.clear();
+                    }
+                    if !word.is_empty() {
+                        tokens.push(Token::Word(std::mem::take(&mut word)));
+                    }
+                    let rest: String = chars.iter().skip(index).take(3).collect();
+                    let operator = SHELL_OPERATORS
+                        .iter()
+                        .find(|operator| rest.starts_with(**operator))
+                        .expect("every operator character is an operator");
+                    tokens.push(Token::Operator((*operator).to_owned()));
+                    index += operator.len();
+                }
+                _ => {
+                    let end = match c {
+                        '\\' => index + 2,
+                        '\'' => quote_close(&chars, index + 1, '\'') + 1,
+                        '"' => {
+                            let close = double_close(&chars, index + 1);
+                            self.double_quoted(chars.get(index + 1..close).unwrap_or_default());
+                            close + 1
+                        }
+                        '$' if chars.get(index + 1) == Some(&'(') => {
+                            let close = substitution_close(&chars, index + 2);
+                            self.substitution(chars.get(index + 2..close).unwrap_or_default());
+                            close + 1
+                        }
+                        '`' => {
+                            let close = backtick_close(&chars, index + 1);
+                            self.backticks(chars.get(index + 1..close).unwrap_or_default());
+                            close + 1
+                        }
+                        _ => index + 1,
+                    }
+                    .min(chars.len());
+                    word.extend(chars.get(index..end).unwrap_or_default());
+                    index = end;
+                }
+            }
+        }
+        if !word.is_empty() {
+            tokens.push(Token::Word(word));
+        }
+        tokens
+    }
+
+    /// The command substitutions inside a double-quoted string.
+    fn double_quoted(&mut self, chars: &[char]) {
+        let mut index = 0;
+        while let Some(&c) = chars.get(index) {
+            match c {
+                '\\' => index += 2,
+                '$' if chars.get(index + 1) == Some(&'(') => {
+                    let close = substitution_close(chars, index + 2);
+                    self.substitution(chars.get(index + 2..close).unwrap_or_default());
+                    index = close + 1;
+                }
+                '`' => {
+                    let close = backtick_close(chars, index + 1);
+                    self.backticks(chars.get(index + 1..close).unwrap_or_default());
+                    index = close + 1;
+                }
+                _ => index += 1,
+            }
+        }
+    }
+
+    /// The commands of a `$(...)`. A `case` inside one is refused: the `)` of its first pattern
+    /// would end the substitution for this reader, and the rest would read as arguments.
+    fn substitution(&mut self, chars: &[char]) {
+        let script: String = chars.iter().collect();
+        if script
+            .split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+            .any(|word| word == "case")
+        {
+            self.refused
+                .push("a case inside $(...), which the check does not read".to_owned());
+        }
+        self.script(&script);
+    }
+
+    /// The commands of a `` `...` ``, where `\$`, `` \` `` and `\\` stand for the character.
+    fn backticks(&mut self, chars: &[char]) {
+        let mut script = String::new();
+        let mut index = 0;
+        while let Some(&c) = chars.get(index) {
+            if let ('\\', Some(&next @ ('$' | '`' | '\\'))) = (c, chars.get(index + 1)) {
+                script.push(next);
+                index += 2;
+            } else {
+                script.push(c);
+                index += 1;
+            }
+        }
+        self.substitution(&script.chars().collect::<Vec<_>>());
+    }
 }
 
 #[test]
@@ -183,6 +646,49 @@ fn every_template_unit_starts_only_a_host_or_npm_binary() {
         }
     }
     assert!(findings.is_empty(), "{}", findings.join("\n"));
+}
+
+/// The binaries that the playbook installs in `/usr/local/bin/`: one for each service that
+/// `services.json` enrolls, and nothing else.
+fn artifact_binaries() -> Vec<String> {
+    let path = workspace_root().join("deploy/ansible/group_vars/all/services.json");
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("{} must exist: {error}", path.display()));
+    let inventory: serde_json::Value = serde_json::from_str(&text)
+        .unwrap_or_else(|error| panic!("{} is not valid: {error}", path.display()));
+    inventory
+        .get("ratatoskr_services")
+        .and_then(serde_json::Value::as_array)
+        .expect("services.json lists ratatoskr_services")
+        .iter()
+        .map(|service| {
+            service
+                .get("binary")
+                .and_then(serde_json::Value::as_str)
+                .expect("each service names its binary")
+                .to_owned()
+        })
+        .collect()
+}
+
+/// The bare host tools that a binary of these names in `/usr/local/bin/` would hide.
+fn hidden_host_tools(binaries: &[String]) -> Vec<String> {
+    binaries
+        .iter()
+        .filter(|binary| BARE_HOST_TOOLS.contains(&binary.as_str()))
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn no_artifact_binary_has_the_name_of_a_bare_host_tool() {
+    assert_eq!(
+        hidden_host_tools(&["ratatoskr-edge".to_owned(), "cat".to_owned()]),
+        vec!["cat".to_owned()]
+    );
+    let binaries = artifact_binaries();
+    assert!(!binaries.is_empty(), "services.json enrolls no binary");
+    assert_eq!(hidden_host_tools(&binaries), Vec::<String>::new());
 }
 
 #[test]

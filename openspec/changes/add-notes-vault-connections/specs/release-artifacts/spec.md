@@ -27,6 +27,11 @@ A repository that ships a systemd unit other than a template unit (`*@.service`)
 - **WHEN** a command setting (`ExecStart=`, `ExecStartPre=`, `ExecStartPost=`, `ExecCondition=`, `ExecReload=`, `ExecStop=` or `ExecStopPost=`) of a pinned `deploy/systemd/*@.service` names a bare command or a path outside `/usr/bin/`, `/bin/`, `/usr/sbin/`, `/sbin/` and `/opt/ratatoskr-ob/`
 - **THEN** `release_artifact_callers.rs` fails and names the repository, the unit and the binary
 
+#### Scenario: A template unit starts a binary that the repository builds through a wrapper
+
+- **WHEN** such a command setting starts `env` or a shell (`sh`, `dash` or `bash`) from a host directory, and the command after the options and variables of `env`, or a command word of the `-c` string of the shell, is a bare name or a path outside those directories
+- **THEN** `release_artifact_callers.rs` fails and names the command. A shell builtin passes, and so does a bare host tool such as `cat` while no binary in `services.json` has its name and the unit sets no PATH of its own, because systemd puts `/usr/local/bin/` first in PATH. A shell without `-c`, an `env` option that the check does not know, such as `-S`, and a command line that continues on the next line also fail, because the check cannot read the command that they start
+
 ### Requirement: The publishing workflow is defined once
 
 The build, ABI check, SBOM, attestation and push SHALL be one reusable workflow in `ratatoskr-workspace`. Each deployable repository SHALL call it pinned to a full commit SHA, and SHALL NOT copy its steps.
