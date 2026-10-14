@@ -208,6 +208,23 @@ dependencies = [
 ]
 
 [[repositories]]
+id = "obsidian-plugin"
+path = "repos/clients/obsidian-plugin"
+remote = "https://github.com/po4yka/ratatoskr-obsidian-plugin.git"
+default_branch = "main"
+kind = "client"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["lint", "test", "build"]
+contracts = ["platform.public-api"]
+profiles = ["clients"]
+digest_inputs = ["openapi/openapi.lock.json", "openspec/config.yaml", "package-lock.json"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "wire contract vocabulary" },
+  { repository = "platform", kind = "api", purpose = "device pairing and the notes connection routes through Edge" },
+]
+
+[[repositories]]
 id = "platform"
 path = "repos/platform"
 remote = "https://github.com/po4yka/ratatoskr-platform.git"
