@@ -66,3 +66,7 @@
 	path = repos/integrations/channel-digests
 	url = https://github.com/po4yka/ratatoskr-channel-digests.git
 	branch = main
+[submodule "notes"]
+	path = repos/notes
+	url = https://github.com/po4yka/ratatoskr-notes.git
+	branch = main

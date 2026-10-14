@@ -1,6 +1,6 @@
 format_version = 1
-manifest_sha256 = "e4bed2c2044ce5aaf3ed8f8b57253b1aed0adab47fefa47c77bd21f96534ce22"
-gitmodules_sha256 = "e699febd0ff2a6a614af4018c6cbdcc593bd6a2b98195489bbdec182f4fcd128"
+manifest_sha256 = "f5906c34b9e5c7873503eeb952b45a6ace5f4f7b8299835b882d4eb92087fb59"
+gitmodules_sha256 = "ca82da6f8f335be00f8c1cfd8814aa6d2b77a75468cb50cee63870faa7eaafa6"
 
 [[repositories]]
 id = "browser-extension"
@@ -122,6 +122,18 @@ digests = [
   { path = "contracts/github/ratatoskr-contracts.lock.json", kind = "file", sha256 = "15287b9db430dd261700d1c59d5343c8ea6f9dc32f2ca4ad875aba569ac9e891" },
   { path = "contracts/platform-openapi.lock.json", kind = "file", sha256 = "bcd6c4b6595b0124b8d160d12fcebf5ce6c1e8b1b3cb80617a4af59ba3ac5de7" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "23f28daaab9839af0ffd4fdff03bbf45c7e04390ffcd86e1a557b3fc3bec21bc" },
+]
+
+[[repositories]]
+id = "notes"
+path = "repos/notes"
+remote = "https://github.com/po4yka/ratatoskr-notes.git"
+default_branch = "main"
+commit = "1d09bc00761b3da491728f1c599a5edaf69c3dc3"
+digests = [
+  { path = "Cargo.lock", kind = "file", sha256 = "1a82a780e3a15483e7cf91b656fa1073e86d32d160db1f15082c775b126dd5f4" },
+  { path = "openspec/config.yaml", kind = "file", sha256 = "1393a3f18882941a3334e4a1111e88e9588f58fecc59922190ab0a857afcc9a9" },
+  { path = "schema.sql", kind = "file", sha256 = "464d6c2d93a56df78ff456a01e15efb670db6d8a3ac76993976ca7519e338cd1" },
 ]
 
 [[repositories]]

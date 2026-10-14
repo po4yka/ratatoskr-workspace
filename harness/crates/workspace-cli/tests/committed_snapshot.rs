@@ -10,7 +10,7 @@ use workspace_core::{
     validate_manifest,
 };
 
-const EXPECTED_PINS: [(&str, &str, &str); 17] = [
+const EXPECTED_PINS: [(&str, &str, &str); 18] = [
     (
         "browser-extension",
         "repos/clients/browser-extension",
@@ -65,6 +65,11 @@ const EXPECTED_PINS: [(&str, &str, &str); 17] = [
         "mobile",
         "repos/clients/mobile",
         "67646d3ec6f50a458b59ec50ccea0cec29981e98",
+    ),
+    (
+        "notes",
+        "repos/notes",
+        "1d09bc00761b3da491728f1c599a5edaf69c3dc3",
     ),
     (
         "platform",

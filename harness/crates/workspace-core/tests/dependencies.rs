@@ -49,6 +49,7 @@ fn valid_graph_has_stable_order() {
             "extractor".to_owned(),
             "github".to_owned(),
             "mobile".to_owned(),
+            "notes".to_owned(),
             "platform".to_owned(),
             "instagram".to_owned(),
             "knowledge".to_owned(),
