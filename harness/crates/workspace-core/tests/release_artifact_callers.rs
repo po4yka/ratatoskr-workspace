@@ -3,7 +3,8 @@
 //! `po4yka/ratatoskr-workspace/.github/workflows/reusable-release-artifact.yml@<40-hex SHA>`.
 //!
 //! A repository that copies the steps instead, calls the workflow twice, or follows a moving ref
-//! such as `@main` fails here, by name. A repository without a unit is not asked to publish.
+//! such as `@main` fails here, by name. A repository without a unit, or with template units
+//! (`*@.service`) only, is not asked to publish.
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
 
@@ -46,9 +47,11 @@ fn release_calls(workflows: &[(String, String)]) -> Calls {
     calls
 }
 
-/// Whether the units a repository ships (paths under `deploy/systemd/`) oblige it to publish.
+/// Whether the units a repository ships (paths under `deploy/systemd/`) oblige it to publish. A
+/// template unit (`*@.service`) does not: the playbook copies it from the pinned repository, and
+/// it starts no binary that the repository builds.
 fn publishes(units: &[&str]) -> bool {
-    !units.is_empty()
+    units.iter().any(|unit| !unit.ends_with("@.service"))
 }
 
 #[test]
@@ -65,7 +68,13 @@ fn every_repository_that_ships_a_unit_publishes_through_the_reusable_workflow() 
             root.display(),
             repository.path
         );
-        if tracked_files(&root, "deploy/systemd/*.service").is_empty() {
+        let units = tracked_files(&root, "deploy/systemd/*.service");
+        if !publishes(
+            &units
+                .iter()
+                .map(|(path, _)| path.as_str())
+                .collect::<Vec<_>>(),
+        ) {
             continue;
         }
         publishers += 1;
