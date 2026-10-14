@@ -494,33 +494,210 @@
         path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256
         state: absent
 
-    # --- notes_connections_root ---------------------------------------------------------------------
-    # The working trees and the ob client state of the sync connections. Only ratatoskr-notes-sync,
-    # which the notes template units run ob as, may enter it: ob-home holds the Sync token and the
-    # end-to-end key in plain text. The login unit has the path in ReadWritePaths= with no `-`, so
-    # systemd fails the unit when the directory does not exist.
-    - name: "notes_connections_root: the root and its parent"
+    # --- notes_trees_and_clients ---------------------------------------------------------------------
+    # Owner decision B of 2026-10-14 (add-notes-vault-connections). The notes units run ob as
+    # ratatoskr-notes-sync, which creates trees/<id> and clients/<id>. The trees root is setgid with
+    # the group ratatoskr-notes-trees, whose only member is ratatoskr-notes, so the notes service
+    # reads each tree and no other user can. The clients root holds the Sync token and the
+    # end-to-end key in plain text, so only ratatoskr-notes-sync may enter it. The login and cleanup
+    # units have both roots in ReadWritePaths= with no `-`, so systemd fails them when one does not
+    # exist. The fixture tree is written as the units write, with umask 0027.
+    - name: "notes_trees_and_clients: the group of the trees"
+      ansible.builtin.command: getent group ratatoskr-notes-trees
+      register: notes_trees_group
+      changed_when: false
+
+    - name: "notes_trees_and_clients: the groups of ratatoskr-notes"
+      ansible.builtin.command: id -nG ratatoskr-notes
+      register: notes_user_groups
+      changed_when: false
+
+    - name: "notes_trees_and_clients: ratatoskr-notes is the only member; it is in its own group, ratatoskr and the tree group"
+      ansible.builtin.assert:
+        that:
+          - notes_trees_group.stdout.split(':')[3] | trim == 'ratatoskr-notes'
+          - (notes_user_groups.stdout.split() | first) == 'ratatoskr-notes'
+          - notes_user_groups.stdout.split() | sort == ['ratatoskr', 'ratatoskr-notes', 'ratatoskr-notes-trees']
+        fail_msg: "{{ notes_trees_group.stdout }}; id -nG ratatoskr-notes: {{ notes_user_groups.stdout }}"
+
+    - name: "notes_trees_and_clients: the parent, the two roots and the old connections root"
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
         - /mnt/nvme/ratatoskr/notes
+        - /mnt/nvme/ratatoskr/notes/trees
+        - /mnt/nvme/ratatoskr/notes/clients
         - /mnt/nvme/ratatoskr/notes/connections
-      register: notes_connections
+      register: notes_roots
 
-    - name: "notes_connections_root: the parent is root's, mode 0755; the root is ratatoskr-notes-sync's, mode 0700"
+    - name: "notes_trees_and_clients: parent root 0755; trees ratatoskr-notes-sync:ratatoskr-notes-trees 2750; clients ratatoskr-notes-sync 0700; no connections root"
       ansible.builtin.assert:
         that:
-          - notes_connections.results[0].stat.isdir | default(false)
-          - notes_connections.results[0].stat.pw_name == 'root'
-          - notes_connections.results[0].stat.mode == '0755'
-          - notes_connections.results[1].stat.isdir | default(false)
-          - notes_connections.results[1].stat.pw_name == 'ratatoskr-notes-sync'
-          - notes_connections.results[1].stat.gr_name == 'ratatoskr-notes-sync'
-          - notes_connections.results[1].stat.mode == '0700'
+          - notes_roots.results[0].stat.isdir | default(false)
+          - notes_roots.results[0].stat.pw_name == 'root'
+          - notes_roots.results[0].stat.mode == '0755'
+          - notes_roots.results[1].stat.isdir | default(false)
+          - notes_roots.results[1].stat.pw_name == 'ratatoskr-notes-sync'
+          - notes_roots.results[1].stat.gr_name == 'ratatoskr-notes-trees'
+          - notes_roots.results[1].stat.mode == '2750'
+          - notes_roots.results[2].stat.isdir | default(false)
+          - notes_roots.results[2].stat.pw_name == 'ratatoskr-notes-sync'
+          - notes_roots.results[2].stat.gr_name == 'ratatoskr-notes-sync'
+          - notes_roots.results[2].stat.mode == '0700'
+          - not notes_roots.results[3].stat.exists
         fail_msg: >-
-          {% for result in notes_connections.results %}{{ result.item }}:
+          {% for result in notes_roots.results %}{{ result.item }}:
           {{ result.stat.pw_name | default('') }}:{{ result.stat.gr_name | default('') }}
           {{ result.stat.mode | default('missing') }}; {% endfor %}
+
+    - name: "notes_trees_and_clients: a tree, written by ratatoskr-notes-sync with umask 0027"
+      ansible.builtin.command:
+        argv:
+          - setpriv
+          - --reuid=ratatoskr-notes-sync
+          - --regid=ratatoskr-notes-sync
+          - --init-groups
+          - /bin/sh
+          - -c
+          - >-
+            umask 0027
+            && mkdir -p /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder
+            && printf fixture > /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder/note.md
+      changed_when: true
+
+    - name: "notes_trees_and_clients: the tree, its folder and its note"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: notes_tree_fixture
+      loop:
+        - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b
+        - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder
+        - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder/note.md
+
+    - name: "notes_trees_and_clients: each inherits the tree group; directories 2750, the note 0640"
+      ansible.builtin.assert:
+        that:
+          - item.stat.pw_name == 'ratatoskr-notes-sync'
+          - item.stat.gr_name == 'ratatoskr-notes-trees'
+          - item.stat.mode == ('2750' if item.stat.isdir else '0640')
+        fail_msg: "{{ item.item }}: {{ item.stat.pw_name }}:{{ item.stat.gr_name }} {{ item.stat.mode }}"
+        quiet: true
+      loop: "{{ notes_tree_fixture.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "notes_trees_and_clients: ratatoskr-notes reads the tree, no other ratatoskr-* user reads it, and only ratatoskr-notes-sync enters the clients root"
+      ansible.builtin.shell:
+        executable: /bin/bash
+        cmd: |
+          set -uo pipefail
+          note=/mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder/note.md
+          clients=/mnt/nvme/ratatoskr/notes/clients
+          wrong=""
+          as() { user="$1"; shift; setpriv --reuid="$user" --regid="$user" --init-groups "$@" >/dev/null 2>&1; }
+          as ratatoskr-notes cat "$note" || wrong="${wrong}ratatoskr-notes cannot read the tree"$'\n'
+          as ratatoskr-notes-sync ls "$clients" || wrong="${wrong}ratatoskr-notes-sync cannot enter the clients root"$'\n'
+          others=0
+          for user in $(getent passwd | cut -d: -f1 | grep '^ratatoskr-'); do
+            case "$user" in ratatoskr-notes-sync) continue ;; esac
+            if as "$user" ls "$clients"; then wrong="${wrong}${user} enters the clients root"$'\n'; fi
+            case "$user" in ratatoskr-notes) continue ;; esac
+            others=$((others + 1))
+            if as "$user" cat "$note"; then wrong="${wrong}${user} reads the tree"$'\n'; fi
+          done
+          [ "$others" -gt 0 ] || wrong="${wrong}no ratatoskr-* user outside the group to try"$'\n'
+          printf '%s' "$wrong"
+          [ -z "$wrong" ]
+      changed_when: false
+
+    - name: "notes_trees_and_clients: remove the fixture tree"
+      ansible.builtin.file:
+        path: /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b
+        state: absent
+
+    # --- notes_journal_namespace ---------------------------------------------------------------------
+    # Owner decision A of 2026-10-14. The sync unit logs to the journal namespace
+    # ratatoskr-notes-sync, and ratatoskr-notes reads it with journalctl without the group
+    # systemd-journal. The tmpfiles entry creates the namespace directory with an ACL and a default
+    # ACL for the group ratatoskr-notes. Debian also gives the group adm r-x through the default ACL
+    # of /var/log/journal, which the directory inherits; no other ratatoskr group may be named. The
+    # fixture file is created as journald creates a journal file (root:systemd-journal, mode 0640),
+    # so it gets the default ACL.
+    - name: "notes_journal_namespace: the installed tmpfiles entry"
+      ansible.builtin.stat:
+        path: /etc/tmpfiles.d/ratatoskr-notes-journal.conf
+        checksum_algorithm: sha256
+      register: notes_journal_tmpfiles
+
+    - name: "notes_journal_namespace: the machine id"
+      ansible.builtin.command: cat /etc/machine-id
+      register: notes_machine_id
+      changed_when: false
+
+    - name: "notes_journal_namespace: the namespace directory"
+      ansible.builtin.stat:
+        path: "/var/log/journal/{{ notes_machine_id.stdout | trim }}.ratatoskr-notes-sync"
+      register: notes_journal_dir
+
+    - name: "notes_journal_namespace: the named groups of its ACL and of its default ACL"
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - |
+            import grp, json, os, struct, sys
+            def groups(name):
+                try:
+                    raw = os.getxattr(sys.argv[1], name)
+                except OSError:
+                    return []
+                entries = [struct.unpack('<HHI', raw[i:i + 8]) for i in range(4, len(raw), 8)]
+                return sorted(f'{grp.getgrgid(ident).gr_name}:{perm}' for tag, perm, ident in entries if tag == 0x08)
+            print(json.dumps({'access': groups('system.posix_acl_access'), 'default': groups('system.posix_acl_default')}))
+          - "/var/log/journal/{{ notes_machine_id.stdout | trim }}.ratatoskr-notes-sync"
+      register: notes_journal_acl
+      changed_when: false
+
+    - name: "notes_journal_namespace: the entry is the workspace's; the directory is root:systemd-journal 2755; both ACLs give ratatoskr-notes r-x and name no other ratatoskr group"
+      ansible.builtin.assert:
+        that:
+          - notes_journal_tmpfiles.stat.exists
+          - notes_journal_tmpfiles.stat.checksum == (lookup('ansible.builtin.file', project ~ '/roles/host/files/ratatoskr-notes-journal.conf') ~ '\n') | hash('sha256')
+          - notes_journal_dir.stat.isdir | default(false)
+          - notes_journal_dir.stat.pw_name == 'root'
+          - notes_journal_dir.stat.gr_name == 'systemd-journal'
+          - notes_journal_dir.stat.mode == '2755'
+          - "'ratatoskr-notes:5' in (notes_journal_acl.stdout | from_json).access"
+          - "'ratatoskr-notes:5' in (notes_journal_acl.stdout | from_json).default"
+          - (notes_journal_acl.stdout | from_json).access | select('match', 'ratatoskr') | list == ['ratatoskr-notes:5']
+          - (notes_journal_acl.stdout | from_json).default | select('match', 'ratatoskr') | list == ['ratatoskr-notes:5']
+        fail_msg: >-
+          tmpfiles: {{ notes_journal_tmpfiles.stat.checksum | default('missing') }};
+          directory: {{ notes_journal_dir.stat.pw_name | default('') }}:{{ notes_journal_dir.stat.gr_name | default('') }}
+          {{ notes_journal_dir.stat.mode | default('missing') }}; ACL: {{ notes_journal_acl.stdout }}
+
+    - name: "notes_journal_namespace: ratatoskr-notes reads a journal file there, and no other ratatoskr-* user can"
+      ansible.builtin.shell:
+        executable: /bin/bash
+        cmd: |
+          set -uo pipefail
+          file="/var/log/journal/{{ notes_machine_id.stdout | trim }}.ratatoskr-notes-sync/molecule-fixture.journal"
+          python3 -c 'import os, sys; os.close(os.open(sys.argv[1], os.O_CREAT | os.O_WRONLY, 0o640))' "$file" || exit 99
+          chown root:systemd-journal "$file"
+          wrong=""
+          reads() { setpriv --reuid="$1" --regid="$1" --init-groups cat "$file" >/dev/null 2>&1; }
+          reads ratatoskr-notes || wrong="${wrong}ratatoskr-notes cannot read the journal file"$'\n'
+          others=0
+          for user in $(getent passwd | cut -d: -f1 | grep '^ratatoskr-'); do
+            case "$user" in ratatoskr-notes) continue ;; esac
+            others=$((others + 1))
+            if reads "$user"; then wrong="${wrong}${user} reads the journal file"$'\n'; fi
+          done
+          [ "$others" -gt 0 ] || wrong="${wrong}no other ratatoskr-* user to try"$'\n'
+          rm -f "$file"
+          printf '%s' "$wrong"
+          [ -z "$wrong" ]
+      changed_when: false
 
     # --- nats_up and seed_modes ---------------------------------------------------------------------
     - name: "nats_up: the broker answers its health check"
