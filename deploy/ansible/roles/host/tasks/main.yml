@@ -66,6 +66,21 @@
   when: ratatoskr_host_files_result.results | selectattr('changed') | map(attribute='item.dest') | select('match', '/etc/tmpfiles.d/') | list | length > 0
   changed_when: true
 
+- name: The tmpfiles entry of the notes journal namespace, which the workspace owns
+  ansible.builtin.copy:
+    src: ratatoskr-notes-journal.conf
+    dest: /etc/tmpfiles.d/ratatoskr-notes-journal.conf
+    owner: root
+    group: root
+    mode: "0644"
+  register: ratatoskr_notes_journal_tmpfiles
+
+- name: Create the notes journal namespace directory and its ACL now rather than at the next boot
+  ansible.builtin.command:
+    cmd: systemd-tmpfiles --create /etc/tmpfiles.d/ratatoskr-notes-journal.conf
+  when: ratatoskr_notes_journal_tmpfiles.changed
+  changed_when: true
+
 - name: Boot starts the deployment through ratatoskr.target
   ansible.builtin.systemd_service:
     name: ratatoskr.target

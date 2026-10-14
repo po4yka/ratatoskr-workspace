@@ -42,6 +42,9 @@ ratatoskr_groups:
   - ratatoskr-telegram-blobs
   # Read access to the notes blob root (add-notes-vault-connections, design D12). Only notes writes.
   - ratatoskr-notes-blobs
+  # Read access to the working trees of the notes sync connections (owner decision B of
+  # 2026-10-14). ob writes the trees as ratatoskr-notes-sync; the notes service reads them.
+  - ratatoskr-notes-trees
 
 # Each service user gets its own group (--user-group) and these memberships, as the deploy guides of
 # Platform, the extractor and Telegram create them.
@@ -53,10 +56,12 @@ ratatoskr_users:
   - {name: ratatoskr-telegram-webhook, groups: [ratatoskr, ratatoskr-telegram-secrets, ratatoskr-telegram-blobs]}
   - {name: ratatoskr-telegram-dispatcher, groups: [ratatoskr, ratatoskr-telegram-secrets]}
   - {name: ratatoskr-nats, groups: []}
-  # The notes service user, which starts and stops the notes template units (design D3), and the
-  # user those units run `ob` as. No other user shares the group of ratatoskr-notes-sync, because
-  # its 0700 client state holds the Sync token and the end-to-end key in plain text.
-  - {name: ratatoskr-notes, groups: [ratatoskr]}
+  # The notes service user, which starts and stops the notes template units (design D3) and reads
+  # the working trees through ratatoskr-notes-trees, and the user those units run `ob` as.
+  # ratatoskr-notes-sync is in no other group: its 0700 client state holds the Sync token and the
+  # end-to-end key in plain text. It is not in ratatoskr-notes-trees either, because each tree gets
+  # that group from the setgid bit of the trees root, as the notes units expect.
+  - {name: ratatoskr-notes, groups: [ratatoskr, ratatoskr-notes-trees]}
   - {name: ratatoskr-notes-sync, groups: []}
   # Knowledge reads note bytes through the read group from OBS-023 on (design D12).
   - {name: ratatoskr-knowledge, groups: [ratatoskr, ratatoskr-notes-blobs]}
@@ -77,10 +82,15 @@ ratatoskr_directories:
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-extractor, owner: ratatoskr-extractor, group: ratatoskr-extractor, mode: "0700"}
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-blobs, mode: "2750"}
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes, owner: ratatoskr-notes, group: ratatoskr-notes-blobs, mode: "2750"}
-  # The working trees and the ob client state of the notes sync connections. Only the user that the
-  # notes template units run ob as may enter it; the login unit fails when it does not exist.
+  # The working trees and the ob client state of the notes sync connections (owner decision B of
+  # 2026-10-14). ob creates trees/<id> and clients/<id> as ratatoskr-notes-sync. The setgid bit of
+  # the trees root gives each tree the read group of the notes service; with UMask=0027 a tree is
+  # 2750 and its files 0640. Only ratatoskr-notes-sync may enter the clients root. The login and
+  # cleanup units have both roots in ReadWritePaths= with no `-`, so systemd fails them when one
+  # does not exist.
   - {path: /mnt/nvme/ratatoskr/notes, owner: root, group: root, mode: "0755"}
-  - {path: /mnt/nvme/ratatoskr/notes/connections, owner: ratatoskr-notes-sync, group: ratatoskr-notes-sync, mode: "0700"}
+  - {path: /mnt/nvme/ratatoskr/notes/trees, owner: ratatoskr-notes-sync, group: ratatoskr-notes-trees, mode: "2750"}
+  - {path: /mnt/nvme/ratatoskr/notes/clients, owner: ratatoskr-notes-sync, group: ratatoskr-notes-sync, mode: "0700"}
   - {path: /mnt/nvme/backups, owner: root, group: root, mode: "0755"}
   - {path: /mnt/nvme/backups/ratatoskr, owner: root, group: root, mode: "0700"}
   - {path: /var/lib/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-webhook, mode: "0750"}
