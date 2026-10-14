@@ -29,7 +29,7 @@ Fixtures must use synthetic repositories and credentials. Never use personal exp
 The Rust tests create isolated Git superprojects and child repositories. They cover manifest and
 dependency diagnostics, topology mismatches, uninitialized and dirty baselines, non-mutation,
 canonical lock output, semantic stale-lock diffs, pinned blob/tree evidence, path escape, symlink
-refusal, CLI exit codes, and the real committed seventeen-repository snapshot.
+refusal, CLI exit codes, and the real committed eighteen-repository snapshot.
 
 `harness/crates/workspace-core/tests/fleet.rs` builds a committed fleet source and an empty target in
 temporary directories and covers `ws fleet init`: byte-for-byte copies with the executable bit and
