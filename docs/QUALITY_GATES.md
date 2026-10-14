@@ -250,12 +250,12 @@ All 19 repositories are public. The default branch of each repository is `main`.
 | `.editorconfig` | 19 of 19 | Editor defaults. No check enforces the file |
 | `.githooks/pre-commit` | 19 of 19 | Identical file. See [Git hooks](#git-hooks) |
 | Branch ruleset on `main` | 19 of 19 | `deletion`, `required_signatures` and `required_status_checks`, which lists the three shared checks and the repository's own CI jobs. See [What the ruleset requires](#what-the-ruleset-requires-and-what-it-cannot) |
-| Dependabot alerts | 18 of 19 | GitHub reports a vulnerable dependency. Disabled on `ratatoskr-notes`: `vulnerability-alerts` answers 404, "Vulnerability alerts are disabled" |
-| Dependabot security updates | 18 of 19 | Disabled on `ratatoskr-notes`: `automated-security-fixes` answers `"enabled": false`. GitHub opens a pull request for an advisory against a locked dependency. See [Dependabot](#dependabot) |
+| Dependabot alerts | 19 of 19 | GitHub reports a vulnerable dependency |
+| Dependabot security updates | 19 of 19 | GitHub opens a pull request for an advisory against a locked dependency. See [Dependabot](#dependabot) |
 | `.github/dependabot.yml` | 19 of 19 | Version updates for the `github-actions` ecosystem, grouped, monthly, with a seven-day cooldown |
 | `allow_auto_merge`, and `.github/workflows/dependabot-automerge.yml` | 19 of 19 | Identical wrapper. A Dependabot pull request merges itself once every required check passes. See [Dependabot](#dependabot) |
 | Secret scanning and push protection | 19 of 19 | GitHub gives these to a public repository |
-| `sha_pinning_required` for Actions | 18 of 19 | A workflow must pin each action to a commit SHA. `false` on `ratatoskr-notes` |
+| `sha_pinning_required` for Actions | 19 of 19 | A workflow must pin each action to a commit SHA |
 | The fleet gate, `.github/workflows/fleet.yml` | 19 of 19 | Identical wrapper around the workspace's `reusable-fleet.yml`. See [The fleet gate](#the-fleet-gate) |
 | The workflow gate, `.github/workflows/zizmor.yml` | 19 of 19 | Identical wrapper around the workspace's `reusable-zizmor.yml`. See [The workflow gate](#the-workflow-gate) |
 | `openspec / specs` in `required_status_checks` | 19 of 19 | Added after the name had been published by a real run, and read back on each repository |
@@ -511,9 +511,9 @@ repositories without Rust no language ecosystem is named at all: the commit that
 code brings its own gate and its own lockfile policy, and that commit is where the question belongs.
 
 A security fix is the exception, and it needs no entry in the file. Dependabot security updates are
-enabled in the settings of 18 of the 19 repositories, and both forms of `dependabot.yml` say so in their
+enabled in the settings of all 19 repositories, and both forms of `dependabot.yml` say so in their
 header, so an advisory against a locked dependency opens its own pull request once GitHub's advisory
-database carries it. They were disabled until September 2026, and on 2026-10-14 they are still disabled on `ratatoskr-notes`. `cargo deny check` finds the same
+database carries it. They were disabled until September 2026, and on `ratatoskr-notes` until 2026-10-14. `cargo deny check` finds the same
 advisory, but only as a red job that somebody then fixes by hand in every repository:
 RUSTSEC-2026-0285 in `rustls` turned twelve repositories red that way.
 
