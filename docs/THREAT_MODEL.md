@@ -55,7 +55,9 @@ Mitigations:
   they write only under the trees root and the clients root.
 - The sync units log to their own journal namespace, `ratatoskr-notes-sync`. An ACL gives
   `ratatoskr-notes` read access to that namespace only, so the notes service is not in the group
-  `systemd-journal` and cannot read the journal of another unit.
+  `systemd-journal` and cannot read the journal of another unit. The ACL names no other group: the
+  deploy role removes the group `adm`, which the default ACL of `/var/log/journal` gives on Debian,
+  because a line of `ob` can name a file of the vault.
 - Only `ratatoskr-notes` can open the key file. The service refuses a key file that is a symbolic
   link, that has another owner, or that other users can open.
 - One polkit rule lets `ratatoskr-notes` start and stop only the three notes template units, with a

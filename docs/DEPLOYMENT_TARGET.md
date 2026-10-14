@@ -60,7 +60,7 @@ keeps durable state off it either way.
 | Notes blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, owner `ratatoskr-notes:ratatoskr-notes-blobs`, mode 2750 (setgid) | NVMe |
 | Notes working trees | `/mnt/nvme/ratatoskr/notes/trees`, owner `ratatoskr-notes-sync:ratatoskr-notes-trees`, mode 2750 (setgid); one `<id>` for each `sync` connection, mode 2750, files 0640 | NVMe |
 | Notes `ob` client state | `/mnt/nvme/ratatoskr/notes/clients`, owner `ratatoskr-notes-sync:ratatoskr-notes-sync`, mode 0700; one `<id>` for each `sync` connection, mode 0700 | NVMe |
-| Notes sync journal | `/var/log/journal/<machine id>.ratatoskr-notes-sync` (`LogNamespace=ratatoskr-notes-sync` of the sync unit), owner `root:systemd-journal`, mode 2755, with an ACL and a default ACL that give the group `ratatoskr-notes` `r-x` | `/var/log` (log2ram tmpfs) |
+| Notes sync journal | `/var/log/journal/<machine id>.ratatoskr-notes-sync` (`LogNamespace=ratatoskr-notes-sync` of the sync unit), owner `root:systemd-journal`, mode 2755, with an ACL and a default ACL that name the group `ratatoskr-notes` (`r-x`) and no other group; at most 8 MiB (`journald@ratatoskr-notes-sync.conf`) | `/var/log` (log2ram tmpfs) |
 | Notes login credentials | `/run/ratatoskr-notes` (`RuntimeDirectory=` of the notes service unit, owner `ratatoskr-notes`), with `credentials/<id>/` (directory 0700, files 0600) only while a login runs | tmpfs (`/run`); never written to a disk |
 | Obsidian Headless client | `/opt/ratatoskr-ob` (owner root; no file writable by group or other), and `/usr/bin/ob`, a link to its `cli.js` | root filesystem |
 
@@ -104,12 +104,19 @@ start, the notes service removes `/run/ratatoskr-notes/credentials`.
 The sync unit logs to the journal namespace `ratatoskr-notes-sync`, not to the system journal (owner
 decision A of 2026-10-14). The notes service reads that namespace with `journalctl` and is not in
 the group `systemd-journal`. The deploy role installs
-`/etc/tmpfiles.d/ratatoskr-notes-journal.conf`, which creates the namespace directory with an ACL
-and a default ACL for the group `ratatoskr-notes`, and the Molecule verify case
-`notes_journal_namespace` checks them. When the service cannot read the namespace, it logs
-`notes.sync.journal_unreadable` at its start. The namespace directory is on the log2ram tmpfs of
-`/var/log` (see below). Its size is not bounded yet, and it is not checked on the real host
-(systemd 252) yet.
+`/etc/tmpfiles.d/ratatoskr-notes-journal.conf`, which creates the namespace directory and replaces
+its ACL and default ACL, and those of its journal files, with entries for the group
+`ratatoskr-notes` only. The replacement removes the group `adm`, which Debian puts in the default
+ACL of `/var/log/journal`. When the service cannot read the namespace, it logs
+`notes.sync.journal_unreadable` at its start.
+
+The namespace directory is on the log2ram tmpfs of `/var/log` (see below), which has about 27 MiB
+free. The deploy role installs `/etc/systemd/journald@ratatoskr-notes-sync.conf`: at most 8 MiB
+(`SystemMaxUse=8M`) in files of 2 MiB (`SystemMaxFileSize=2M`), no write when less than 8 MiB of
+`/var/log` is free (`SystemKeepFree=8M`), and 4 MiB in `/run` while `/var/log` is not writable.
+The Molecule verify case `notes_journal_namespace` logs a line through the namespace and checks the
+ACLs, the limit that journald reports, and that only `ratatoskr-notes` reads the line. Neither is
+checked on the real host (systemd 252) yet.
 
 ## Supervision
 
