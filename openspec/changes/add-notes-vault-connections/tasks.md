@@ -117,26 +117,36 @@ or reporter lanes, so no test there could fail first. The kind and its reporter 
 
 ## 11. Obsidian plugin (ratatoskr-obsidian-plugin)
 
-- [ ] 11.1 Create the repository with the Obsidian sample plugin layout, TypeScript strict mode, the fleet `ci.yml` and the Edge client generated from the contracts. No test: scaffolding. Verify that the build and the lint run green.
-- [ ] 11.2 RED: `tests/batcher.test.ts` "a rename arrives as one renamed change" feeds `rename` and `modify` events of the vault API into the batcher and asserts one `renamed` change with the old path. Confirm that it fails because the batcher does not exist.
-- [ ] 11.3 GREEN: implement the batcher and the device sequence. Verify 11.2.
-- [ ] 11.4 RED: `tests/batcher.test.ts` "a folder rename moves each file once" replays the recorded spike sequence (one folder `rename`, then one `rename` per file) and asserts exactly one `renamed` change per file and none for the folder; "an outside rename is paired by hash" replays `create` then `delete` 1 s apart with equal content hashes and asserts one `renamed` change. Confirm that both fail because the batcher forwards every event.
-- [ ] 11.5 GREEN: skip folder `rename` events, pair `create` and `delete` with equal hashes within 3 seconds (design D5), and send NFC paths. Verify 11.4.
-- [ ] 11.6 RED: `tests/credential.test.ts` "credential_never_written_to_data_json" pairs, connects and sends a batch in a test vault with a fake Edge, then reads every file under the vault folder and asserts that none contains the credential or the refresh token. Confirm that it fails because the default `saveData` path writes the credential into `data.json`.
-- [ ] 11.7 GREEN: keep the credential in `app.secretStorage` on desktop (design D5), with `remote.safeStorage` as the fallback, and in memory only where neither exists. Verify 11.6.
-- [ ] 11.8 RED: `tests/sync.test.ts` "a sync connection makes the plugin status-only" answers the connect request with `notes.connection.vault_already_connected` and `channel = sync`, and asserts that the plugin sends no batch. Confirm that it fails because the plugin retries the connect and then sends.
-- [ ] 11.9 GREEN: implement pairing, connect, upload, batches, manifest reconciliation, the status-only mode, and the message for `notes.channel_mismatch` that points to Sync. Verify 11.8.
-- [ ] 11.10 Write the README: pairing, where the credential is kept, what the plugin sends, and what Ratatoskr can read. No test: documentation.
+- [x] 11.1 Create the repository with the Obsidian sample plugin layout, TypeScript strict mode, the fleet `ci.yml` and the Edge client generated from the contracts. No test: scaffolding. Verify that the build and the lint run green.
+- [x] 11.2 RED: `tests/batcher.test.ts` "a rename arrives as one renamed change" feeds `rename` and `modify` events of the vault API into the batcher and asserts one `renamed` change with the old path. Confirm that it fails because the batcher does not exist.
+- [x] 11.3 GREEN: implement the batcher and the device sequence. Verify 11.2.
+- [x] 11.4 RED: `tests/batcher.test.ts` "a folder rename moves each file once" replays the recorded spike sequence (one folder `rename`, then one `rename` per file) and asserts exactly one `renamed` change per file and none for the folder; "an outside rename is paired by hash" replays `create` then `delete` 1 s apart with equal content hashes and asserts one `renamed` change. Confirm that both fail because the batcher forwards every event.
+- [x] 11.5 GREEN: skip folder `rename` events, pair `create` and `delete` with equal hashes within 3 seconds (design D5), and send NFC paths. Verify 11.4.
+- [x] 11.6 RED: `tests/credential.test.ts` "credential_never_written_to_data_json" pairs, connects and sends a batch in a test vault with a fake Edge, then reads every file under the vault folder and asserts that none contains the credential or the refresh token. Confirm that it fails because the default `saveData` path writes the credential into `data.json`.
+- [x] 11.7 GREEN: keep the credential in `app.secretStorage` on desktop (design D5), with `remote.safeStorage` as the fallback, and in memory only where neither exists. Verify 11.6.
+- [x] 11.8 RED: `tests/sync.test.ts` "a sync connection makes the plugin status-only" answers the connect request with `notes.connection.vault_already_connected` and `channel = sync`, and asserts that the plugin sends no batch. Confirm that it fails because the plugin retries the connect and then sends.
+- [x] 11.9 GREEN: implement pairing, connect, upload, batches, manifest reconciliation, the status-only mode, and the message for `notes.channel_mismatch` that points to Sync. Verify 11.8.
+- [x] 11.10 Write the README: pairing, where the credential is kept, what the plugin sends, and what Ratatoskr can read. No test: documentation.
+- [x] 11.11 RED: `tests/origin.test.ts` pairs, then changes the Edge address (a new host, a half-typed address, a look-alike host) and asserts that no Bearer credential, refresh token or device secret reaches any host other than the paired origin. It failed: the new host got `/v1/sessions/refresh` and `/v1/sessions/device`.
+- [x] 11.12 GREEN: store the Edge origin with the credential at pairing, send every authenticated request only to that origin, ask for a new pairing on a mismatch, and apply the address only on Save. Verify 11.11.
+- [x] 11.13 RED: `tests/transport.test.ts` answers 307 and 308 to another origin and asserts that no secret body reaches it. It failed: the second server got the refresh token.
+- [x] 11.14 GREEN: on desktop, send requests through Node `http`/`https` and follow no redirect. Verify 11.13.
+- [x] 11.15 RED: `tests/sync-stop.test.ts` answers `notes.channel_mismatch` on the manifest and upload routes and asserts the Sync message and no further request, and asserts a manifest at each start. It failed on both.
+- [x] 11.16 GREEN: stop for a channel mismatch on every route, and send a manifest at each start. Verify 11.15.
+- [x] 11.17 RED: `tests/sync-order.test.ts` asserts that a slow `modify` and a later `delete` keep their order, and that an event for a vanished file resolves and asks for a manifest. It failed with the wrong order and an unhandled rejection.
+- [x] 11.18 GREEN: accept events through one promise chain, and turn a read failure into a manifest request. Verify 11.17.
 
 ## 12. Export agent (ratatoskr-export-agent)
 
-- [ ] 12.1 RED: `Tests/AgentCoreTests/VaultWatcherTests.swift` `testDeleteAndCreateWithEqualHashIsRename` feeds a delete and a create with equal hashes and asserts one `renamed` change. Confirm that it fails because the vault watcher does not exist.
-- [ ] 12.2 GREEN: implement the vault mode with FSEvents, the Obsidian CLI rename check, and the same batch format as the plugin. Verify 12.1.
+- [x] 12.1 RED: `Tests/AgentCoreTests/VaultWatcherTests.swift` `testDeleteAndCreateWithEqualHashIsRename` feeds a delete and a create with equal hashes and asserts one `renamed` change. Confirm that it fails because the vault watcher does not exist.
+- [x] 12.2 GREEN: implement the vault mode with FSEvents, the Obsidian CLI rename check, and the same batch format as the plugin. Verify 12.1.
+- [x] 12.3 RED: in `VaultWatcherTests` and `VaultModeCoordinatorTests`, assert that a folder rename of identical files pairs each file with the file of the same name, that the same path wins over another path with an equal hash, that a create and a delete inside the window send nothing, and that a scan batch asks the rename check at most once and never while the coordinator lock is held. Three failed by assertion; the create and delete case already passed.
+- [x] 12.4 GREEN: rank pairs by the same file name, then the same path, then the nearest path, and ask the rename check once per scan batch outside the lock. Verify 12.3.
 
 ## 13. Web client (ratatoskr-web)
 
-- [ ] 13.1 RED: `src/features/notes/connect.test.tsx` "the end-to-end password is asked only after the server-access notice is accepted" asserts that the password field is absent until the notice is accepted. Confirm that it fails because the connect view does not exist.
-- [ ] 13.2 GREEN: implement the connection list, the connect flow with the notice, the operation progress, and read-only browse with backlinks. Verify 13.1 and the existing route tests.
+- [x] 13.1 RED: `src/features/notes/connect.test.tsx` "the end-to-end password is asked only after the server-access notice is accepted" asserts that the password field is absent until the notice is accepted. Confirm that it fails because the connect view does not exist.
+- [x] 13.2 GREEN: implement the connection list, the connect flow with the notice, the operation progress, and read-only browse with backlinks. Verify 13.1 and the existing route tests.
 
 ## 14. Workspace (ratatoskr-workspace)
 
