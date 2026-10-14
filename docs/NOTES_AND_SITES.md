@@ -303,9 +303,10 @@ SITE-027 adds `platform_site_events`.
   `notes.service.unavailable`, the four login codes `notes.sync.login_failed`,
   `notes.sync.mfa_required`, `notes.sync.e2e_password_wrong` and `notes.sync.vault_not_found`, the
   expired Sync login `notes.sync.login_expired`, the unreadable journal namespace of the sync units
-  `notes.sync.journal_unreadable` (logged at the start of the service), `sites.site_not_found`,
-  `sites.page_not_found`,
-  `sites.asset_not_found`, `sites.slug_collision`, `sites.publication_suspended`,
+  `notes.sync.journal_unreadable` (logged at the start of the service), the file codes
+  `notes.file.not_found` (a read of an unknown path or revision) and `notes.file.path_collision`
+  (a status: two paths that differ only in case, of which one is published), `sites.site_not_found`, `sites.page_not_found`, `sites.asset_not_found`,
+  `sites.slug_collision`, `sites.publication_suspended`,
   `platform.manifest_digest_stale`, `platform.site_hostname_taken` and
   `edge.capability_not_granted`.
 - Registered device kinds: `obsidian_plugin` and `site_deployer`.
@@ -315,6 +316,7 @@ SITE-027 adds `platform_site_events`.
 | Prefix | Owner | Route class (ADR-0015 of Platform) |
 |---|---|---|
 | `/v1/notes/connections` (`POST` connects, 202), `.../{id}` (`DELETE` disconnects, 204), `.../{id}/changes` | notes | `control`; the connect body is never persisted at Edge |
+| `GET /v1/notes/connections` (the caller's connections), `GET .../{id}/files`, `GET .../{id}/files/{*path}` (the current bytes, or `?revision=` for a past revision), `GET .../{id}/index/{*path}` (links, backlinks, tags and properties), `PUT .../{id}/excluded-folders` | notes | `control`; read only, except the excluded folders; a file route refuses `PUT` and `DELETE` with 405 |
 | `/v1/notes/connections/{id}/blobs` | notes | `transfer` |
 | `/v1/notes/connections/{id}/writes` | Edge publishes the write command | `control` |
 | `/v1/notes/connections/{id}/write-mode` | notes | `control` |
