@@ -39,7 +39,7 @@ use inbox_wiring::{Sources, inbox_wiring_problem, sources_of};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 
-const IDENTITIES: [&str; 13] = [
+const IDENTITIES: [&str; 14] = [
     "EDGE",
     "TELEGRAM",
     "CHATGPT",
@@ -53,10 +53,11 @@ const IDENTITIES: [&str; 13] = [
     "GITHUB",
     "VAULT",
     "CHANNEL_DIGESTS",
+    "NOTES",
 ];
 
 /// The repository that owns each identity: it publishes or consumes with it.
-const OWNERS: [(&str, &str); 13] = [
+const OWNERS: [(&str, &str); 14] = [
     ("EDGE", "platform"),
     ("TELEGRAM", "telegram"),
     ("CHATGPT", "chatgpt"),
@@ -70,11 +71,12 @@ const OWNERS: [(&str, &str); 13] = [
     ("GITHUB", "github"),
     ("VAULT", "vault"),
     ("CHANNEL_DIGESTS", "channel-digests"),
+    ("NOTES", "notes"),
 ];
 
 /// `(repository, path of the copy, identity)`: one vendored copy for every non-Edge identity
 /// (R3-01 gave the six services that had none a `deploy/nats/identity.conf` as well).
-const FRAGMENTS: [(&str, &str, &str); 12] = [
+const FRAGMENTS: [(&str, &str, &str); 13] = [
     ("telegram", "deploy/nats/identity.conf", "TELEGRAM"),
     ("chatgpt", "deploy/nats/identity.conf", "CHATGPT"),
     ("claude", "deploy/nats/identity.conf", "CLAUDE"),
@@ -95,11 +97,12 @@ const FRAGMENTS: [(&str, &str, &str); 12] = [
     ),
     ("github", "deploy/nats/identity.conf", "GITHUB"),
     ("vault", "deploy/nats/identity.conf", "VAULT"),
+    ("notes", "deploy/nats/identity.conf", "NOTES"),
 ];
 
 /// R3-01: the one reply namespace each non-Edge identity may subscribe to. EDGE keeps `_INBOX.>`.
 /// `_INBOX_x.>` does not match `_INBOX.>` because NATS compares whole tokens.
-const INBOX_PREFIXES: [(&str, &str); 12] = [
+const INBOX_PREFIXES: [(&str, &str); 13] = [
     ("TELEGRAM", "_INBOX_telegram"),
     ("CHATGPT", "_INBOX_chatgpt"),
     ("CLAUDE", "_INBOX_claude"),
@@ -115,13 +118,14 @@ const INBOX_PREFIXES: [(&str, &str); 12] = [
     ("GITHUB", "_INBOX_github"),
     ("VAULT", "_INBOX_vault"),
     ("CHANNEL_DIGESTS", "_INBOX_channel_digests"),
+    ("NOTES", "_INBOX_notes"),
 ];
 
 const COMMANDS: &str = "ratatoskr_commands";
 const EVENTS: &str = "ratatoskr_events";
 
 /// `(stream, durable, owning identity)`: the ACL owner column of the fixed-durable table.
-const DURABLE_OWNERS: [(&str, &str, &str); 27] = [
+const DURABLE_OWNERS: [(&str, &str, &str); 29] = [
     (EVENTS, "ratatoskr_telegram_notifications", "TELEGRAM"),
     (COMMANDS, "ratatoskr_x_browser_capture", "X"),
     (COMMANDS, "ratatoskr_instagram_browser_capture", "INSTAGRAM"),
@@ -173,6 +177,8 @@ const DURABLE_OWNERS: [(&str, &str, &str); 27] = [
     (EVENTS, "ratatoskr_x_deletion_acks", "X"),
     (EVENTS, "ratatoskr_instagram_deletion_acks", "INSTAGRAM"),
     (EVENTS, "ratatoskr_threads_deletion_acks", "THREADS"),
+    (EVENTS, "ratatoskr_knowledge_notes_files", "KNOWLEDGE"),
+    (EVENTS, "ratatoskr_knowledge_notes_vaults", "KNOWLEDGE"),
 ];
 
 /// R5-11 and R5-12: `(subject, identities that may publish it)`. The set must match exactly.
@@ -251,7 +257,7 @@ fn is_allowed_wildcard(subject: &str) -> bool {
 }
 
 #[test]
-fn platform_conf_has_exactly_the_thirteen_identities() {
+fn platform_conf_has_exactly_the_fourteen_identities() {
     let manifest = committed_manifest();
     let found = platform_stanzas();
     let names = found
@@ -280,7 +286,7 @@ fn platform_conf_has_exactly_the_thirteen_identities() {
             .iter()
             .map(|name| (*name).to_owned())
             .collect::<BTreeSet<_>>(),
-        "ratatoskr.conf must hold exactly the thirteen identities of the bus topology"
+        "ratatoskr.conf must hold exactly the fourteen identities of the bus topology"
     );
     for identity in IDENTITIES {
         require_checkout(&manifest, owner_of(identity));

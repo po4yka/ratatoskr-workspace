@@ -78,8 +78,9 @@ const fn durable(name: &'static str, filter: &'static str, owner: &'static str) 
     }
 }
 
-/// The 23 service-owned entries of CONTRACTS S04 (`DOMAIN_CONSUMERS`), as amended by R5-11.
-const DOMAIN: [Durable; 23] = [
+/// The 25 service-owned entries of CONTRACTS S04 (`DOMAIN_CONSUMERS`), as amended by R5-11 and by
+/// OBS-023, which added the two Knowledge durables of the notes events.
+const DOMAIN: [Durable; 25] = [
     durable(
         "ratatoskr_extractor_capture",
         "cmd.content.capture.requested.v1",
@@ -190,6 +191,16 @@ const DOMAIN: [Durable; 23] = [
         "ratatoskr_extractor_render_awaits",
         "evt.content.render.>",
         "extractor",
+    ),
+    durable(
+        "ratatoskr_knowledge_notes_files",
+        "evt.notes.file.changed.v1",
+        "knowledge",
+    ),
+    durable(
+        "ratatoskr_knowledge_notes_vaults",
+        "evt.notes.vault.>",
+        "knowledge",
     ),
 ];
 
