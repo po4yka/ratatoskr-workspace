@@ -76,7 +76,7 @@ Two rules follow, and both are contracts rather than advice:
   writes there. If the group does not exist, extractor runs fail with `blob_unreadable`, which is host
   state no repository can repair. The group is a host prerequisite, not something a unit file creates.
   The notes blob root follows the same rule with the read group `ratatoskr-notes-blobs`:
-  `ratatoskr-notes` writes it with `UMask=0027`, so a blob is mode 0640 with that group, and
+  `ratatoskr-notes` writes it with `UMask=0027` (planned, notes task 6.8), so a blob is mode 0640 with that group, and
   `ratatoskr-knowledge` is the only member of the group. A later reader, such as
   `ratatoskr-sites`, joins the group in its own change. The deploy role creates the group, the
   membership and the root (`deploy/ansible/group_vars/all/host.yml`), and the Molecule verify case
@@ -127,7 +127,7 @@ repository carries the same two lines.
 
 **A template unit is installed and never started by the playbook.** `ratatoskr-notes` ships three
 template units (`*@.service`). The instance name is the connection id, a lowercase UUID. Each unit
-runs `/usr/bin/ob` as `ratatoskr-notes-sync`, with `HOME` and `XDG_CONFIG_HOME` set to the
+runs as `ratatoskr-notes-sync` and starts only `/usr/bin/ob`, `/bin/rm` or `/bin/sh -c`, with `HOME` and `XDG_CONFIG_HOME` set to the
 `ob-home` of the connection:
 
 | Unit | Type | Started by | Does |
