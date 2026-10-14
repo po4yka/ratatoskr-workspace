@@ -717,6 +717,11 @@ fn no_artifact_binary_has_the_name_of_a_bare_host_tool() {
         hidden_host_tools(&["ratatoskr-edge".to_owned(), "cat".to_owned()]),
         vec!["cat".to_owned()]
     );
+    // /usr/bin/ob starts with #!/usr/bin/env node, so env finds a node in /usr/local/bin/ first.
+    assert_eq!(
+        hidden_host_tools(&["ratatoskr-edge".to_owned(), "node".to_owned()]),
+        vec!["node".to_owned()]
+    );
     let binaries = artifact_binaries();
     assert!(!binaries.is_empty(), "services.json enrolls no binary");
     assert_eq!(hidden_host_tools(&binaries), Vec::<String>::new());
@@ -879,7 +884,7 @@ fn a_template_unit_that_hides_a_program_from_the_check_is_caught() {
         "ExecStart=/usr/bin/ob sync ; /usr/local/bin/ratatoskr-notes",
         "ExecStart=/bin/rm -rf /x ; /usr/local/bin/ratatoskr-notes",
         // systemd puts the value of a variable in the string before the shell reads it.
-        "Environment=\"X=a;/usr/local/bin/ratatoskr-notes\"\nExecStart=/bin/sh -c 'echo ${X}'",
+        "Environment=\"HOME=a;/usr/local/bin/ratatoskr-notes\"\nExecStart=/bin/sh -c 'echo ${HOME}'",
         // A PATH that the script or the unit sets makes cat find another program.
         "ExecStart=/bin/sh -c 'PATH=/srv/bin cat /x'",
         "ExecStart=/bin/sh -c 'export PATH=/srv/bin; cat /x'",
@@ -909,6 +914,76 @@ fn a_template_unit_that_hides_a_program_from_the_check_is_caught() {
         "each fixture must give exactly one finding:\n{}",
         wrong.join("\n")
     );
+}
+
+#[test]
+fn a_template_unit_that_sets_an_unlisted_variable_or_a_mount_is_caught() {
+    let unit = |setting: &str| {
+        vec![(
+            "deploy/systemd/ratatoskr-notes-sync@.service".to_owned(),
+            format!("[Service]\nType=oneshot\n{setting}\nExecStart=/usr/bin/ob sync\n"),
+        )]
+    };
+    let wrong: Vec<String> = [
+        // Node.js reads a startup variable before ob runs, and the dynamic linker reads its
+        // variables before node runs.
+        "Environment=NODE_OPTIONS=--require=/srv/x.js",
+        "Environment=NODE_PATH=/srv/lib",
+        "Environment=LD_PRELOAD=/srv/x.so",
+        "Environment=LD_LIBRARY_PATH=/srv/lib",
+        "Environment=LD_AUDIT=/srv/x.so",
+        "Environment=HOME=/x NODE_OPTIONS=--require=/srv/x.js",
+        "Environment=\"HOME=/x y\" 'NODE_OPTIONS=--require=/srv/x.js'",
+        "PassEnvironment=HOME NODE_OPTIONS",
+        // Node.js does not read NODE_ENV, but a package can build a file path from its value.
+        "Environment=NODE_ENV=production",
+        // A word that is not NAME=VALUE.
+        "Environment=1X=y",
+        "Environment=%iX=y",
+        // A mount or root setting can put another file at /usr/bin/ob, /bin/sh or /bin/rm, or
+        // hide /usr/bin/env.
+        "BindPaths=/srv/x:/usr/bin/ob",
+        "BindReadOnlyPaths=/srv/sh:/bin/sh",
+        "RootDirectory=/srv/root",
+        "RootImage=/srv/x.raw",
+        "RootImageOptions=root:nosuid",
+        "MountImages=/srv/x.raw:/usr",
+        "ExtensionImages=/srv/x.raw",
+        "ExtensionDirectories=/srv/x",
+        "TemporaryFileSystem=/usr/bin",
+    ]
+    .into_iter()
+    .filter_map(|setting| {
+        let findings = repository_binaries(&unit(setting));
+        (findings.len() != 1).then(|| format!("{setting}: {findings:?}"))
+    })
+    .collect();
+    assert!(
+        wrong.is_empty(),
+        "each fixture must give exactly one finding:\n{}",
+        wrong.join("\n")
+    );
+
+    // A listed variable, a setting that only removes a variable, and a setting that only
+    // restricts the file system pass.
+    for setting in [
+        "Environment=XDG_CONFIG_HOME=/var/lib/x/%i",
+        "Environment=HOME=/x XDG_CONFIG_HOME=/var/lib/x/%i",
+        "Environment=\"HOME=/x y\" 'XDG_CONFIG_HOME=/y'",
+        "PassEnvironment=HOME XDG_CONFIG_HOME",
+        "UnsetEnvironment=NODE_OPTIONS",
+        "ReadWritePaths=-/var/lib/x/%i",
+        "ReadOnlyPaths=/var/lib/x",
+        "InaccessiblePaths=/var/lib/y",
+        "ProtectSystem=strict",
+        "PrivateTmp=yes",
+    ] {
+        assert_eq!(
+            repository_binaries(&unit(setting)),
+            Vec::<String>::new(),
+            "{setting}"
+        );
+    }
 }
 
 #[test]
