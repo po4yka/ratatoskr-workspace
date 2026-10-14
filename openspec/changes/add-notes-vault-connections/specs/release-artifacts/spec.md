@@ -10,7 +10,7 @@ notes cleanup unit starts `/usr/bin/ob`, which npm installs, and `/bin/rm`.
 
 ### Requirement: Every commit on main of a deployable repository has an artifact
 
-A repository that ships a systemd unit other than a template unit (`*@.service`) SHALL publish, for every commit that reaches `main`, one `linux/arm64` artifact at `ghcr.io/po4yka/<repository>` tagged `sha-<full commit SHA>`. The artifact SHALL hold every binary that the repository's units other than template units start, a `SHA256SUMS` file and an SPDX SBOM.
+A repository that ships a systemd unit other than a template unit (`*@.service`) SHALL publish, for every commit that reaches `main`, one `linux/arm64` artifact at `ghcr.io/po4yka/<repository>` tagged `sha-<full commit SHA>`. The artifact SHALL hold every binary that the repository's units other than template units start, a `SHA256SUMS` file and an SPDX SBOM. A template unit SHALL start only a binary of a Debian package or of the npm prefix of `ob`, never a binary that the repository builds.
 
 #### Scenario: The artifact of a pinned commit is located
 
@@ -21,6 +21,11 @@ A repository that ships a systemd unit other than a template unit (`*@.service`)
 
 - **WHEN** the artifact check finds an `ExecStart=` binary in a unit of `deploy/systemd/` other than a template unit that the build did not produce, or a built file that no such unit starts
 - **THEN** the workflow fails and does not publish, which `release_artifact_check.rs` proves against generated fixtures
+
+#### Scenario: A template unit starts a binary that the repository builds
+
+- **WHEN** a command setting (`ExecStart=`, `ExecStartPre=`, `ExecStartPost=`, `ExecCondition=`, `ExecReload=`, `ExecStop=` or `ExecStopPost=`) of a pinned `deploy/systemd/*@.service` names a bare command or a path outside `/usr/bin/`, `/bin/`, `/usr/sbin/`, `/sbin/` and `/opt/ratatoskr-ob/`
+- **THEN** `release_artifact_callers.rs` fails and names the repository, the unit and the binary
 
 ### Requirement: The publishing workflow is defined once
 

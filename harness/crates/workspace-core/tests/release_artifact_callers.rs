@@ -4,7 +4,8 @@
 //!
 //! A repository that copies the steps instead, calls the workflow twice, or follows a moving ref
 //! such as `@main` fails here, by name. A repository without a unit, or with template units
-//! (`*@.service`) only, is not asked to publish.
+//! (`*@.service`) only, is not asked to publish, and a template unit may start only a host or npm
+//! binary.
 
 #![allow(dead_code, clippy::expect_used, clippy::panic)]
 
@@ -49,16 +50,67 @@ fn release_calls(workflows: &[(String, String)]) -> Calls {
 
 /// Whether the units a repository ships (paths under `deploy/systemd/`) oblige it to publish. A
 /// template unit (`*@.service`) does not: the playbook copies it from the pinned repository, and
-/// it starts no binary that the repository builds.
+/// it starts no binary that the repository builds, which `repository_binaries` holds it to.
 fn publishes(units: &[&str]) -> bool {
     units.iter().any(|unit| !unit.ends_with("@.service"))
 }
 
+/// The directories a template unit may start a binary from: those of Debian packages, and the npm
+/// prefix of `ob` that the `nodejs` role installs. The playbook installs a binary of the artifact
+/// in `/usr/local/bin/`, and systemd also searches `/usr/local/bin/` for a bare name, so a template
+/// unit that starts either would need the artifact it is exempt from.
+const HOST_BINARY_DIRECTORIES: [&str; 5] = [
+    "/usr/bin/",
+    "/bin/",
+    "/usr/sbin/",
+    "/sbin/",
+    "/opt/ratatoskr-ob/",
+];
+
+/// The unit settings that start a command.
+const COMMAND_SETTINGS: [&str; 7] = [
+    "ExecCondition",
+    "ExecStartPre",
+    "ExecStart",
+    "ExecStartPost",
+    "ExecReload",
+    "ExecStop",
+    "ExecStopPost",
+];
+
 /// The commands of a template unit that start something other than a host or npm binary. Each
 /// argument is `(path, unit text)`.
 fn repository_binaries(units: &[(String, String)]) -> Vec<String> {
-    let _ = units;
-    Vec::new()
+    let mut findings = Vec::new();
+    for (path, text) in units {
+        for line in text.lines() {
+            let Some((setting, command)) = line.trim().split_once('=') else {
+                continue;
+            };
+            if !COMMAND_SETTINGS.contains(&setting.trim()) {
+                continue;
+            }
+            let Some(binary) = command
+                .trim_start()
+                .trim_start_matches(['-', '@', ':', '+', '!'])
+                .split_whitespace()
+                .next()
+            else {
+                continue;
+            };
+            let host = HOST_BINARY_DIRECTORIES
+                .iter()
+                .any(|directory| binary.starts_with(directory))
+                && !binary.split('/').any(|part| part == "..");
+            if !host {
+                findings.push(format!(
+                    "{path}: {}= starts {binary}, which is not a host or npm binary",
+                    setting.trim()
+                ));
+            }
+        }
+    }
+    findings
 }
 
 #[test]
