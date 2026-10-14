@@ -21,7 +21,7 @@
 
 - name: "{{ ratatoskr_service.name }}: ready on its operator listener"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ ratatoskr_service.operator_port }}/health/ready"
+    url: "http://127.0.0.1:{{ ratatoskr_service.operator_port }}{{ ratatoskr_service.ready_path | default('/health/ready') }}"
     status_code: 200
   register: ratatoskr_ready
   until: ratatoskr_ready.status == 200

@@ -101,7 +101,33 @@ repositories:
       - "352ed77c464834c5467a315045679d5a4485663a ci: pin the shared fleet workflows at 75b3ed8"
   - id: ratatoskr-knowledge
     role: notes-intake-consumer
-    branch: obs-023/notes-vault-connections
+    branch: main@a7c981a4da98698bfd3af38a8c4b197984e539d5
+    base: c08df4b33147362d7435bedca797d5644cd6646e
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    pin: repos/knowledge at a7c981a4da98698bfd3af38a8c4b197984e539d5 (task 14.4; tasks 10.1 to 10.14). Knowledge names the two note durables and its fragment equals the KNOWLEDGE stanza, so bus_durables.rs drops OWNER_PENDING and bus_acl.rs drops FRAGMENT_PENDING; ACK_WAIT_RULES holds both note durables at 120 seconds. Knowledge ships ratatoskr-knowledge.service from this pin, so services.json enrols it (operator listener 9081, readiness path /ready), its nkey belongs to the group ratatoskr-knowledge, and its release artifact is checked by release_artifact_callers.rs like every unit that a pinned repository ships
+    commits:
+      - "7508f0d7ffb272ed26feb1b6887b0b9113278e79 docs: open the OBS-023 notes intake change"
+      - "3c034aa2e022cdd7200bb2ad65b4ba2b54b131a7 test(ingest): require one run per note revision and no run for an image"
+      - "29a09af887682e245db3bdb0cd3471ceef5e652e feat(ingest): analyse a Markdown note once per file revision"
+      - "1921692ed00ec4c7ce932210e781e2fdec6620a5 test(ingest): require the removal of a deleted note and a removed vault"
+      - "a89dec1062875f7dc3cfdc871536886b5e581d0b feat(ingest): remove the derived data of a deleted note and a removed vault"
+      - "b548680023a9c2533bc890b88de3fba00d2f9aee test(ingest): require the notes blob root key and the read group in the unit"
+      - "3066243963b5d9e9c0f64e9c4c29aa0be188e6f2 feat(deploy): read the notes blob root through its read group"
+      - "c0a2c1d39dc9b181842d64ff2a995e66fecb43e5 docs: add the review tasks to the OBS-023 notes intake change"
+      - "9390784d89057a3b24dcc14b60045b7cc58ae919 test(ingest): move the notes intake harness into notes_support"
+      - "749cfb574ae3e1d10c1dd69379b67064075e847e test(ingest): require that a removal and an overlapping analysis leave nothing"
+      - "133fb9f177256ebd4ca3cbb82105fefcb44fb56c fix(ingest): serialize a vault removal with the changes of its connection"
+      - "66d6fcce5f51394ffbe34d4abfd6fcb89b4ac0a8 test(ingest): require that only the current note revision is searchable"
+      - "e7333f4b6a328c0db6982ccf27b88e83c543308e fix(ingest): keep only the current note revision and title searchable"
+      - "394e047d70aca1fe54c02be319352519d95389d1 test(knowledge): require a bounded, encoded note context and an absolute root"
+      - "60df80e376989aedf6535737c0c2ace3382100f9 test(knowledge): state the recorded context cap in the version grammar"
+      - "77e417c42579cfa84d1cc825f8a6c6f6ec1e878d fix(knowledge): bound and encode the note context and require an absolute root"
+      - "e7412eabc287c366c35c454accf5865317c43f4f test(knowledge): require that a tenant deletion removes the notes guards"
+      - "10a1c85e2d6a63cfa61efb4d55f150c62d42a2f7 fix(knowledge): delete the notes guards in a tenant deletion"
+      - "43fef7c0e8627ffa76e71c68150d2c741e4f3bd4 ci: build and publish the Knowledge release artifact"
+      - "ec683c472cdf8c972a983ce6f0213e673a89b006 docs: record the review fixes in the OBS-023 notes intake design"
+      - "6c719cf79b3fdde4e771326e5da4124921e5d4dd fix(deps): update rustls to 0.23.46 for RUSTSEC-2026-0346 to 0349"
+      - "a7c981a4da98698bfd3af38a8c4b197984e539d5 ci: pin the shared fleet workflows at 75b3ed8"
   - id: ratatoskr-obsidian-plugin
     role: new-client-plugin-channel
     branch: main@a6afdbce2247c9298a328a5a9033a281ef35618b

@@ -82,6 +82,26 @@
       "role_file": true,
       "operator_port": 9468,
       "settings": {}
+    },
+    {
+      "name": "knowledge",
+      "repository": "knowledge",
+      "unit": "ratatoskr-knowledge.service",
+      "binary": "ratatoskr-knowledge-service",
+      "user": "ratatoskr-knowledge",
+      "config_example": "deploy/systemd/knowledge.conf.example",
+      "config": "/etc/ratatoskr/knowledge.conf",
+      "database_role": "ratatoskr_knowledge",
+      "role_file": true,
+      "operator_port": 9081,
+      "ready_path": "/ready",
+      "settings": {
+        "RATATOSKR__STORAGE__DATABASE_URL": "postgres://ratatoskr_knowledge:{file:/etc/ratatoskr/secrets/postgres/ratatoskr_knowledge.password}@127.0.0.1:5432/ratatoskr",
+        "RATATOSKR__PROVIDER__OPENROUTER__API_KEY": "{file:/etc/ratatoskr/secrets/openrouter-api-key}",
+        "RATATOSKR__INGEST__GITHUB_README_SERVICE_SECRET": "{file:/etc/ratatoskr/secrets/github-readme-service-secret}",
+        "RATATOSKR__CHANNEL_RECAP__DIGEST_SOURCE_SERVICE_SECRET": "{file:/etc/ratatoskr/secrets/channel-digests-source-secret}",
+        "RATATOSKR__CHANNEL_RECAP__RESULT_READER_SERVICE_SECRET": "{file:/etc/ratatoskr/secrets/channel-digests-result-reader-secret}"
+      }
     }
   ],
   "ratatoskr_template_units": [
@@ -113,7 +133,7 @@
     {"identity": "instagram", "group": "root"},
     {"identity": "threads", "group": "root"},
     {"identity": "extractor-browser-worker", "group": "root"},
-    {"identity": "knowledge", "group": "root"},
+    {"identity": "knowledge", "group": "ratatoskr-knowledge"},
     {"identity": "github", "group": "root"},
     {"identity": "vault", "group": "root"},
     {"identity": "channel-digests", "group": "root"},

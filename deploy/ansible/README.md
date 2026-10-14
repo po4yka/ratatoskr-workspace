@@ -34,10 +34,12 @@ service first starts. The decision is ADR-0009, and the behaviour is the openspe
 | Secret | Where it comes from | Leaves the host? |
 |---|---|---|
 | PostgreSQL role passwords | generated on the host, `/etc/ratatoskr/secrets/postgres/<role>.password` | no; set through psql's standard input |
-| nkey seeds (all thirteen identities) | `nk -gen user -pubout` on the host, `/etc/ratatoskr/<identity>.nkey` | no; only the public keys go into `ratatoskr.conf` |
+| nkey seeds (all fourteen identities) | `nk -gen user -pubout` on the host, `/etc/ratatoskr/<identity>.nkey` | no; only the public keys go into `ratatoskr.conf` |
 | Telegram signing key | `ratatoskr-telegram-webhook assertion-key generate` on the host | no; only its public key goes into `edge.conf` |
 | Telegram webhook secret, channel-digests service secret | generated on the host | no |
+| Knowledge's secrets shared with GitHub (README endpoint) and channel-digests (manifest source, recap result reader) | generated on the host, readable by `ratatoskr-knowledge` | no |
 | Telegram bot token, owner user id | the operator's vault file | copied once, with `no_log` |
+| OpenRouter API key of Knowledge | the operator's vault file | copied once, with `no_log` |
 
 The vault file is outside the repository, at `~/.config/ratatoskr/secrets.vault.yml` by default
 (`ratatoskr_secrets_file`):
@@ -46,6 +48,7 @@ The vault file is outside the repository, at `~/.config/ratatoskr/secrets.vault.
 # ansible-vault create ~/.config/ratatoskr/secrets.vault.yml
 ratatoskr_operator_secrets:
   telegram_bot_token: "<token from @BotFather>"
+  openrouter_api_key: "<OpenRouter API key for Knowledge>"
 ratatoskr_telegram_owner_user_id: "<numeric Telegram user id>"
 ```
 
@@ -104,9 +107,11 @@ The workspace CI job `molecule` runs the same scenario on a native arm64 runner.
 
 ## What it does not do
 
-- It does not deploy the services that ship no unit yet (knowledge, github, vault, channel-digests,
-  chatgpt, claude, x, instagram, threads). It provisions their database roles and nkeys, so that
-  enrolling them later is one entry.
+- It does not deploy the services that ship no unit yet (github, vault, channel-digests, chatgpt,
+  claude, x, instagram, threads). It provisions their database roles and nkeys, so that enrolling
+  them later is one entry. Knowledge is enrolled (OBS-023): its operator listener answers `/ready`,
+  not `/health/ready`, so its entry sets `ready_path`, and the secrets it shares with GitHub and
+  channel-digests are readable by its group only until those peers are enrolled.
 - It does not install Platform's backup units (`deploy/backup/`). Their own README covers them.
 - It does not serve the web client. Where that bundle is served is still an open decision in
   `DEPLOYMENT_TARGET.md`.

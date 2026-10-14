@@ -82,6 +82,8 @@ ratatoskr_directories:
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-extractor, owner: ratatoskr-extractor, group: ratatoskr-extractor, mode: "0700"}
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-blobs, mode: "2750"}
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes, owner: ratatoskr-notes, group: ratatoskr-notes-blobs, mode: "2750"}
+  # The Knowledge blob root, in ReadWritePaths= of ratatoskr-knowledge.service with no `-`.
+  - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-knowledge, owner: ratatoskr-knowledge, group: ratatoskr-knowledge, mode: "0700"}
   # The working trees and the ob client state of the notes sync connections (owner decision B of
   # 2026-10-14). ob creates trees/<id> and clients/<id> as ratatoskr-notes-sync. The setgid bit of
   # the trees root gives each tree the read group of the notes service; with UMask=0027 a tree is
@@ -132,3 +134,9 @@ ratatoskr_better_sqlite3:
 ratatoskr_generated_secrets:
   - {path: /etc/ratatoskr/secrets/channel-digests-service-secret, owner: root, group: ratatoskr-edge, mode: "0640"}
   - {path: /etc/ratatoskr/secrets/telegram-webhook, owner: root, group: ratatoskr-telegram-webhook, mode: "0640"}
+  # Knowledge's shared secrets with GitHub (the README byte endpoint) and channel-digests (the
+  # manifest source and the recap result reader). Neither peer is enrolled yet; its enrolment
+  # adds its user to the group of the file it reads.
+  - {path: /etc/ratatoskr/secrets/github-readme-service-secret, owner: root, group: ratatoskr-knowledge, mode: "0640"}
+  - {path: /etc/ratatoskr/secrets/channel-digests-source-secret, owner: root, group: ratatoskr-knowledge, mode: "0640"}
+  - {path: /etc/ratatoskr/secrets/channel-digests-result-reader-secret, owner: root, group: ratatoskr-knowledge, mode: "0640"}

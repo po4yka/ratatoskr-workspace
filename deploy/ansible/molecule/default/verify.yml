@@ -737,9 +737,9 @@
         label: "{{ item.item.identity }}"
 
     # --- services_ready -----------------------------------------------------------------------------
-    - name: "services_ready: every enrolled operator listener answers /health/ready with 200"
+    - name: "services_ready: every enrolled operator listener answers its readiness path with 200"
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ item.operator_port }}/health/ready"
+        url: "http://127.0.0.1:{{ item.operator_port }}{{ item.ready_path | default('/health/ready') }}"
         status_code: 200
       loop: "{{ services }}"
       loop_control:
@@ -945,6 +945,9 @@
           cat /etc/ratatoskr/secrets/postgres/*.password /etc/ratatoskr/*.nkey \
               /etc/ratatoskr/secrets/telegram-webhook /etc/ratatoskr/secrets/channel-digests-service-secret \
               /etc/ratatoskr/secrets/telegram-platform-signing-key /etc/ratatoskr/secrets/telegram-bot-token \
+              /etc/ratatoskr/secrets/openrouter-api-key /etc/ratatoskr/secrets/github-readme-service-secret \
+              /etc/ratatoskr/secrets/channel-digests-source-secret \
+              /etc/ratatoskr/secrets/channel-digests-result-reader-secret \
             | sed '/^$/d'
         executable: /bin/bash
       register: host_secrets
@@ -1003,7 +1006,7 @@
 
     - name: "stop_as_one: every enrolled service is ready again"
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ item.operator_port }}/health/ready"
+        url: "http://127.0.0.1:{{ item.operator_port }}{{ item.ready_path | default('/health/ready') }}"
         status_code: 200
       register: again
       until: again.status == 200

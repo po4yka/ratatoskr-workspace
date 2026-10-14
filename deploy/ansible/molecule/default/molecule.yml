@@ -47,6 +47,7 @@ provisioner:
         # Test values, not secrets: nothing they open exists outside this container.
         ratatoskr_operator_secrets:
           telegram_bot_token: "123456:MOLECULE-test-token"
+          openrouter_api_key: "sk-or-v1-MOLECULE-test-key"
         ratatoskr_telegram_owner_user_id: "700100200"
         ratatoskr_monitoring_dir: /opt/monitoring-fixture
         # The webhook calls getMe at startup; here it reaches the loopback stand-in from prepare.yml.

@@ -121,11 +121,6 @@ const INBOX_PREFIXES: [(&str, &str); 13] = [
     ("NOTES", "_INBOX_notes"),
 ];
 
-/// OBS-023 task 14.4 pins Platform and notes before Knowledge. Until the Knowledge note intake
-/// (group 10) is pinned, Knowledge's vendored copy lacks the two note durables of its stanza.
-/// The row must go when the copy equals the stanza again: the fragment test reports a stale row.
-const FRAGMENT_PENDING: [(&str, &str); 1] = [("knowledge", "KNOWLEDGE")];
-
 /// Notes writes its events to an outbox and opens no NATS connection at its pin; the relay of
 /// notes task 7.6 adds the connection and its inbox prefix. The wiring test skips the identity
 /// until then, and reports a stale row when the owner wires the prefix.
@@ -338,16 +333,9 @@ fn every_service_fragment_equals_its_platform_stanza() {
             problems.push(format!("ratatoskr.conf has no `{identity}` stanza"));
             continue;
         };
-        let pending = FRAGMENT_PENDING.contains(&(repository, identity));
-        let equal = copy.normalized() == reviewed.normalized();
-        if !equal && !pending {
+        if copy.normalized() != reviewed.normalized() {
             problems.push(format!(
                 "{repository}: {relative} differs from the `{identity}` stanza of ratatoskr.conf"
-            ));
-        }
-        if equal && pending {
-            problems.push(format!(
-                "{repository}: {relative} equals the `{identity}` stanza now; remove its row from FRAGMENT_PENDING"
             ));
         }
     }

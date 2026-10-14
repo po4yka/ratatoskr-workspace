@@ -24,10 +24,11 @@
   ansible.builtin.assert:
     that:
       - ratatoskr_operator_secrets.telegram_bot_token | default('') | length > 0
+      - ratatoskr_operator_secrets.openrouter_api_key | default('') | length > 0
       - ratatoskr_telegram_owner_user_id | default('') | string is match('^[0-9]+$')
     fail_msg: >-
-      {{ ratatoskr_secrets_file }} must set ratatoskr_operator_secrets.telegram_bot_token and
-      ratatoskr_telegram_owner_user_id.
+      {{ ratatoskr_secrets_file }} must set ratatoskr_operator_secrets.telegram_bot_token,
+      ratatoskr_operator_secrets.openrouter_api_key and ratatoskr_telegram_owner_user_id.
     quiet: true
   no_log: true
   run_once: true

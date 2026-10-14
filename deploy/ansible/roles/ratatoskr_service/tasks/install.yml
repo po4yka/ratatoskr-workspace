@@ -150,3 +150,12 @@
     group: ratatoskr-telegram-secrets
     mode: "0640"
   no_log: true
+
+- name: The OpenRouter API key of Knowledge, from the operator's vault file
+  ansible.builtin.copy:
+    dest: /etc/ratatoskr/secrets/openrouter-api-key
+    content: "{{ ratatoskr_operator_secrets.openrouter_api_key }}\n"
+    owner: root
+    group: ratatoskr-knowledge
+    mode: "0640"
+  no_log: true
