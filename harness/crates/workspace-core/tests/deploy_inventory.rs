@@ -88,6 +88,22 @@ fn exec_start_binary(unit: &str) -> Option<String> {
         .map(|name| name.to_string_lossy().into_owned())
 }
 
+/// Why the shipped units and the two inventory lists disagree. Each argument holds
+/// `(repository id, unit file name)`.
+fn enrolment_findings(
+    services: &[(&str, &str)],
+    _templates: &[(&str, &str)],
+    shipped: &[(&str, &str)],
+) -> Vec<String> {
+    shipped
+        .iter()
+        .filter(|unit| !services.contains(unit))
+        .map(|(id, unit)| {
+            format!("{id}: deploy/systemd/{unit} ships and is not enrolled in {SERVICES}")
+        })
+        .collect()
+}
+
 /// The lines a unit is missing to join `ratatoskr.target`.
 fn target_gaps(unit: &str) -> Vec<&'static str> {
     ["PartOf=ratatoskr.target", "WantedBy=ratatoskr.target"]
@@ -298,6 +314,51 @@ fn the_ansible_tree_holds_no_child_deploy_file_or_plain_secret() {
         }
     }
     assert!(findings.is_empty(), "{}", findings.join("\n"));
+}
+
+#[test]
+fn a_template_unit_enrols_only_as_a_template_and_a_plain_unit_only_as_a_service() {
+    let edge = ("platform", "ratatoskr-edge.service");
+    let cleanup = ("notes", "ratatoskr-notes-cleanup@.service");
+    let shipped = [edge, cleanup];
+    let not_enrolled = |id: &str, unit: &str| {
+        format!("{id}: deploy/systemd/{unit} ships and is not enrolled in {SERVICES}")
+    };
+
+    assert_eq!(
+        enrolment_findings(&[edge], &[cleanup], &shipped),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        enrolment_findings(&[edge, cleanup], &[], &shipped),
+        vec![
+            not_enrolled(cleanup.0, cleanup.1),
+            "notes: ratatoskr-notes-cleanup@.service is a template unit and is listed in \
+             ratatoskr_services; list it in ratatoskr_template_units"
+                .to_owned(),
+        ]
+    );
+    assert_eq!(
+        enrolment_findings(&[], &[edge, cleanup], &shipped),
+        vec![
+            not_enrolled(edge.0, edge.1),
+            "platform: ratatoskr-edge.service is not a template unit and is listed in \
+             ratatoskr_template_units; list it in ratatoskr_services"
+                .to_owned(),
+        ]
+    );
+    assert_eq!(
+        enrolment_findings(
+            &[edge],
+            &[cleanup, ("notes", "ratatoskr-notes-sync@.service")],
+            &shipped
+        ),
+        vec![
+            "notes: ratatoskr-notes-sync@.service is listed in ratatoskr_template_units and the \
+             pinned repository does not ship it"
+                .to_owned()
+        ]
+    );
 }
 
 #[test]
