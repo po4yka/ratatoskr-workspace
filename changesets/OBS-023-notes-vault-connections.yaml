@@ -23,7 +23,7 @@ repositories:
     branch: main@1d09bc00761b3da491728f1c599a5edaf69c3dc3
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: not yet. The deploy inventory requires each shipped ratatoskr-*.service to be an enrolled service, and the cleanup template unit is not one; tasks 14.6 and 14.7 decide the enrollment
+    pin: repos/notes at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 (tasks 14.1 and 14.2). The cleanup template unit is listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6 and 14.7)
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"

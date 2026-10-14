@@ -222,12 +222,13 @@ version strings in the binary, so a requirement loaded at run time through `dlop
   lacks, when an enrolled unit does not carry `PartOf=` and `WantedBy=ratatoskr.target`, when a pinned
   `deploy/postgres/role.sql` is not provisioned under the role it creates, and when the Ansible tree
   holds a copy of a child deploy file, an unencrypted vault file, an nkey seed or a private key.
-  `release_artifact_callers.rs` fails when such a repository does not call the reusable
-  release-artifact workflow exactly once, pinned to a commit.
+  `release_artifact_callers.rs` fails when a repository that ships a unit other than a template
+  unit does not call the reusable release-artifact workflow exactly once, pinned to a commit.
 - The `molecule` job in `ci.yml` converges the playbook on a Debian 12 arm64 stand-in with systemd
   and its own Docker daemon, on a native arm64 runner. It requires a second run to report zero
   changes, and then runs the verify cases in `deploy/ansible/molecule/default/verify.yml`: host facts,
-  byte-identical units, the broker's keys and seed modes, readiness of every service, the monitoring
+  byte-identical units, the notes template units with their client and polkit rule, the notes blob
+  read group, the broker's keys and seed modes, readiness of every service, the monitoring
   lines, the provisioning order, a failing role file, no restart on a rerun, the freeze guard, a pin
   that disagrees with the lock, a tampered artifact cache, no secret in a verbose run, and
   `ratatoskr.target` stopping every service.

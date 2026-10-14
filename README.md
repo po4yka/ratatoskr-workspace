@@ -2,7 +2,7 @@
 
 `ratatoskr-workspace` is the coordination repository for Ratatoskr: a self-hosted, multi-repository platform for capturing, extracting, analysing, searching, and backing up personal knowledge from the web, GitHub, social networks, Telegram, ChatGPT, and Claude.
 
-> **Status:** reproducible snapshot slice implemented. Seventeen public child repositories are pinned
+> **Status:** reproducible snapshot slice implemented. Eighteen public child repositories are pinned
 > by gitlinks; `workspace.toml`, `workspace.lock`, the Rust snapshot harness, and hosted snapshot CI
 > are executable. Task-worktree, general integration-profile, PR, release, and MCP orchestration
 > remain later milestones.
@@ -252,10 +252,11 @@ Planned profiles:
 | `ratatoskr-export-agent` | Local macOS ingestion of provider export archives |
 | `ratatoskr-browser-extension` | Explicit browser capture without provider cookie access |
 | `ratatoskr-mobile` | Android/iOS sharing, offline capture queue, and mobile experience |
+| `ratatoskr-notes` | Obsidian vault connections, the file index and revisions of notes, and the Obsidian Sync supervisor |
 
-This repository is the eighteenth. Besides the responsibilities above it is the OpenSpec store,
+This repository is the nineteenth. Besides the responsibilities above it is the OpenSpec store,
 under the id `ratatoskr-workspace`: `openspec/specs/` holds the behaviour more than one repository
-can see, and `openspec/changes/` holds the cross-repository work in motion. Each of the seventeen
+can see, and `openspec/changes/` holds the cross-repository work in motion. Each of the eighteen
 above references it by name from its own `openspec/config.yaml`. See
 `docs/adr/0008-openspec-and-test-first.md`.
 
@@ -285,7 +286,7 @@ The snapshot slice is implemented and tested. Sections that describe task worktr
 profiles, agent runners, PR/release automation, or MCP are target architecture until their own
 changes land.
 
-The fleet is not. Nine of the seventeen product repositories hold code:
+The fleet is not. Ten of the eighteen product repositories hold code:
 
 | Repository | State |
 |---|---|
@@ -298,11 +299,12 @@ The fleet is not. Nine of the seventeen product repositories hold code:
 | `ratatoskr-telegram` | Rust. Service foundation, Bot API client, and durable secure webhook intake. Identity and domain processing remain planned. |
 | `ratatoskr-channel-digests` | Rust. An owner-scoped loopback API and a worker that reads subscribed public channels through one MTProto session, preserves post revisions, builds digest manifests, and exchanges recap requests and results with Knowledge. |
 | `ratatoskr-web` | TypeScript. Generated Edge gateway, authenticated shell, public status, search/reader and archive views, owner operational views, Vitest/Playwright accessibility coverage, build, and CI. |
+| `ratatoskr-notes` | Rust. Vault connections with one channel per vault, disconnect, and the cleanup template unit of a `sync` connection. The Sync supervisor, the index and the read API remain planned. |
 | `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents and fleet/OpenSpec gates. No product manifest or runtime yet. |
 
-Four more repositories are planned and do not exist yet: `ratatoskr-notes`,
-`ratatoskr-obsidian-plugin`, `ratatoskr-sites` and `ratatoskr-site-sdk`. They connect Obsidian vaults
-and serve independent sites. `docs/NOTES_AND_SITES.md` describes the target, and ADR-0010 and
+Three more repositories are planned and do not exist yet: `ratatoskr-obsidian-plugin`,
+`ratatoskr-sites` and `ratatoskr-site-sdk`. With `ratatoskr-notes` they connect Obsidian vaults and
+serve independent sites. `docs/NOTES_AND_SITES.md` describes the target, and ADR-0010 and
 ADR-0011 record the decisions.
 
 The first domain loop now exists in source: Platform publishes
