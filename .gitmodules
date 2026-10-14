@@ -70,3 +70,7 @@
 	path = repos/notes
 	url = https://github.com/po4yka/ratatoskr-notes.git
 	branch = main
+[submodule "obsidian-plugin"]
+	path = repos/clients/obsidian-plugin
+	url = https://github.com/po4yka/ratatoskr-obsidian-plugin.git
+	branch = main

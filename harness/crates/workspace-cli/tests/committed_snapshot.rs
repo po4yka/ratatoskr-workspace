@@ -10,7 +10,7 @@ use workspace_core::{
     validate_manifest,
 };
 
-const EXPECTED_PINS: [(&str, &str, &str); 18] = [
+const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "browser-extension",
         "repos/clients/browser-extension",
@@ -70,6 +70,11 @@ const EXPECTED_PINS: [(&str, &str, &str); 18] = [
         "notes",
         "repos/notes",
         "10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8",
+    ),
+    (
+        "obsidian-plugin",
+        "repos/clients/obsidian-plugin",
+        "a6afdbce2247c9298a328a5a9033a281ef35618b",
     ),
     (
         "platform",

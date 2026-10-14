@@ -1,4 +1,4 @@
-pub(crate) const REPOSITORY_IDS: [&str; 18] = [
+pub(crate) const REPOSITORY_IDS: [&str; 19] = [
     "browser-extension",
     "channel-digests",
     "chatgpt",
@@ -11,6 +11,7 @@ pub(crate) const REPOSITORY_IDS: [&str; 18] = [
     "knowledge",
     "mobile",
     "notes",
+    "obsidian-plugin",
     "platform",
     "telegram",
     "threads",

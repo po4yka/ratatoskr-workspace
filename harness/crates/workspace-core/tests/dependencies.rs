@@ -50,6 +50,7 @@ fn valid_graph_has_stable_order() {
             "github".to_owned(),
             "mobile".to_owned(),
             "notes".to_owned(),
+            "obsidian-plugin".to_owned(),
             "platform".to_owned(),
             "instagram".to_owned(),
             "knowledge".to_owned(),

@@ -1,6 +1,6 @@
 format_version = 1
-manifest_sha256 = "f5906c34b9e5c7873503eeb952b45a6ace5f4f7b8299835b882d4eb92087fb59"
-gitmodules_sha256 = "ca82da6f8f335be00f8c1cfd8814aa6d2b77a75468cb50cee63870faa7eaafa6"
+manifest_sha256 = "23a233e9e06da1bacea5f97825637b6469d35b9985a39dc96dffa83c45f3169a"
+gitmodules_sha256 = "48c0fa4144180175b2ea781b80511ae1c1e042a78bb8118b34556e3ac5a4d632"
 
 [[repositories]]
 id = "browser-extension"
@@ -134,6 +134,18 @@ digests = [
   { path = "Cargo.lock", kind = "file", sha256 = "dbe888fb6c5f562daac2248ef5d4e224ccf8b17c2d33af2627cbcfd3aa7a78d6" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "1393a3f18882941a3334e4a1111e88e9588f58fecc59922190ab0a857afcc9a9" },
   { path = "schema.sql", kind = "file", sha256 = "e01ce248b19b76bc0af2a740b7511e83823f60d37dd1df873c2b693e433e2b12" },
+]
+
+[[repositories]]
+id = "obsidian-plugin"
+path = "repos/clients/obsidian-plugin"
+remote = "https://github.com/po4yka/ratatoskr-obsidian-plugin.git"
+default_branch = "main"
+commit = "a6afdbce2247c9298a328a5a9033a281ef35618b"
+digests = [
+  { path = "openapi/openapi.lock.json", kind = "file", sha256 = "f5d8724a24d7dee679f44edb7f5425b87a30c0c9d09acaa49c2ab3eeb9678d1b" },
+  { path = "openspec/config.yaml", kind = "file", sha256 = "037d9a3c8acf0dcc0b87bf8de4362fdb9f5f619eddb9a4140269d9821a24f7ab" },
+  { path = "package-lock.json", kind = "file", sha256 = "6efc0434d4f635a22e683ee077c4b58b68911a76942175f5bc3df9a5486393dc" },
 ]
 
 [[repositories]]
