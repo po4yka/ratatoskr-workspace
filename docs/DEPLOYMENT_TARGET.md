@@ -57,6 +57,10 @@ keeps durable state off it either way.
 | Database dumps | `/mnt/nvme/backups/ratatoskr` | NVMe |
 | Off-host copies | `/mnt/backup/borg` | SATA SSD, 954 GB |
 | Telegram blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-telegram` | NVMe |
+| Notes blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, owner `ratatoskr-notes:ratatoskr-notes-blobs`, mode 2750 (setgid) | NVMe |
+| Notes working trees and `ob` client state | `/mnt/nvme/ratatoskr/notes/connections`, owner `ratatoskr-notes-sync:ratatoskr-notes-sync`, mode 0700; one `<id>/tree` and one `<id>/ob-home` for each `sync` connection | NVMe |
+| Notes login credentials | `/run/ratatoskr-notes` (`RuntimeDirectory=` of the notes service unit, owner `ratatoskr-notes`), with `credentials/<id>/` (directory 0700, files 0600) only while a login runs | tmpfs (`/run`); never written to a disk |
+| Obsidian Headless client | `/opt/ratatoskr-ob` (owner root; no file writable by group or other), and `/usr/bin/ob`, a link to its `cli.js` | root filesystem |
 
 Two rules follow, and both are contracts rather than advice:
 
@@ -71,9 +75,24 @@ Two rules follow, and both are contracts rather than advice:
   `SupplementaryGroups=ratatoskr-telegram-blobs` and the path in `ReadOnlyPaths`. The extractor never
   writes there. If the group does not exist, extractor runs fail with `blob_unreadable`, which is host
   state no repository can repair. The group is a host prerequisite, not something a unit file creates.
+  The notes blob root follows the same rule with the read group `ratatoskr-notes-blobs`:
+  `ratatoskr-notes` writes it with `UMask=0027`, so a blob is mode 0640 with that group, and
+  `ratatoskr-knowledge` is the only member of the group. A later reader, such as
+  `ratatoskr-sites`, joins the group in its own change. The deploy role creates the group, the
+  membership and the root (`deploy/ansible/group_vars/all/host.yml`), and the Molecule verify case
+  `notes_blob_read_group` checks them.
 - **`/mnt/backup` is a second volume on the same machine.** It survives a disk failure and does not
   survive losing the Pi. Nothing may treat it as an off-host replica — `vault`'s policy of blocking
   `healthy` until a verified remote copy exists is not satisfied by it.
+
+The notes connections root holds the client state of `ob`. Each `ob-home` holds the Obsidian Sync
+token and the derived end-to-end key in plain text, so only `ratatoskr-notes-sync` may enter the
+root, and no other user is a member of its group. The notes login unit has the root in
+`ReadWritePaths=` with no `-` prefix, so systemd fails the unit if the directory does not exist.
+The deploy role creates `/mnt/nvme/ratatoskr/notes` (root, 0755) and the root, and the Molecule
+verify case `notes_connections_root` checks them. `/run/ratatoskr-notes` is on tmpfs, so the
+credential files of a login never reach a disk; at start, the notes service removes
+`/run/ratatoskr-notes/credentials`.
 
 ## Supervision
 
@@ -105,6 +124,37 @@ because Platform is installed first. Each unit carries `PartOf=ratatoskr.target`
 `WantedBy=ratatoskr.target`, so `systemctl stop ratatoskr.target` stops the whole deployment and
 boot starts it. The PostgreSQL and NATS containers are not members and stay up. A new unit in any
 repository carries the same two lines.
+
+**A template unit is installed and never started by the playbook.** `ratatoskr-notes` ships three
+template units (`*@.service`). The instance name is the connection id, a lowercase UUID. Each unit
+runs `/usr/bin/ob` as `ratatoskr-notes-sync`, with `HOME` and `XDG_CONFIG_HOME` set to the
+`ob-home` of the connection:
+
+| Unit | Type | Started by | Does |
+|---|---|---|---|
+| `ratatoskr-notes-sync@.service` | long-running | the Sync supervisor of the notes service (planned, notes group 6), for each `sync` connection | `ob sync --continuous` on the working tree of the connection |
+| `ratatoskr-notes-login@.service` | oneshot | the notes service, at the connect of a `sync` connection | `ob login`, then `ob sync-setup`; reads the secrets with `LoadCredential=` from `/run/ratatoskr-notes/credentials/<id>/` |
+| `ratatoskr-notes-cleanup@.service` | oneshot | the notes service, at a disconnect and after a failed login | `ob sync-unlink`, then removes the working tree and `ob-home` of the connection |
+
+The playbook installs each unit that `ratatoskr_template_units` in `services.json` lists,
+byte-identical to its pin, and reloads systemd. It does not enable or start a template unit. At the
+current pin, notes ships the login and cleanup units; the sync unit joins the list when notes ships
+it. One polkit rule, `/etc/polkit-1/rules.d/60-ratatoskr-template-units.rules`, lets
+`ratatoskr-notes` start and stop an instance of these units whose instance name is a lowercase
+UUID, and allows nothing else: no other verb, unit, instance name or user, and no change to a unit
+file. The Molecule verify case `notes_sync_unit` checks this with `pkcheck`. A template unit does not
+join `ratatoskr.target`, and it starts only a program of a reviewed allow-list (`/usr/bin/ob`,
+`/bin/rm`, `/bin/sh -c`), never a binary that the repository builds; so it needs no release
+artifact (openspec `release-artifacts`).
+
+**Memory budget of a `sync` connection: 512M (PROVISIONAL).** Each `sync` connection runs one
+Node.js process, `ob sync --continuous`, in its own instance of `ratatoskr-notes-sync@.service`, so
+the memory of the notes deployment grows by this budget for each connection. 512M is a placeholder
+for `MemoryMax=` of the sync unit, not a measurement. Spike 3.1 of `add-notes-vault-connections`
+measures the resident memory of one continuous sync with a 1 GiB fixture vault on a host of this
+class, and the sync unit then sets `MemoryMax=` to that value plus 50 %. Replace this paragraph
+with the measured budget when the spike is recorded. At most
+`RATATOSKR__CONNECTIONS__MAX_LOGINS` (default 2) login units run at the same time.
 
 A service that must be scraped by the container-resident metrics stack is reached from a container
 through `host.docker.internal` with `extra_hosts: host-gateway` — the bridge gateway address itself
@@ -407,6 +457,17 @@ ships at the commit `workspace.lock` pins, and from the attested `linux/arm64` a
 repository publishes for that commit. It runs the PostgreSQL files in the order above, generates
 every host secret on the host, and recreates the host facts listed in the next section. A second
 run changes nothing. Its README has the command and the operator's vault file.
+
+For the notes template units, the role `nodejs` installs Node.js 22 from the NodeSource apt
+repository, with a signing key checked against its recorded sha256, and `obsidian-headless` 0.0.14
+(`ob`) in `/opt/ratatoskr-ob` (ADR-0010: from npm on the host, never in a published image). It runs
+`npm ci --omit=dev --ignore-scripts` from the committed lockfile in
+`deploy/ansible/roles/nodejs/files/obsidian-headless/`, which holds a sha512 integrity for each
+package, so no lifecycle script runs. The native module of `better-sqlite3` is the release prebuilt
+for the Node.js ABI and the host architecture, checked against its recorded sha256 before it is put
+in place; the playbook stops when no prebuilt is recorded for the host. Only root writes the prefix.
+`/usr/bin/ob` links to the `cli.js` of the package. The Molecule verify case `notes_sync_unit`
+checks the tree package by package and runs `ob --help` as `ratatoskr-notes-sync`.
 
 While the freeze statement at the top of this document stands, the playbook refuses this host
 before its first change. Lifting the freeze is an edit to this document, and nothing else lifts it.
