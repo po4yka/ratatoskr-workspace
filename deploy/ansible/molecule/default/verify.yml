@@ -243,7 +243,8 @@
 
     # pkcheck asks polkitd what systemd asks it for StartUnit and StopUnit: the action, the unit and
     # the verb, for a process of the subject user. Exit 0 allows; 1 or 2 refuses; another code is an
-    # error and fails the case.
+    # error and fails the case. RestartUnit, KillUnit and ResetFailedUnit ask the same action with
+    # the verbs restart, kill and reset-failed, which the rule must refuse.
     - name: "notes_sync_unit: ratatoskr-notes starts and stops exactly the listed units, with a UUID instance only"
       ansible.builtin.shell:
         executable: /bin/bash
@@ -270,6 +271,9 @@
             case "$listed" in *" $template "*) want=allowed ;; *) want=refused ;; esac
             check ratatoskr-notes manage-units "$instance" start "$want"
             check ratatoskr-notes manage-units "$instance" stop "$want"
+            check ratatoskr-notes manage-units "$instance" restart refused
+            check ratatoskr-notes manage-units "$instance" kill refused
+            check ratatoskr-notes manage-units "$instance" reset-failed refused
             check ratatoskr-notes manage-units "${template/@./@not-a-uuid.}" start refused
             check ratatoskr-notes manage-units "${template/@./@${uuid^^}.}" start refused
             check ratatoskr-notes manage-units "${template/@./@$uuid-0.}" start refused
