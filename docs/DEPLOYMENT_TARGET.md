@@ -284,6 +284,7 @@ bind to `0.0.0.0`.
 | 8096 | `ratatoskr-chatgpt` archive receipt (`/v1/ai-archives/receipt`, `/v1/capabilities`), a dedicated listener (`RATATOSKR__RECEIPT__LISTEN_ADDRESS`) next to the operator listener `9085` | loopback; reached only through Platform archive acceptance |
 | 8097 | `ratatoskr-claude` archive receipt (`/v1/ai-archives/receipt`, `/v1/capabilities`), a dedicated listener (`RATATOSKR__RECEIPT__LISTEN_ADDRESS`) next to the operator listener `9086` | loopback; reached only through Platform archive acceptance |
 | 8098 | `ratatoskr-channel-digests` API (`/v1/manifests`, `/v1/subscriptions`, `/v1/results`, `/ready`) | loopback; Platform and Knowledge only |
+| 8099 | `ratatoskr-notes` domain API (`/v1/notes`), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9471` | loopback; reached only through Edge |
 | 9081 | `ratatoskr-knowledge` operator listener | host only |
 | 9082 | `ratatoskr-instagram` operator listener | host only |
 | 9083 | `ratatoskr-instagram` product API (`POST /v1/captures`, data exports) | host only |
@@ -298,6 +299,7 @@ bind to `0.0.0.0`.
 | 9468 | `ratatoskr-telegram-dispatcher` operator listener | host and monitoring bridge only |
 | 9469 | `ratatoskr-channel-digests` API operator listener | host only |
 | 9470 | `ratatoskr-channel-digests` worker operator listener | host only |
+| 9471 | `ratatoskr-notes` operator listener | host only |
 | 9570 | `ratatoskr-vault` operator listener | host only |
 | 4222 | NATS client, a container, `ratatoskr-nats`, config in `platform/deploy/nats/`; the server binds `0.0.0.0` inside the container and the port is published on `127.0.0.1` only, and it requires an nkey; the largest message it accepts is 8 MiB (`max_payload: 8MB`, up from the 1 MiB default); every identity except Edge subscribes only to its own reply prefix, `_INBOX_telegram`, `_INBOX_chatgpt`, `_INBOX_claude`, `_INBOX_x`, `_INBOX_instagram`, `_INBOX_threads`, `_INBOX_extractor`, `_INBOX_extractor_browser_worker`, `_INBOX_knowledge`, `_INBOX_github`, `_INBOX_vault` or `_INBOX_channel_digests` (R3-01), so one service cannot read another's JetStream deliveries, and a service built before Round 3 times out under this ACL | host only |
 | 8222 | NATS monitoring, the same container; bound inside the container as above and published on `127.0.0.1` only | host only |
