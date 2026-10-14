@@ -6,7 +6,8 @@
 //! - every `deploy/systemd/ratatoskr-*.service` a pinned repository ships is enrolled, and every
 //!   enrolled service names a unit, a binary and a config example that the pinned repository has;
 //! - a template unit (`ratatoskr-*@.service`) is enrolled in `ratatoskr_template_units` and never as
-//!   a service, a plain unit never as a template, and every listed template unit ships at its pin;
+//!   a service, a plain unit never as a template, and every listed template unit ships at its pin
+//!   and names a manager that `ratatoskr_users` of `host.yml` creates;
 //! - every enrolled unit joins `ratatoskr.target` (`PartOf=` and `WantedBy=`);
 //! - every pinned `deploy/postgres/role.sql` is provisioned, under the role name the file creates;
 //! - `deploy/ansible/` holds no copy of a child deploy file and no secret in plain text. The
@@ -203,16 +204,29 @@ fn tree_finding(relative: &str, text: &str) -> Option<String> {
     None
 }
 
-/// The `name:` of each entry of `ratatoskr_users` in `host.yml`.
+/// The `name:` of each entry of `ratatoskr_users` in `host.yml`. The list holds one flow mapping
+/// per line, `- {name: <user>, groups: [...]}`, and ends at the next top-level key.
 fn host_users(host: &str) -> Vec<String> {
-    let _ = host;
-    Vec::new()
+    host.lines()
+        .skip_while(|line| line.trim_end() != "ratatoskr_users:")
+        .skip(1)
+        .take_while(|line| line.is_empty() || line.starts_with([' ', '-', '#']))
+        .filter_map(|line| line.trim().strip_prefix("- {name:"))
+        .filter_map(|rest| rest.split([',', '}']).next())
+        .map(|name| name.trim().to_owned())
+        .collect()
 }
 
-/// Why a listed template unit's manager cannot start it. Each template is `(unit, manager)`.
+/// Why a listed template unit's manager cannot start it. Each template is `(unit, manager)`; the
+/// polkit rule names the manager, and the playbook creates only the users of `ratatoskr_users`.
 fn unknown_managers(templates: &[(&str, &str)], users: &[String]) -> Vec<String> {
-    let _ = (templates, users);
-    Vec::new()
+    templates
+        .iter()
+        .filter(|(_, manager)| !users.iter().any(|user| user == manager))
+        .map(|(unit, manager)| {
+            format!("{unit}: manager {manager} is not in ratatoskr_users of {HOST}")
+        })
+        .collect()
 }
 
 fn walk(dir: &Path, root: &Path, out: &mut Vec<(String, String)>) {

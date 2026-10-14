@@ -10,7 +10,7 @@ template unit and never starts it, unlike a service.
 
 ### Requirement: The inventory and the pinned units agree
 
-Every service in the provisioning inventory SHALL have a systemd unit in its pinned repository, and every `ratatoskr-*.service` that a pinned repository ships SHALL be in the inventory. A template unit (`ratatoskr-*@.service`) SHALL be listed in `ratatoskr_template_units` with the service user that manages its instances, and never in `ratatoskr_services`; a unit that is not a template SHALL NOT be listed in `ratatoskr_template_units`; and every listed template unit SHALL ship at its pin. Each enrolled service unit SHALL carry `PartOf=ratatoskr.target` and `WantedBy=ratatoskr.target`.
+Every service in the provisioning inventory SHALL have a systemd unit in its pinned repository, and every `ratatoskr-*.service` that a pinned repository ships SHALL be in the inventory. A template unit (`ratatoskr-*@.service`) SHALL be listed in `ratatoskr_template_units` with the service user that manages its instances, which SHALL be a user of `ratatoskr_users`, and never in `ratatoskr_services`; a unit that is not a template SHALL NOT be listed in `ratatoskr_template_units`; and every listed template unit SHALL ship at its pin. Each enrolled service unit SHALL carry `PartOf=ratatoskr.target` and `WantedBy=ratatoskr.target`.
 
 #### Scenario: A repository ships a unit that the inventory omits
 
@@ -26,6 +26,11 @@ Every service in the provisioning inventory SHALL have a systemd unit in its pin
 
 - **WHEN** `ratatoskr_services` lists a `*@.service`, or `ratatoskr_template_units` lists a unit that is not a template or that its pinned repository does not ship
 - **THEN** `deploy_inventory.rs` fails and names the repository and the unit
+
+#### Scenario: A template unit names a manager that the playbook does not create
+
+- **WHEN** the `manager` of a `ratatoskr_template_units` entry is not the `name` of an entry of `ratatoskr_users` in `host.yml`
+- **THEN** `deploy_inventory.rs` fails and names the unit and the manager
 
 ## ADDED Requirements
 
