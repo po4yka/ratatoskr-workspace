@@ -77,6 +77,10 @@ ratatoskr_directories:
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-extractor, owner: ratatoskr-extractor, group: ratatoskr-extractor, mode: "0700"}
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-blobs, mode: "2750"}
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes, owner: ratatoskr-notes, group: ratatoskr-notes-blobs, mode: "2750"}
+  # The working trees and the ob client state of the notes sync connections. Only the user that the
+  # notes template units run ob as may enter it; the login unit fails when it does not exist.
+  - {path: /mnt/nvme/ratatoskr/notes, owner: root, group: root, mode: "0755"}
+  - {path: /mnt/nvme/ratatoskr/notes/connections, owner: ratatoskr-notes-sync, group: ratatoskr-notes-sync, mode: "0700"}
   - {path: /mnt/nvme/backups, owner: root, group: root, mode: "0755"}
   - {path: /mnt/nvme/backups/ratatoskr, owner: root, group: root, mode: "0700"}
   - {path: /var/lib/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-webhook, mode: "0750"}
