@@ -193,29 +193,122 @@
         that: notes_node.stdout is match('v22\.')
         fail_msg: "node --version: {{ notes_node.stdout }}"
 
-    - name: "notes_sync_unit: the globally installed npm packages"
-      ansible.builtin.command: npm ls --global --json --depth 0
-      register: notes_npm
-      changed_when: false
+    # ob runs as root at install time and as ratatoskr-notes-sync at run time, so every package and
+    # every downloaded binary of its tree is pinned and checked before use. The tree is installed
+    # from the committed lockfile, with the npm integrity of every package, into a prefix that only
+    # root writes; no lifecycle script runs, so nothing downloads at install time. The native module
+    # of better-sqlite3 is the prebuilt of the release, with the sha256 recorded for each
+    # architecture that runs the playbook (the Pi and the CI runner are arm64).
+    - name: "notes_sync_unit: the committed lockfile of ob"
+      ansible.builtin.set_fact:
+        notes_lock: "{{ lookup('ansible.builtin.file', project ~ '/roles/nodejs/files/obsidian-headless/package-lock.json') | from_json }}"
+        notes_native_sha256:
+          arm64: c3352cb3b127d28c8163e827dbb8575bef3b5cdff4b2206d562197b5c448f3ea
 
-    - name: "notes_sync_unit: the obsidian-headless tarball kept on the host"
+    - name: "notes_sync_unit: how the installed tree differs from the committed lockfile"
       ansible.builtin.command:
         argv:
           - python3
           - -c
-          - >-
-            import base64, hashlib, sys;
-            print('sha512-' + base64.b64encode(hashlib.sha512(open(sys.argv[1], 'rb').read()).digest()).decode())
-          - "{{ state }}/npm/obsidian-headless-0.0.14.tgz"
-      register: notes_tarball
+          - |
+            import json, os, sys
+            lock, root, wrong = json.load(sys.stdin), sys.argv[1], []
+            want = {key: entry for key, entry in lock['packages'].items() if key}
+            def read(path):
+                try:
+                    with open(path) as f:
+                        return json.load(f)
+                except (OSError, ValueError):
+                    return None
+            hidden = (read(root + '/node_modules/.package-lock.json') or {}).get('packages', {})
+            for key, entry in sorted(want.items()):
+                if not str(entry.get('integrity', '')).startswith('sha512-'):
+                    wrong.append(key + ': the lockfile records no sha512 integrity')
+                if not str(entry.get('resolved', '')).startswith('https://registry.npmjs.org/'):
+                    wrong.append(key + ': the lockfile resolves it outside registry.npmjs.org')
+                for field in ('version', 'resolved', 'integrity'):
+                    if hidden.get(key, {}).get(field) != entry.get(field):
+                        wrong.append(f'{key}: installed {field} {hidden.get(key, {}).get(field)}')
+                if (read(os.path.join(root, key, 'package.json')) or {}).get('version') != entry.get('version'):
+                    wrong.append(f'{key}: the installed package.json is not version {entry.get("version")}')
+            def walk(base):
+                for name in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+                    if name.startswith('.'):
+                        continue
+                    path = os.path.join(base, name)
+                    for package in [os.path.join(path, n) for n in sorted(os.listdir(path))] if name.startswith('@') else [path]:
+                        yield os.path.relpath(package, root)
+                        yield from walk(os.path.join(package, 'node_modules'))
+            for key in sorted((set(walk(root + '/node_modules')) | set(hidden)) - set(want) - {''}):
+                wrong.append(key + ': installed and not in the lockfile')
+            print('\n'.join(wrong))
+          - /opt/ratatoskr-ob
+        stdin: "{{ notes_lock | to_json }}"
+      register: notes_tree
       changed_when: false
+
+    - name: "notes_sync_unit: the native module of better-sqlite3"
+      ansible.builtin.stat:
+        path: /opt/ratatoskr-ob/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+        checksum_algorithm: sha256
+      register: notes_native
+
+    - name: "notes_sync_unit: the architecture of the host"
+      ansible.builtin.command: dpkg --print-architecture
+      register: notes_arch
+      changed_when: false
+
+    # node-gyp would leave a Makefile and objects in build/, and prebuild-install keeps each download
+    # in npm's cache, under _prebuilds.
+    - name: "notes_sync_unit: what better-sqlite3's build directory holds"
+      ansible.builtin.command: find /opt/ratatoskr-ob/node_modules/better-sqlite3/build -mindepth 1 -printf '%P\n'
+      register: notes_build
+      changed_when: false
+      failed_when: false
+
+    - name: "notes_sync_unit: npm's cache of prebuilt downloads"
+      ansible.builtin.stat:
+        path: /root/.npm/_prebuilds
+      register: notes_prebuilds
+
+    - name: "notes_sync_unit: whether npm runs a lifecycle script in the prefix"
+      ansible.builtin.command:
+        cmd: npm config get ignore-scripts
+        chdir: /opt/ratatoskr-ob
+      register: notes_ignore_scripts
+      changed_when: false
+      failed_when: false
+
+    - name: "notes_sync_unit: files of the prefix that are not root's, or that a group or other may write"
+      ansible.builtin.command: find /opt/ratatoskr-ob ! -type l ( ! -user root -o ! -group root -o -perm /022 ) -print
+      register: notes_writable
+      changed_when: false
+      failed_when: false
+
+    - name: "notes_sync_unit: ob's tree is the committed lockfile, its native module the recorded prebuilt, and no lifecycle script ran"
+      ansible.builtin.assert:
+        that:
+          - notes_tree.stdout == ''
+          - notes_native.stat.exists
+          - notes_native.stat.checksum == notes_native_sha256[notes_arch.stdout | trim] | default('no hash recorded')
+          - notes_native.stat.pw_name == 'root' and notes_native.stat.mode == '0644'
+          - notes_build.stdout_lines == ['Release', 'Release/better_sqlite3.node']
+          - not notes_prebuilds.stat.exists
+          - notes_ignore_scripts.stdout | trim == 'true'
+          - notes_writable.rc == 0 and notes_writable.stdout == ''
+        fail_msg: >-
+          tree: {{ notes_tree.stdout }};
+          native module: {{ notes_native.stat.checksum | default('missing') }} on {{ notes_arch.stdout }};
+          build: {{ notes_build.stdout_lines }}; _prebuilds: {{ notes_prebuilds.stat.exists }};
+          ignore-scripts: {{ notes_ignore_scripts.stdout }}{{ notes_ignore_scripts.stderr | default('') }};
+          not root's or writable: {{ notes_writable.stdout }}{{ notes_writable.stderr }}
 
     - name: "notes_sync_unit: the native module of ob loads"
       ansible.builtin.command:
         argv:
           - node
           - -e
-          - new (require('/usr/lib/node_modules/obsidian-headless/node_modules/better-sqlite3'))(':memory:').close()
+          - new (require('/opt/ratatoskr-ob/node_modules/better-sqlite3'))(':memory:').close()
       changed_when: false
 
     - name: "notes_sync_unit: /usr/bin/ob, which the units start"
@@ -226,10 +319,10 @@
     - name: "notes_sync_unit: obsidian-headless 0.0.14, with the integrity recorded by spike 3.2"
       ansible.builtin.assert:
         that:
-          - (notes_npm.stdout | from_json).dependencies['obsidian-headless'].version == '0.0.14'
-          - notes_tarball.stdout | trim == 'sha512-S1d/hxLKvCUG2g5tRyXFkzPqMs3Ntw1tDyzoF2yfHGRuB4B+Mi3X2vgT8LbfQKrkEEi3LfJRdXtYzAVHcbpccw=='
-          - notes_ob.stdout | trim == '/usr/lib/node_modules/obsidian-headless/cli.js'
-        fail_msg: "{{ notes_npm.stdout }} {{ notes_tarball.stdout }} {{ notes_ob.stdout }}"
+          - notes_lock.packages['node_modules/obsidian-headless'].version == '0.0.14'
+          - notes_lock.packages['node_modules/obsidian-headless'].integrity == 'sha512-S1d/hxLKvCUG2g5tRyXFkzPqMs3Ntw1tDyzoF2yfHGRuB4B+Mi3X2vgT8LbfQKrkEEi3LfJRdXtYzAVHcbpccw=='
+          - notes_ob.stdout | trim == '/opt/ratatoskr-ob/node_modules/obsidian-headless/cli.js'
+        fail_msg: "{{ notes_lock.packages['node_modules/obsidian-headless'] }} {{ notes_ob.stdout }}"
 
     - name: "notes_sync_unit: the user that runs ob"
       ansible.builtin.command: id -nG ratatoskr-notes-sync
