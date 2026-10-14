@@ -618,83 +618,115 @@
     # --- notes_journal_namespace ---------------------------------------------------------------------
     # Owner decision A of 2026-10-14. The sync unit logs to the journal namespace
     # ratatoskr-notes-sync, and ratatoskr-notes reads it with journalctl without the group
-    # systemd-journal. The tmpfiles entry creates the namespace directory with an ACL and a default
-    # ACL for the group ratatoskr-notes. Debian also gives the group adm r-x through the default ACL
-    # of /var/log/journal, which the directory inherits; no other ratatoskr group may be named. The
-    # fixture file is created as journald creates a journal file (root:systemd-journal, mode 0640),
-    # so it gets the default ACL.
-    - name: "notes_journal_namespace: the installed tmpfiles entry"
+    # systemd-journal. The tmpfiles entry replaces the ACL of the namespace directory and of its
+    # journal files, so they name the group ratatoskr-notes only: not the group adm that Debian puts
+    # in the default ACL of /var/log/journal. journald@ratatoskr-notes-sync.conf bounds the
+    # namespace to 8 MiB in files of 2 MiB, because /var/log is a 128 MiB log2ram tmpfs on the host.
+    # The case logs one line through the namespace, as a sync unit does, so the instance starts with
+    # the limits and writes a real journal file.
+    - name: "notes_journal_namespace: the installed tmpfiles entry and journald configuration"
       ansible.builtin.stat:
-        path: /etc/tmpfiles.d/ratatoskr-notes-journal.conf
+        path: "{{ item }}"
         checksum_algorithm: sha256
-      register: notes_journal_tmpfiles
+      loop:
+        - /etc/tmpfiles.d/ratatoskr-notes-journal.conf
+        - /etc/systemd/journald@ratatoskr-notes-sync.conf
+      register: notes_journal_files
 
     - name: "notes_journal_namespace: the machine id"
       ansible.builtin.command: cat /etc/machine-id
       register: notes_machine_id
       changed_when: false
 
+    - name: "notes_journal_namespace: one line logged through the namespace, as a sync unit logs"
+      ansible.builtin.command:
+        argv:
+          - systemd-run
+          - --wait
+          - --quiet
+          - --property=LogNamespace=ratatoskr-notes-sync
+          - /bin/echo
+          - molecule-notes-journal-probe
+      changed_when: true
+
     - name: "notes_journal_namespace: the namespace directory"
       ansible.builtin.stat:
         path: "/var/log/journal/{{ notes_machine_id.stdout | trim }}.ratatoskr-notes-sync"
       register: notes_journal_dir
 
-    - name: "notes_journal_namespace: the named groups of its ACL and of its default ACL"
+    - name: "notes_journal_namespace: the named groups of the ACLs of the directory and of each journal file"
       ansible.builtin.command:
         argv:
           - python3
           - -c
           - |
-            import grp, json, os, struct, sys
-            def groups(name):
+            import glob, grp, json, os, struct, sys
+            def groups(path, name):
                 try:
-                    raw = os.getxattr(sys.argv[1], name)
+                    raw = os.getxattr(path, name)
                 except OSError:
                     return []
                 entries = [struct.unpack('<HHI', raw[i:i + 8]) for i in range(4, len(raw), 8)]
                 return sorted(f'{grp.getgrgid(ident).gr_name}:{perm}' for tag, perm, ident in entries if tag == 0x08)
-            print(json.dumps({'access': groups('system.posix_acl_access'), 'default': groups('system.posix_acl_default')}))
+            root = sys.argv[1]
+            files = sorted(glob.glob(os.path.join(root, '*.journal*')))
+            print(json.dumps({
+                'access': groups(root, 'system.posix_acl_access'),
+                'default': groups(root, 'system.posix_acl_default'),
+                # A file takes the named entry of the default ACL; the mask of its mode 0640 makes
+                # the entry r--, so only the group name is compared.
+                'files': {os.path.basename(f): [g.split(':')[0] for g in groups(f, 'system.posix_acl_access')] for f in files},
+                'bytes': sum(os.path.getsize(f) for f in files),
+            }))
           - "/var/log/journal/{{ notes_machine_id.stdout | trim }}.ratatoskr-notes-sync"
       register: notes_journal_acl
       changed_when: false
 
-    - name: "notes_journal_namespace: the entry is the workspace's; the directory is root:systemd-journal 2755; both ACLs give ratatoskr-notes r-x and name no other ratatoskr group"
+    - name: "notes_journal_namespace: the instance logs the limits it read"
+      ansible.builtin.command: journalctl --namespace=ratatoskr-notes-sync --output=cat
+      register: notes_journal_usage
+      changed_when: false
+
+    - name: "notes_journal_namespace: the files are the workspace's; root:systemd-journal 2755; the ACLs name ratatoskr-notes only; at most 8 MiB"
       ansible.builtin.assert:
         that:
-          - notes_journal_tmpfiles.stat.exists
-          - notes_journal_tmpfiles.stat.checksum == (lookup('ansible.builtin.file', project ~ '/roles/host/files/ratatoskr-notes-journal.conf') ~ '\n') | hash('sha256')
+          - notes_journal_files.results[0].stat.checksum | default('') == (lookup('ansible.builtin.file', project ~ '/roles/host/files/ratatoskr-notes-journal.conf') ~ '\n') | hash('sha256')
+          - notes_journal_files.results[1].stat.checksum | default('') == (lookup('ansible.builtin.file', project ~ '/roles/host/files/journald@ratatoskr-notes-sync.conf') ~ '\n') | hash('sha256')
           - notes_journal_dir.stat.isdir | default(false)
           - notes_journal_dir.stat.pw_name == 'root'
           - notes_journal_dir.stat.gr_name == 'systemd-journal'
           - notes_journal_dir.stat.mode == '2755'
-          - "'ratatoskr-notes:5' in (notes_journal_acl.stdout | from_json).access"
-          - "'ratatoskr-notes:5' in (notes_journal_acl.stdout | from_json).default"
-          - (notes_journal_acl.stdout | from_json).access | select('match', 'ratatoskr') | list == ['ratatoskr-notes:5']
-          - (notes_journal_acl.stdout | from_json).default | select('match', 'ratatoskr') | list == ['ratatoskr-notes:5']
+          - (notes_journal_acl.stdout | from_json).access == ['ratatoskr-notes:5']
+          - (notes_journal_acl.stdout | from_json).default == ['ratatoskr-notes:5']
+          - (notes_journal_acl.stdout | from_json).files | length > 0
+          - (notes_journal_acl.stdout | from_json).files.values() | map('join', ',') | unique | list == ['ratatoskr-notes']
+          - (notes_journal_acl.stdout | from_json).bytes <= 8388608
+          - notes_journal_usage.stdout is search('ratatoskr-notes-sync\) is [0-9.]+[KM], max 8\.0M')
         fail_msg: >-
-          tmpfiles: {{ notes_journal_tmpfiles.stat.checksum | default('missing') }};
+          files: {{ notes_journal_files.results | map(attribute='stat.checksum', default='missing') | list }};
           directory: {{ notes_journal_dir.stat.pw_name | default('') }}:{{ notes_journal_dir.stat.gr_name | default('') }}
-          {{ notes_journal_dir.stat.mode | default('missing') }}; ACL: {{ notes_journal_acl.stdout }}
+          {{ notes_journal_dir.stat.mode | default('missing') }}; ACL: {{ notes_journal_acl.stdout }};
+          journald: {{ notes_journal_usage.stdout_lines | select('search', 'max') | list }}
 
-    - name: "notes_journal_namespace: ratatoskr-notes reads a journal file there, and no other ratatoskr-* user can"
+    - name: "notes_journal_namespace: ratatoskr-notes reads the line with journalctl, and no other ratatoskr-* user can"
       ansible.builtin.shell:
         executable: /bin/bash
         cmd: |
           set -uo pipefail
-          file="/var/log/journal/{{ notes_machine_id.stdout | trim }}.ratatoskr-notes-sync/molecule-fixture.journal"
-          python3 -c 'import os, sys; os.close(os.open(sys.argv[1], os.O_CREAT | os.O_WRONLY, 0o640))' "$file" || exit 99
-          chown root:systemd-journal "$file"
           wrong=""
-          reads() { setpriv --reuid="$1" --regid="$1" --init-groups cat "$file" >/dev/null 2>&1; }
-          reads ratatoskr-notes || wrong="${wrong}ratatoskr-notes cannot read the journal file"$'\n'
+          reads() {
+            setpriv --reuid="$1" --regid="$1" --init-groups \
+              journalctl --namespace=ratatoskr-notes-sync --output=cat 2>/dev/null \
+              | grep -q molecule-notes-journal-probe
+          }
+          reads ratatoskr-notes || wrong="${wrong}ratatoskr-notes cannot read the line"$'\n'
           others=0
           for user in $(getent passwd | cut -d: -f1 | grep '^ratatoskr-'); do
             case "$user" in ratatoskr-notes) continue ;; esac
             others=$((others + 1))
-            if reads "$user"; then wrong="${wrong}${user} reads the journal file"$'\n'; fi
+            if reads "$user"; then wrong="${wrong}${user} reads the line"$'\n'; fi
           done
           [ "$others" -gt 0 ] || wrong="${wrong}no other ratatoskr-* user to try"$'\n'
-          rm -f "$file"
           printf '%s' "$wrong"
           [ -z "$wrong" ]
       changed_when: false
