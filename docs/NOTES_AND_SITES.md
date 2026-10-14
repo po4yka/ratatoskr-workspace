@@ -299,7 +299,8 @@ SITE-027 adds `platform_site_events`.
   `notes.write.disabled`, `notes.write.transformed` (a warning), `notes.write.partially_applied`,
   `notes.connection.not_found`, `notes.connection.vault_already_connected`,
   `notes.connection.cleanup_failed`, `notes.request.unauthenticated`, `notes.request.invalid`,
-  `notes.service.unavailable`, `sites.site_not_found`, `sites.page_not_found`,
+  `notes.service.unavailable`, the four login codes `notes.sync.login_failed`,
+  `notes.sync.mfa_required`, `notes.sync.e2e_password_wrong` and `notes.sync.vault_not_found`, `sites.site_not_found`, `sites.page_not_found`,
   `sites.asset_not_found`, `sites.slug_collision`, `sites.publication_suspended`,
   `platform.manifest_digest_stale`, `platform.site_hostname_taken` and
   `edge.capability_not_granted`.

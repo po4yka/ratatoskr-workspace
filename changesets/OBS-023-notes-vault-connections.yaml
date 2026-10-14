@@ -20,10 +20,10 @@ repositories:
       - "a9289e27bcf53f496b5917889580965d97ff2358 feat(notes-contracts): mark the notes events user_content and match the blob media type"
   - id: ratatoskr-notes
     role: new-service-connections-index-sync-supervisor
-    branch: main@1d09bc00761b3da491728f1c599a5edaf69c3dc3
+    branch: main@cea01d589e2d3980c995deffb2ef4c3635061d88
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/notes at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 (tasks 14.1 and 14.2). The cleanup template unit is listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6 and 14.7)
+    pin: repos/notes at cea01d589e2d3980c995deffb2ef4c3635061d88 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced after tasks 5.6 to 5.15). The cleanup and login template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6 and 14.7)
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"
@@ -32,6 +32,16 @@ repositories:
       - "3ab3dcfd3d2c4658ff67d6525e2530ef705f7fe5 test(notes): disconnect removes the unit, tree, client state and secrets"
       - "95be5d60660e30e23bfabc01a60605138a5308b0 feat(notes): disconnect a vault and ship the cleanup unit"
       - "1d09bc00761b3da491728f1c599a5edaf69c3dc3 fix(deploy): harden the cleanup unit and bound its run time"
+      - "c0545b408715ae4e1471cfb87c988174168475b6 chore(deps): update tokio to 1.53.3 (#1)"
+      - "c1ea2c96e91a021392d40e9279e550d55dab03dd test(notes): marker secrets, the e2e code and the stored ciphertext"
+      - "d57db634755efa58fb411574cef6d1aeac46a6fd feat(notes): seal the Obsidian passwords and run the first login"
+      - "e7154546239b28b235e75572f4bbd252fd32810f test(notes): the login unit gets its secrets only as credentials"
+      - "223f291a65f14c88a2c2d15f8bfb81ee17047c57 feat(notes): ship the login unit and give it the secrets as credentials"
+      - "5afd862ea932105b1622464b072378f6ecf90918 docs(notes): connections, the template units and secret custody"
+      - "5948e07678834a70403c096586b051d550dbe48f test(notes): login codes, an unsafe key file and a leading dash"
+      - "1de29dab0aa24328adaba39eb40c19d5ae83518a fix(notes): open the key file once and refuse a leading dash"
+      - "4ddf1dec49e966491f62ef04ecca0270865629ce test(notes): stale credentials, a dropped connect and a running login"
+      - "cea01d589e2d3980c995deffb2ef4c3635061d88 fix(notes): finish a dropped connect and remove stale credentials"
   - id: ratatoskr-platform
     role: edge-route-durables-identity-device-kind-authority
     branch: obs-023/notes-vault-connections
