@@ -700,8 +700,8 @@ fn a_template_unit_that_starts_a_repository_binary_is_caught() {
         )]
     };
     let host = unit(
-        "ExecStartPre=+/bin/mkdir -p /run/x\nExecStart=-/usr/bin/ob sync --path /x/%i\n\
-         ExecStart=/opt/ratatoskr-ob/node_modules/obsidian-headless/cli.js\nExecStop=",
+        "ExecStart=-/usr/bin/ob sync-unlink --path /x/%i/tree\n\
+         ExecStart=/bin/rm -rf -- /x/%i/tree /x/%i/ob-home\nExecStop=",
     );
     assert_eq!(repository_binaries(&host), Vec::<String>::new());
 
@@ -710,7 +710,8 @@ fn a_template_unit_that_starts_a_repository_binary_is_caught() {
         repository_binaries(&built),
         vec![
             "deploy/systemd/ratatoskr-notes-sync@.service: ExecStart= starts \
-             /usr/local/bin/ratatoskr-notes, which is not a host or npm binary"
+             /usr/local/bin/ratatoskr-notes, which is not a program that a template unit may \
+             start"
                 .to_owned()
         ]
     );
@@ -719,6 +720,9 @@ fn a_template_unit_that_starts_a_repository_binary_is_caught() {
         "ExecStartPost=@/usr/local/lib/ratatoskr/notes x",
         "ExecStop=/usr/bin/../local/bin/ratatoskr-notes stop",
         "ExecStopPost=!!/srv/ratatoskr-notes",
+        // No notes unit starts these host and npm programs, so the allow-list does not hold them.
+        "ExecStartPre=+/bin/mkdir -p /run/x",
+        "ExecStart=/opt/ratatoskr-ob/node_modules/obsidian-headless/cli.js",
     ] {
         assert_eq!(repository_binaries(&unit(exec)).len(), 1, "{exec}");
     }
@@ -732,7 +736,7 @@ fn a_template_unit_that_starts_a_repository_binary_through_a_wrapper_is_caught()
             format!("[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n{exec}\n"),
         )]
     };
-    // The shell itself is a host binary. The notes login unit runs ob, cat and builtins through it.
+    // /bin/sh is on the allow-list. The notes login unit runs ob, cat and builtins through it.
     for exec in [
         "ExecStart=/bin/sh -c 'set -- --email \"$$(cat \"$$CREDENTIALS_DIRECTORY/email\")\"; \
          mfa=\"$$(cat \"$$CREDENTIALS_DIRECTORY/mfa\")\"; if [ -n \"$$mfa\" ]; then set -- \"$$@\" \
@@ -742,7 +746,6 @@ fn a_template_unit_that_starts_a_repository_binary_through_a_wrapper_is_caught()
          \"$$CREDENTIALS_DIRECTORY/vault\")\" --device-name ratatoskr-%i < \
          \"$$CREDENTIALS_DIRECTORY/e2e\"; status=$$?; case $$status in 0) exit 0 ;; 2) exit 12 ;; \
          *) exit 10 ;; esac'",
-        "ExecStart=/usr/bin/env -i HOME=/x /usr/bin/ob sync",
         "ExecStart=/bin/sh -ec 'exec /usr/bin/ob sync 2>/dev/null'",
     ] {
         assert_eq!(
@@ -755,8 +758,8 @@ fn a_template_unit_that_starts_a_repository_binary_through_a_wrapper_is_caught()
     assert_eq!(
         repository_binaries(&unit("ExecStart=/usr/bin/env ratatoskr-notes sync %i")),
         vec![
-            "deploy/systemd/ratatoskr-notes-sync@.service: ExecStart= starts ratatoskr-notes, \
-             which is not a host or npm binary"
+            "deploy/systemd/ratatoskr-notes-sync@.service: ExecStart= starts /usr/bin/env, \
+             which is not a program that a template unit may start"
                 .to_owned()
         ]
     );
@@ -766,7 +769,8 @@ fn a_template_unit_that_starts_a_repository_binary_through_a_wrapper_is_caught()
         )),
         vec![
             "deploy/systemd/ratatoskr-notes-sync@.service: ExecStart= starts \
-             /usr/local/bin/ratatoskr-notes, which is not a host or npm binary"
+             /usr/local/bin/ratatoskr-notes, which is not a program that a template unit may \
+             start"
                 .to_owned()
         ]
     );
@@ -796,6 +800,95 @@ fn a_template_unit_that_starts_a_repository_binary_through_a_wrapper_is_caught()
     ] {
         assert_eq!(repository_binaries(&unit(exec)).len(), 1, "{exec}");
     }
+}
+
+#[test]
+fn a_template_unit_that_hides_a_program_from_the_check_is_caught() {
+    let unit = |exec: &str| {
+        vec![(
+            "deploy/systemd/ratatoskr-notes-sync@.service".to_owned(),
+            format!("[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n{exec}\n"),
+        )]
+    };
+    let wrong: Vec<String> = [
+        // A host program that starts the program in its arguments.
+        "ExecStart=/usr/bin/timeout 5 /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/nice -n 5 /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/nohup /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/setpriv --reuid=1 /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/flock /run/x /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/stdbuf -oL /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/systemd-cat /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/systemd-run --wait /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/xargs -a /x /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/find /x -exec /usr/local/bin/ratatoskr-notes {} +",
+        "ExecStart=/usr/bin/node -e 'require(\"child_process\").execSync(\"ratatoskr-notes\")'",
+        "ExecStart=/usr/bin/python3 -c 'import os; os.system(\"ratatoskr-notes\")'",
+        "ExecStart=/bin/busybox sh -c ratatoskr-notes",
+        "ExecStart=/bin/zsh -c ratatoskr-notes",
+        "ExecStart=/bin/bash -c '/usr/bin/ob sync'",
+        "ExecStart=/bin/dash -c '/usr/bin/ob sync'",
+        "ExecStart=/bin/sh -c '/usr/bin/timeout 5 /usr/local/bin/ratatoskr-notes'",
+        "ExecStart=/bin/sh -c 'nice ratatoskr-notes'",
+        "ExecStart=/usr/bin/env -i /usr/bin/nohup /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/usr/bin/env -i HOME=/x /usr/bin/ob sync",
+        // An interactive shell reads the file that ENV names before the string.
+        "ExecStart=/bin/sh -ic '/usr/bin/ob sync'",
+        // dash has no [[, so it searches PATH for a program of that name.
+        "ExecStart=/bin/sh -c '[[ -n x ]] && /usr/bin/ob sync'",
+        // systemd decodes a C escape before the shell reads the string.
+        "ExecStart=/bin/sh -c 'echo a\\x3b/usr/local/bin/ratatoskr-notes'",
+        "ExecStart=/bin/sh -c 'echo a\\n/usr/local/bin/ratatoskr-notes'",
+        "ExecStart=/bin/sh -c 'echo a\\073/usr/local/bin/ratatoskr-notes'",
+        "ExecStart=/bin/sh -c 'echo\\s/usr/bin/ob'",
+        // A process substitution starts a command.
+        "ExecStart=/bin/sh -c 'cat <(/usr/local/bin/ratatoskr-notes)'",
+        "ExecStart=/bin/sh -c '/usr/bin/ob sync >(/usr/local/bin/ratatoskr-notes)'",
+        // systemd reads a ; word as the start of a second command.
+        "ExecStart=/usr/bin/ob sync ; /usr/local/bin/ratatoskr-notes",
+        "ExecStart=/bin/rm -rf /x ; /usr/local/bin/ratatoskr-notes",
+        // systemd puts the value of a variable in the string before the shell reads it.
+        "Environment=\"X=a;/usr/local/bin/ratatoskr-notes\"\nExecStart=/bin/sh -c 'echo ${X}'",
+        // A PATH that the script or the unit sets makes cat find another program.
+        "ExecStart=/bin/sh -c 'PATH=/srv/bin cat /x'",
+        "ExecStart=/bin/sh -c 'export PATH=/srv/bin; cat /x'",
+        "ExecStart=/bin/sh -c 'read PATH < /x; cat /y'",
+        "ExecStart=/bin/sh -c '/usr/bin/env PATH=/srv/bin cat /x'",
+        "ExecStart=/usr/bin/env PATH=/srv/bin /bin/sh -c 'cat /x'",
+        "PassEnvironment=PATH\nExecStart=/bin/sh -c 'cat /x'",
+        "EnvironmentFile=/etc/x\nExecStart=/usr/bin/ob sync",
+        "Environment=A=1 \\\n PATH=/srv/bin\nExecStart=/bin/sh -c 'cat /x'",
+        // A brace or a specifier in a program word.
+        "ExecStart=/bin/sh -c '/usr/bin/{ob,../local/bin/ratatoskr-notes}'",
+        "ExecStart=/bin/sh -c '/usr/bin/%I'",
+        "ExecStart=/opt/ratatoskr-ob/%I",
+        "ExecStart=/bin/sh -c 'echo %I'",
+        // The shell reads the file that BASH_ENV or ENV names.
+        "Environment=BASH_ENV=/srv/x\nExecStart=/bin/sh -c 'cat /x'",
+        "Environment=ENV=/srv/x\nExecStart=/bin/sh -c 'cat /x'",
+    ]
+    .into_iter()
+    .filter_map(|exec| {
+        let findings = repository_binaries(&unit(exec));
+        (findings.len() != 1).then(|| format!("{exec}: {findings:?}"))
+    })
+    .collect();
+    assert!(
+        wrong.is_empty(),
+        "each fixture must give exactly one finding:\n{}",
+        wrong.join("\n")
+    );
+}
+
+#[test]
+fn a_shell_builtin_that_starts_no_command_passes() {
+    let unit = vec![(
+        "deploy/systemd/ratatoskr-notes-sync@.service".to_owned(),
+        "[Service]\nExecStart=/bin/sh -c 'ulimit -n 1024; kill -0 1 || exit 1; \
+         while getopts ab o; do :; done; /usr/bin/ob sync'\n"
+            .to_owned(),
+    )];
+    assert_eq!(repository_binaries(&unit), Vec::<String>::new());
 }
 
 #[test]
