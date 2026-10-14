@@ -191,6 +191,23 @@ dependencies = [
 ]
 
 [[repositories]]
+id = "notes"
+path = "repos/notes"
+remote = "https://github.com/po4yka/ratatoskr-notes.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test", "serve"]
+contracts = ["notes.vault_connected", "notes.vault_disconnected", "notes.file_changed"]
+profiles = ["core"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml", "schema.sql"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "notes vault and file change event contracts" },
+  { repository = "platform", kind = "api", purpose = "Edge proxies the owner's connection routes" },
+]
+
+[[repositories]]
 id = "platform"
 path = "repos/platform"
 remote = "https://github.com/po4yka/ratatoskr-platform.git"
