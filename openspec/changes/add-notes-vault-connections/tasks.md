@@ -162,7 +162,7 @@ Tasks 14.6 and 14.7 wait until `add-deployment-automation` (DPL-022) is merged a
 - [x] 14.20 GREEN: install the tree with `npm ci --omit=dev --ignore-scripts` from the committed lockfile into `/opt/ratatoskr-ob`, fetch the better-sqlite3 prebuilt with `get_url` and its recorded sha256 for the Node.js ABI and architecture, check the sha256 of the module after it is in place, and link `/usr/bin/ob` to the `cli.js` of the prefix. Verify 14.19 and idempotence.
 - [x] 14.21 RED: in `release_artifact_callers.rs`, add fixture template units whose command runs a repository binary through a wrapper: `/usr/bin/env ratatoskr-notes`, and `/bin/sh -c '/usr/local/bin/ratatoskr-notes'`. Assert that the check refuses both. Today it reads only the first word of each command line, so both pass. The notes login unit runs `ob` through `/bin/sh -c`, so the check must read the shell command and must not refuse the shell itself.
 - [x] 14.22 GREEN: read the command after `env` and every command word in a `sh -c` string, and hold each to the host and npm directories. Verify 14.21 and that the notes units still pass.
-- [ ] 14.23 RED: in `notes_sync_unit`, run `ob --help` as `ratatoskr-notes-sync` and assert exit status 0. Confirm that it fails on a stand-in with the tree removed.
+- [x] 14.23 RED: in `notes_sync_unit`, run `ob --help` as `ratatoskr-notes-sync` and assert exit status 0. Confirm that it fails on a stand-in with the tree removed.
 - [ ] 14.24 GREEN: no role change is expected. If 14.23 fails on the converged host, fix the install. Verify 14.23 and idempotence.
 
 ## 15. Integration

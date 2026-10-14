@@ -334,6 +334,33 @@
         that: notes_sync_user.stdout.split() == ['ratatoskr-notes-sync']
         fail_msg: "id -nG ratatoskr-notes-sync: {{ notes_sync_user.stdout }}"
 
+    # The units run /usr/bin/ob as ratatoskr-notes-sync, with the PATH that systemd gives a unit and
+    # a HOME and XDG_CONFIG_HOME of their own. ob must start for that user, not only for root.
+    - name: "notes_sync_unit: ob --help, as ratatoskr-notes-sync"
+      ansible.builtin.command:
+        argv:
+          - setpriv
+          - --reuid=ratatoskr-notes-sync
+          - --regid=ratatoskr-notes-sync
+          - --init-groups
+          - env
+          - -i
+          - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+          - /bin/sh
+          - -c
+          - >-
+            home="$(mktemp -d)" || exit 99;
+            HOME="$home" XDG_CONFIG_HOME="$home" /usr/bin/ob --help;
+            status=$?; rm -rf "$home"; exit "$status"
+      register: notes_ob_help
+      changed_when: false
+      failed_when: false
+
+    - name: "notes_sync_unit: ob starts as ratatoskr-notes-sync"
+      ansible.builtin.assert:
+        that: notes_ob_help.rc == 0
+        fail_msg: "ob --help as ratatoskr-notes-sync: exit {{ notes_ob_help.rc }}: {{ notes_ob_help.stderr }}"
+
     # pkcheck asks polkitd what systemd asks it for StartUnit and StopUnit: the action, the unit and
     # the verb, for a process of the subject user. Exit 0 allows; 1 or 2 refuses; another code is an
     # error and fails the case. RestartUnit, KillUnit and ResetFailedUnit ask the same action with
