@@ -130,10 +130,10 @@ repositories:
       - "a7c981a4da98698bfd3af38a8c4b197984e539d5 ci: pin the shared fleet workflows at 75b3ed8"
   - id: ratatoskr-obsidian-plugin
     role: new-client-plugin-channel
-    branch: main@a6afdbce2247c9298a328a5a9033a281ef35618b
+    branch: main@587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00
     created: 2026-10-14, public, ruleset "protect main" (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate; no deny job, because the stack is TypeScript)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/clients/obsidian-plugin at a6afdbce2247c9298a328a5a9033a281ef35618b (tasks 14.8 and 14.9). A client ships no systemd unit, so no release artifact, deploy inventory or port row applies
+    pin: repos/clients/obsidian-plugin at 587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00 (first pinned at a6afdbce2247c9298a328a5a9033a281ef35618b by tasks 14.8 and 14.9, advanced after tasks 11.19 to 11.24). A client ships no systemd unit, so no release artifact, deploy inventory or port row applies
     commits:
       - "22e84836e779f0cdf95e49c103963ce7d1e96d53 chore: create the repository with the Obsidian sample plugin layout"
       - "8724f392d8a060a6c288fa3a60b47a85fe81226f test(batcher): a rename arrives as one renamed change"
@@ -156,6 +156,14 @@ repositories:
       - "81eabb6283a8a4472c35ecbdd6844706904325d8 fix(credential, batcher): delete the secret; pair empty files by name"
       - "0f780a68130a482c3b4c907003f190db68980a39 test: pin cli status-only, session renewal, the 3 s window and HTTPS"
       - "a6afdbce2247c9298a328a5a9033a281ef35618b docs(readme): mobile storage, the cli case, every data.json field"
+      - "97b4df837f5a4f3bef1389746c463958eb80ef41 test(transport): desktop without the Node clients sends nothing"
+      - "3a3872ed514d75c795837c3cb27417bf3297b361 fix(transport): a desktop app without the Node clients sends nothing"
+      - "0c1831d46b5744b1cbcd2fc0da0327151adb018b test(transport, sync): body cap, total deadline, no manifest for a changed address"
+      - "21529c2b77c250b7b15f2d258b85ad80e7576839 fix(transport, sync): cap the answer body, add a deadline, check before the manifest"
+      - "1ce61de3097ec5aa3c1b0438db67bfaed9037814 test(session): unpair, a renewal that keeps the device, an older credential"
+      - "2c21dc551ac412cc386ca469ec16efa8aab5ea33 fix(session): unpair, renew only the session fields, name an older credential"
+      - "9f36e058972bcdf73172fdf73870fd205eab45fa docs(transport): the transport of each platform; gitleaks names the fake secrets"
+      - "587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00 ci: pin the shared fleet workflows at 75b3ed8"
   - id: ratatoskr-export-agent
     role: cli-channel
     branch: obs-023/notes-vault-connections
