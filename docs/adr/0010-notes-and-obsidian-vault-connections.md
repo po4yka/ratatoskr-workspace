@@ -104,10 +104,15 @@ end to end.
   Only the one-time MFA code is in argv. `PrivatePIDs=` is not used, because the host runs systemd
   252.
 - `ob` keeps its login token and the derived end-to-end key in plaintext files (mode 0600) in its
-  state directory. The 0700 `ob-home` of each connection, owned by `ratatoskr-notes-sync`, is their
-  only protection.
+  state directory. The 0700 client state `/mnt/nvme/ratatoskr/notes/clients/<id>` of each
+  connection, owned by `ratatoskr-notes-sync`, is their only protection.
 - The client state of each `ob` process lives in its own directory, mode 0700, owned by the
-  `ratatoskr-notes-sync` user.
+  `ratatoskr-notes-sync` user, under the 0700 clients root. The working tree is in a separate root,
+  `/mnt/nvme/ratatoskr/notes/trees/<id>`, setgid with the group `ratatoskr-notes-trees`, whose only
+  member is `ratatoskr-notes` (owner decision B of 2026-10-14).
+- The sync units log to the journal namespace `ratatoskr-notes-sync`. The notes service reads only
+  that namespace, through an ACL for the group `ratatoskr-notes`, and is not in the group
+  `systemd-journal` (owner decision A of 2026-10-14).
 - The plugin authenticates as a registered device. Its credential is kept outside the vault folder,
   never in the plugin's `data.json`, because Sync, iCloud, Git or a backup can copy anything in the
   vault. Revocation in Platform stops the device.

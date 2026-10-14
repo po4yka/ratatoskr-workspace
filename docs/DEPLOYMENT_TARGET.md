@@ -58,7 +58,9 @@ keeps durable state off it either way.
 | Off-host copies | `/mnt/backup/borg` | SATA SSD, 954 GB |
 | Telegram blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-telegram` | NVMe |
 | Notes blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, owner `ratatoskr-notes:ratatoskr-notes-blobs`, mode 2750 (setgid) | NVMe |
-| Notes working trees and `ob` client state | `/mnt/nvme/ratatoskr/notes/connections`, owner `ratatoskr-notes-sync:ratatoskr-notes-sync`, mode 0700; one `<id>/tree` and one `<id>/ob-home` for each `sync` connection | NVMe |
+| Notes working trees | `/mnt/nvme/ratatoskr/notes/trees`, owner `ratatoskr-notes-sync:ratatoskr-notes-trees`, mode 2750 (setgid); one `<id>` for each `sync` connection, mode 2750, files 0640 | NVMe |
+| Notes `ob` client state | `/mnt/nvme/ratatoskr/notes/clients`, owner `ratatoskr-notes-sync:ratatoskr-notes-sync`, mode 0700; one `<id>` for each `sync` connection, mode 0700 | NVMe |
+| Notes sync journal | `/var/log/journal/<machine id>.ratatoskr-notes-sync` (`LogNamespace=ratatoskr-notes-sync` of the sync unit), owner `root:systemd-journal`, mode 2755, with an ACL and a default ACL that give the group `ratatoskr-notes` `r-x` | `/var/log` (log2ram tmpfs) |
 | Notes login credentials | `/run/ratatoskr-notes` (`RuntimeDirectory=` of the notes service unit, owner `ratatoskr-notes`), with `credentials/<id>/` (directory 0700, files 0600) only while a login runs | tmpfs (`/run`); never written to a disk |
 | Obsidian Headless client | `/opt/ratatoskr-ob` (owner root; no file writable by group or other), and `/usr/bin/ob`, a link to its `cli.js` | root filesystem |
 
@@ -85,14 +87,29 @@ Two rules follow, and both are contracts rather than advice:
   survive losing the Pi. Nothing may treat it as an off-host replica — `vault`'s policy of blocking
   `healthy` until a verified remote copy exists is not satisfied by it.
 
-The notes connections root holds the client state of `ob`. Each `ob-home` holds the Obsidian Sync
-token and the derived end-to-end key in plain text, so only `ratatoskr-notes-sync` may enter the
-root, and no other user is a member of its group. The notes login unit has the root in
-`ReadWritePaths=` with no `-` prefix, so systemd fails the unit if the directory does not exist.
-The deploy role creates `/mnt/nvme/ratatoskr/notes` (root, 0755) and the root, and the Molecule
-verify case `notes_connections_root` checks them. `/run/ratatoskr-notes` is on tmpfs, so the
-credential files of a login never reach a disk; at start, the notes service removes
-`/run/ratatoskr-notes/credentials`.
+The notes units run `ob` as `ratatoskr-notes-sync`, which creates the working tree `trees/<id>` and
+the client state `clients/<id>` of each `sync` connection (owner decision B of 2026-10-14). The
+trees root is setgid with the group `ratatoskr-notes-trees`, and the sync and login units have
+`UMask=0027`. So each tree gets that group, directories get mode 2750 and files mode 0640.
+`ratatoskr-notes` is the only member of the group and reads the trees through it.
+`ratatoskr-notes-sync` is not a member, because the setgid bit gives the group. Each client state
+holds the Obsidian Sync token and the derived end-to-end key in plain text, so only
+`ratatoskr-notes-sync` may enter the clients root, and no other user is a member of its group. The
+login and cleanup units have both roots in `ReadWritePaths=` with no `-` prefix, so systemd fails
+the unit if a root does not exist. The deploy role creates `/mnt/nvme/ratatoskr/notes` (root,
+0755) and the two roots, and the Molecule verify case `notes_trees_and_clients` checks them.
+`/run/ratatoskr-notes` is on tmpfs, so the credential files of a login never reach a disk; at
+start, the notes service removes `/run/ratatoskr-notes/credentials`.
+
+The sync unit logs to the journal namespace `ratatoskr-notes-sync`, not to the system journal (owner
+decision A of 2026-10-14). The notes service reads that namespace with `journalctl` and is not in
+the group `systemd-journal`. The deploy role installs
+`/etc/tmpfiles.d/ratatoskr-notes-journal.conf`, which creates the namespace directory with an ACL
+and a default ACL for the group `ratatoskr-notes`, and the Molecule verify case
+`notes_journal_namespace` checks them. When the service cannot read the namespace, it logs
+`notes.sync.journal_unreadable` at its start. The namespace directory is on the log2ram tmpfs of
+`/var/log` (see below). Its size is not bounded yet, and it is not checked on the real host
+(systemd 252) yet.
 
 ## Supervision
 
@@ -128,13 +145,14 @@ repository carries the same two lines.
 **A template unit is installed and never started by the playbook.** `ratatoskr-notes` ships three
 template units (`*@.service`). The instance name is the connection id, a lowercase UUID. Each unit
 runs as `ratatoskr-notes-sync` and starts only `/usr/bin/ob`, `/bin/rm` or `/bin/sh -c`, with `HOME` and `XDG_CONFIG_HOME` set to the
-`ob-home` of the connection:
+client state `/mnt/nvme/ratatoskr/notes/clients/<id>` of the connection, and the working tree
+`/mnt/nvme/ratatoskr/notes/trees/<id>`:
 
 | Unit | Type | Started by | Does |
 |---|---|---|---|
-| `ratatoskr-notes-sync@.service` | long-running | the Sync supervisor of the notes service (planned, notes group 6), for each `sync` connection | `ob sync --continuous` on the working tree of the connection |
+| `ratatoskr-notes-sync@.service` | long-running | the Sync supervisor of the notes service, for each `sync` connection | `ob sync --continuous` on the working tree of the connection; logs to the journal namespace `ratatoskr-notes-sync` |
 | `ratatoskr-notes-login@.service` | oneshot | the notes service, at the connect of a `sync` connection | `ob login`, then `ob sync-setup`; reads the secrets with `LoadCredential=` from `/run/ratatoskr-notes/credentials/<id>/` |
-| `ratatoskr-notes-cleanup@.service` | oneshot | the notes service, at a disconnect and after a failed login | `ob sync-unlink`, then removes the working tree and `ob-home` of the connection |
+| `ratatoskr-notes-cleanup@.service` | oneshot | the notes service, at a disconnect and after a failed login | `ob sync-unlink`, then removes the working tree and the client state of the connection |
 
 The playbook installs each unit that `ratatoskr_template_units` in `services.json` lists,
 byte-identical to its pin, and reloads systemd. It does not enable or start a template unit. At the

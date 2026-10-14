@@ -64,10 +64,14 @@ two different edits that arrive through two channels, so the result would depend
 ### D3. The `sync` channel runs Obsidian Headless under systemd
 
 Each `sync` connection gets one unit instance, `ratatoskr-notes-sync@<connection id>.service`. The
-unit runs `ob sync --continuous --path /mnt/nvme/ratatoskr/notes/connections/<id>/tree` as the
-system user `ratatoskr-notes-sync`, with `HOME=/mnt/nvme/ratatoskr/notes/connections/<id>/ob-home`
-(mode 0700). `ratatoskr-notes` starts, stops and inspects the instances through the systemd D-Bus
-API with one polkit rule. The rule allows only three template units: `ratatoskr-notes-sync@*.service`
+unit runs `ob sync --continuous --path /mnt/nvme/ratatoskr/notes/trees/<id>` as the system user
+`ratatoskr-notes-sync`, with `HOME=/mnt/nvme/ratatoskr/notes/clients/<id>` (the client state, mode
+0700). Owner decision B of 2026-10-14 put the trees and the client states under two roots: the
+trees root is setgid with the group `ratatoskr-notes-trees`, whose only member is
+`ratatoskr-notes`, and the sync and login units run with `UMask=0027`, so a tree is 2750 with files
+0640 and the notes service reads it through the group. The clients root is 0700.
+`ratatoskr-notes` starts, stops and inspects the instances through the systemd D-Bus API with one
+polkit rule. The rule allows only three template units: `ratatoskr-notes-sync@*.service`
 (the continuous sync), `ratatoskr-notes-login@*.service` (a oneshot unit that runs `ob login` and
 `ob sync-setup`, D4) and `ratatoskr-notes-cleanup@*.service` (a oneshot unit that runs
 `ob sync-unlink` and deletes the working tree and the client state of a removed connection). In this
@@ -82,16 +86,24 @@ changed for 2 seconds.
 
 Spike 3.2 (`spike/3.2-obsidian-headless.md`, `obsidian-headless` 0.0.14) found that `ob` keeps its
 state under `${XDG_CONFIG_HOME:-$HOME/.config}/obsidian-headless` on Linux. The unit therefore sets
-`XDG_CONFIG_HOME` to the connection's `ob-home`. The client state is plaintext: `auth_token` and
-`sync/<vault id>/config.json`, which holds the derived end-to-end key, both mode 0600. The 0700
-`ob-home` directory and its owner `ratatoskr-notes-sync` are the only protection, so no other
-service user may share that owner.
+`XDG_CONFIG_HOME` to the connection's client state directory. The client state is plaintext:
+`auth_token` and `sync/<vault id>/config.json`, which holds the derived end-to-end key, both mode
+0600. The 0700 client state directory and its owner `ratatoskr-notes-sync` are the only protection,
+so no other service user may share that owner.
 
 The spike also found that an expired or revoked login does not stop `ob sync --continuous`. It logs
-`Failed to authenticate:` and retries every 30 seconds for ever. `ob sync` has no `--json` output.
-Therefore the supervisor reads one thing from the unit's journal: the authentication failure line.
-After the line repeats for 5 minutes, the supervisor stops the unit and marks the connection
-`login_expired` (`notes.sync.login_expired`). The owner must then connect again. The supervisor
+`Failed to authenticate:` and tries again for ever. It waits 5 seconds after the first failure, and
+the wait grows up to 5 minutes. `ob sync` has no `--json` output. Therefore the supervisor reads one
+thing from the unit's journal: the authentication failure line. The sync unit logs to its own
+journal namespace, `ratatoskr-notes-sync` (`LogNamespace=`, owner decision A of 2026-10-14). The
+service follows that namespace with one `journalctl` process and sends each line to its connection
+by the trusted field `_SYSTEMD_UNIT`. An ACL from the deploy role gives the group `ratatoskr-notes`
+read access to that namespace only; when the service cannot read it, it logs
+`notes.sync.journal_unreadable` at its start. After the line repeats for 5 minutes, the supervisor
+stops the unit and marks the connection `login_expired` (`notes.sync.login_expired`). The line and
+the 5-minute rule are PROVISIONAL: they come from the code of `ob` 0.0.14, and the wait of up to 5
+minutes can make the line appear only once in 5 minutes. Spike 3.3 checks both against a real
+recording. The owner must then connect again. The supervisor
 reads no other line, and it never takes file content from the log. The version of
 `obsidian-headless` is pinned, because a release can change these lines.
 
@@ -128,8 +140,9 @@ its idempotency or audit records, or its logs. The Platform test
    The email and the MFA code are in argv. The email is not a secret. The MFA code is a short-lived
    one-time code and is never stored. No password is ever in argv, so the
    `hidepid=invisible` fallback is not needed, and the login unit runs as `ratatoskr-notes-sync`,
-   the owner of `ob-home`, which it must write.
-4. after the setup succeeds, keeps only the client state that `ob` writes in `ob-home`. The
+   the owner of the client state and the working tree, which it must write.
+4. after the setup succeeds, keeps only the client state that `ob` writes in
+   `/mnt/nvme/ratatoskr/notes/clients/<id>`. The
    continuous unit needs no password.
 
 Secrets never appear in an event, an operation report, a log line or an error message. A failed
@@ -273,8 +286,10 @@ so the residual risk that `fleet-bus-topology` states extends to it.
 ### D11. Storage and ports
 
 As `docs/NOTES_AND_SITES.md` section 7 lists them: schema `notes`, role `ratatoskr_notes`, blob root
-`/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, working trees and client state under
-`/mnt/nvme/ratatoskr/notes/connections/<id>/`, domain API 8099 behind Edge, operator listener 9471.
+`/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, working trees under
+`/mnt/nvme/ratatoskr/notes/trees/<id>` (group `ratatoskr-notes-trees`, 2750), client state under
+`/mnt/nvme/ratatoskr/notes/clients/<id>` (0700), the journal namespace `ratatoskr-notes-sync`,
+domain API 8099 behind Edge, operator listener 9471.
 A working tree holds a second copy of the current vault, beside the revisions in the blob root. That
 is the cost of running Obsidian's own client.
 

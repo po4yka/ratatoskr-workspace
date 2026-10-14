@@ -55,7 +55,8 @@ Spike results so far (2026-10-13; evidence in `openspec/changes/add-notes-vault-
 - `obsidian-headless` 0.0.14 is `UNLICENSED` (proprietary). It reads the account password and the
   end-to-end password from standard input, and `ob sync` never needs them again. It keeps its token
   and the derived key in plaintext files (mode 0600) under `$XDG_CONFIG_HOME/obsidian-headless`. An
-  expired login does not stop `ob sync`, which retries for ever.
+  expired login does not stop `ob sync`, which tries again for ever. It waits 5 seconds after the
+  first failure, and the wait grows up to 5 minutes.
 - Obsidian's documentation names server and agent use of Headless Sync. The Terms of Service are
   silent, so a confirmation from Obsidian support is still open.
 - The engine of Obsidian 1.14.4 indexes links inside `%% comments %%`, prefers a file in the linking
@@ -300,7 +301,10 @@ SITE-027 adds `platform_site_events`.
   `notes.connection.not_found`, `notes.connection.vault_already_connected`,
   `notes.connection.cleanup_failed`, `notes.request.unauthenticated`, `notes.request.invalid`,
   `notes.service.unavailable`, the four login codes `notes.sync.login_failed`,
-  `notes.sync.mfa_required`, `notes.sync.e2e_password_wrong` and `notes.sync.vault_not_found`, `sites.site_not_found`, `sites.page_not_found`,
+  `notes.sync.mfa_required`, `notes.sync.e2e_password_wrong` and `notes.sync.vault_not_found`, the
+  expired Sync login `notes.sync.login_expired`, the unreadable journal namespace of the sync units
+  `notes.sync.journal_unreadable` (logged at the start of the service), `sites.site_not_found`,
+  `sites.page_not_found`,
   `sites.asset_not_found`, `sites.slug_collision`, `sites.publication_suspended`,
   `platform.manifest_digest_stale`, `platform.site_hostname_taken` and
   `edge.capability_not_granted`.
@@ -346,8 +350,9 @@ SITE-027 adds `platform_site_events`.
 | Notes database | schema `notes`, role `ratatoskr_notes`, database `ratatoskr` |
 | Sites database | schema `sites`, role `ratatoskr_sites`, database `ratatoskr` |
 | Note file bytes | `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes/sha256/<2 hex>/<rest>` |
-| Sync working tree | `/mnt/nvme/ratatoskr/notes/connections/<id>/tree` |
-| Headless client state | `/mnt/nvme/ratatoskr/notes/connections/<id>/ob-home`, mode 0700, owner `ratatoskr-notes-sync` |
+| Sync working tree | `/mnt/nvme/ratatoskr/notes/trees/<id>`, owner `ratatoskr-notes-sync`, group `ratatoskr-notes-trees` (setgid from the trees root), mode 2750, files 0640; `ratatoskr-notes` is the only member of the group |
+| Headless client state | `/mnt/nvme/ratatoskr/notes/clients/<id>`, mode 0700, owner `ratatoskr-notes-sync:ratatoskr-notes-sync` |
+| Sync unit journal | journal namespace `ratatoskr-notes-sync` (`/var/log/journal/<machine id>.ratatoskr-notes-sync`); an ACL gives the group `ratatoskr-notes` read access to it and to no other journal |
 | Obsidian secrets key | `/etc/ratatoskr/notes-secrets.key`; secrets are stored encrypted in `notes` |
 | Read access to note bytes | group `ratatoskr-notes-blobs`, setgid root, umask 0027. OBS-023 creates it with Knowledge as a member; SITE-025 adds sites. Only notes writes. |
 | Release assets | `/mnt/nvme/ratatoskr/blobs/ratatoskr-sites/sha256/<2 hex>/<rest>` |
