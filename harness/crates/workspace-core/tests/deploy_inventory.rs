@@ -5,6 +5,8 @@
 //!
 //! - every `deploy/systemd/ratatoskr-*.service` a pinned repository ships is enrolled, and every
 //!   enrolled service names a unit, a binary and a config example that the pinned repository has;
+//! - a template unit (`ratatoskr-*@.service`) is enrolled in `ratatoskr_template_units` and never as
+//!   a service, a plain unit never as a template, and every listed template unit ships at its pin;
 //! - every enrolled unit joins `ratatoskr.target` (`PartOf=` and `WantedBy=`);
 //! - every pinned `deploy/postgres/role.sql` is provisioned, under the role name the file creates;
 //! - `deploy/ansible/` holds no copy of a child deploy file and no secret in plain text. The
@@ -29,8 +31,12 @@ const ANSIBLE: &str = "deploy/ansible";
 
 #[derive(Debug, Deserialize)]
 struct Inventory {
-    ratatoskr_services: Vec<Service>,
-    ratatoskr_database_roles: Vec<DatabaseRole>,
+    #[serde(rename = "ratatoskr_services")]
+    services: Vec<Service>,
+    #[serde(rename = "ratatoskr_template_units")]
+    template_units: Vec<TemplateUnit>,
+    #[serde(rename = "ratatoskr_database_roles")]
+    database_roles: Vec<DatabaseRole>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,6 +46,15 @@ struct Service {
     unit: String,
     binary: String,
     config_example: String,
+}
+
+/// A systemd template unit (`ratatoskr-*@.service`) that the playbook installs and never starts.
+/// Its manager, a service user, starts and stops its instances through D-Bus.
+#[derive(Debug, Deserialize)]
+struct TemplateUnit {
+    repository: String,
+    unit: String,
+    manager: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,20 +103,51 @@ fn exec_start_binary(unit: &str) -> Option<String> {
         .map(|name| name.to_string_lossy().into_owned())
 }
 
+fn is_template(unit: &str) -> bool {
+    unit.ends_with("@.service")
+}
+
 /// Why the shipped units and the two inventory lists disagree. Each argument holds
-/// `(repository id, unit file name)`.
+/// `(repository id, unit file name)`. A shipped template unit is enrolled in
+/// `ratatoskr_template_units` only, and any other shipped unit in `ratatoskr_services` only.
 fn enrolment_findings(
     services: &[(&str, &str)],
-    _templates: &[(&str, &str)],
+    templates: &[(&str, &str)],
     shipped: &[(&str, &str)],
 ) -> Vec<String> {
-    shipped
-        .iter()
-        .filter(|unit| !services.contains(unit))
-        .map(|(id, unit)| {
-            format!("{id}: deploy/systemd/{unit} ships and is not enrolled in {SERVICES}")
-        })
-        .collect()
+    let mut findings = Vec::new();
+    for unit @ (id, name) in shipped {
+        let list = if is_template(name) {
+            templates
+        } else {
+            services
+        };
+        if !list.contains(unit) {
+            findings.push(format!(
+                "{id}: deploy/systemd/{name} ships and is not enrolled in {SERVICES}"
+            ));
+        }
+    }
+    for (id, name) in services.iter().filter(|(_, name)| is_template(name)) {
+        findings.push(format!(
+            "{id}: {name} is a template unit and is listed in ratatoskr_services; list it in \
+             ratatoskr_template_units"
+        ));
+    }
+    for unit @ (id, name) in templates {
+        if !is_template(name) {
+            findings.push(format!(
+                "{id}: {name} is not a template unit and is listed in ratatoskr_template_units; \
+                 list it in ratatoskr_services"
+            ));
+        } else if !shipped.contains(unit) {
+            findings.push(format!(
+                "{id}: {name} is listed in ratatoskr_template_units and the pinned repository \
+                 does not ship it"
+            ));
+        }
+    }
+    findings
 }
 
 /// The lines a unit is missing to join `ratatoskr.target`.
@@ -175,30 +221,36 @@ fn walk(dir: &Path, root: &Path, out: &mut Vec<(String, String)>) {
 #[test]
 fn every_pinned_unit_is_enrolled() {
     let inventory = inventory();
-    let enrolled = inventory
-        .ratatoskr_services
+    let services = inventory
+        .services
         .iter()
         .map(|service| (service.repository.as_str(), service.unit.as_str()))
-        .collect::<BTreeSet<_>>();
-    let mut missing = Vec::new();
+        .collect::<Vec<_>>();
+    let templates = inventory
+        .template_units
+        .iter()
+        .map(|template| (template.repository.as_str(), template.unit.as_str()))
+        .collect::<Vec<_>>();
+    let mut shipped = Vec::new();
     for (id, root) in pinned() {
         for (path, _) in tracked_files(&root, "deploy/systemd/ratatoskr-*.service") {
             let unit = path.rsplit('/').next().unwrap_or(&path).to_owned();
-            if !enrolled.contains(&(id.as_str(), unit.as_str())) {
-                missing.push(format!(
-                    "{id}: {path} ships and is not enrolled in {SERVICES}"
-                ));
-            }
+            shipped.push((id.clone(), unit));
         }
     }
-    assert!(missing.is_empty(), "{}", missing.join("\n"));
+    let shipped = shipped
+        .iter()
+        .map(|(id, unit)| (id.as_str(), unit.as_str()))
+        .collect::<Vec<_>>();
+    let findings = enrolment_findings(&services, &templates, &shipped);
+    assert!(findings.is_empty(), "{}", findings.join("\n"));
 }
 
 #[test]
 fn every_enrolled_service_has_a_pinned_unit() {
     let pinned = pinned().into_iter().collect::<BTreeMap<_, _>>();
     let mut wrong = Vec::new();
-    for service in inventory().ratatoskr_services {
+    for service in inventory().services {
         let Some(root) = pinned.get(&service.repository) else {
             wrong.push(format!(
                 "{}: repository `{}` is not pinned",
@@ -236,7 +288,7 @@ fn every_enrolled_service_has_a_pinned_unit() {
 fn every_enrolled_unit_joins_ratatoskr_target() {
     let pinned = pinned().into_iter().collect::<BTreeMap<_, _>>();
     let mut gaps = Vec::new();
-    for service in inventory().ratatoskr_services {
+    for service in inventory().services {
         let path = pinned
             .get(&service.repository)
             .map(|root| root.join("deploy/systemd").join(&service.unit))
@@ -255,7 +307,7 @@ fn every_enrolled_unit_joins_ratatoskr_target() {
 #[test]
 fn every_pinned_role_file_is_provisioned() {
     let listed = inventory()
-        .ratatoskr_database_roles
+        .database_roles
         .into_iter()
         .map(|role| (role.repository, role.role))
         .collect::<BTreeSet<_>>();

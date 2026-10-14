@@ -84,6 +84,7 @@
       "settings": {}
     }
   ],
+  "ratatoskr_template_units": [],
   "ratatoskr_database_roles": [
     {"repository": "extractor", "role": "ratatoskr_extractor"},
     {"repository": "telegram", "role": "ratatoskr_telegram"},

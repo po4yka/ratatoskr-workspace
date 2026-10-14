@@ -214,7 +214,10 @@ version strings in the binary, so a requirement loaded at run time through `dlop
 `deploy/ansible/` is checked in two places (openspec `host-provisioning`):
 
 - `deploy_inventory.rs` in the harness fails when a pinned repository ships a
-  `deploy/systemd/ratatoskr-*.service` that `group_vars/all/services.json` does not enroll. It also
+  `deploy/systemd/ratatoskr-*.service` that `group_vars/all/services.json` does not enroll. A
+  template unit (`ratatoskr-*@.service`) is enrolled in `ratatoskr_template_units` and never in
+  `ratatoskr_services`, a plain unit never in `ratatoskr_template_units`, and every listed template
+  unit must ship at its pin. The playbook installs a template unit and never starts it. It also
   fails when an enrolled service names a unit, binary or config example that its pinned repository
   lacks, when an enrolled unit does not carry `PartOf=` and `WantedBy=ratatoskr.target`, when a pinned
   `deploy/postgres/role.sql` is not provisioned under the role it creates, and when the Ansible tree
