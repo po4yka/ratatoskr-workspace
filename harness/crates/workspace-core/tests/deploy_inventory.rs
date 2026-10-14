@@ -27,6 +27,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const SERVICES: &str = "deploy/ansible/group_vars/all/services.json";
+const HOST: &str = "deploy/ansible/group_vars/all/host.yml";
 const ANSIBLE: &str = "deploy/ansible";
 
 #[derive(Debug, Deserialize)]
@@ -200,6 +201,18 @@ fn tree_finding(relative: &str, text: &str) -> Option<String> {
         }
     }
     None
+}
+
+/// The `name:` of each entry of `ratatoskr_users` in `host.yml`.
+fn host_users(host: &str) -> Vec<String> {
+    let _ = host;
+    Vec::new()
+}
+
+/// Why a listed template unit's manager cannot start it. Each template is `(unit, manager)`.
+fn unknown_managers(templates: &[(&str, &str)], users: &[String]) -> Vec<String> {
+    let _ = (templates, users);
+    Vec::new()
 }
 
 fn walk(dir: &Path, root: &Path, out: &mut Vec<(String, String)>) {
@@ -408,6 +421,52 @@ fn a_template_unit_enrols_only_as_a_template_and_a_plain_unit_only_as_a_service(
         vec![
             "notes: ratatoskr-notes-sync@.service is listed in ratatoskr_template_units and the \
              pinned repository does not ship it"
+                .to_owned()
+        ]
+    );
+}
+
+#[test]
+fn every_template_unit_manager_is_a_host_user() {
+    let path = workspace_root().join(HOST);
+    let host = fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("{} must exist: {error}", path.display()));
+    let users = host_users(&host);
+    assert!(!users.is_empty(), "{HOST} lists no ratatoskr_users");
+    let inventory = inventory();
+    let templates = inventory
+        .template_units
+        .iter()
+        .map(|template| (template.unit.as_str(), template.manager.as_str()))
+        .collect::<Vec<_>>();
+    let findings = unknown_managers(&templates, &users);
+    assert!(findings.is_empty(), "{}", findings.join("\n"));
+}
+
+#[test]
+fn a_template_unit_manager_that_is_not_a_host_user_is_caught() {
+    let host = "ratatoskr_groups:\n  - {name: ratatoskr}\n\nratatoskr_users:\n\
+                  - {name: ratatoskr-edge, groups: [ratatoskr]}\n\
+                  # A comment between entries.\n\
+                  - {name: ratatoskr-notes, groups: [ratatoskr]}\n\n\
+                ratatoskr_directories:\n  - {path: /etc/ratatoskr, owner: root}\n";
+    let users = host_users(host);
+    assert_eq!(users, vec!["ratatoskr-edge", "ratatoskr-notes"]);
+    assert_eq!(
+        unknown_managers(
+            &[("ratatoskr-notes-cleanup@.service", "ratatoskr-notes")],
+            &users
+        ),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        unknown_managers(
+            &[("ratatoskr-notes-cleanup@.service", "ratatoskr-note")],
+            &users
+        ),
+        vec![
+            "ratatoskr-notes-cleanup@.service: manager ratatoskr-note is not in ratatoskr_users \
+             of deploy/ansible/group_vars/all/host.yml"
                 .to_owned()
         ]
     );
