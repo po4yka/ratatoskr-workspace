@@ -1,0 +1,90 @@
+# Node.js from the NodeSource repository of one major version, and obsidian-headless (`ob`) at the
+# version spike 3.2 recorded. The tarball is checked against both recorded checksums before npm
+# installs it, and npm installs it again only when the installed version differs.
+
+- name: The directory of apt signing keys
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: The NodeSource signing key, checked against its recorded checksum
+  ansible.builtin.get_url:
+    url: "{{ ratatoskr_nodesource_key_url }}"
+    dest: /etc/apt/keyrings/nodesource.asc
+    checksum: "sha256:{{ ratatoskr_nodesource_key_sha256 }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: The NodeSource repository of Node.js {{ ratatoskr_nodejs_major }}
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/nodesource.list
+    content: >
+      deb [signed-by=/etc/apt/keyrings/nodesource.asc]
+      https://deb.nodesource.com/node_{{ ratatoskr_nodejs_major }}.x nodistro main
+    owner: root
+    group: root
+    mode: "0644"
+
+# The version pattern refuses the older nodejs of Debian 12 if the repository is not in the cache.
+- name: Node.js {{ ratatoskr_nodejs_major }}
+  ansible.builtin.apt:
+    name: "nodejs={{ ratatoskr_nodejs_major }}.*"
+    state: present
+    update_cache: true
+
+- name: The directory of checked npm tarballs
+  ansible.builtin.file:
+    path: "{{ ratatoskr_state_dir }}/npm"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: The obsidian-headless tarball, checked against its recorded sha256
+  ansible.builtin.get_url:
+    url: "https://registry.npmjs.org/obsidian-headless/-/obsidian-headless-{{ ratatoskr_obsidian_headless.version }}.tgz"
+    dest: "{{ ratatoskr_state_dir }}/npm/obsidian-headless-{{ ratatoskr_obsidian_headless.version }}.tgz"
+    checksum: "sha256:{{ ratatoskr_obsidian_headless.sha256 }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: The tarball has the recorded npm integrity
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - >-
+        import base64, hashlib, sys;
+        print('sha512-' + base64.b64encode(hashlib.sha512(open(sys.argv[1], 'rb').read()).digest()).decode())
+      - "{{ ratatoskr_state_dir }}/npm/obsidian-headless-{{ ratatoskr_obsidian_headless.version }}.tgz"
+  register: ratatoskr_obsidian_integrity
+  changed_when: false
+  failed_when: ratatoskr_obsidian_integrity.stdout | trim != ratatoskr_obsidian_headless.integrity
+
+- name: The globally installed npm packages
+  ansible.builtin.command:
+    argv: [npm, ls, --global, --json, --depth, "0"]
+  register: ratatoskr_npm_global
+  changed_when: false
+  failed_when: false
+
+# npm also fetches the two dependencies at the exact versions the package names, and the install
+# script of better-sqlite3 fetches its prebuilt arm64 module.
+- name: obsidian-headless, installed from the checked tarball
+  ansible.builtin.command:
+    argv:
+      - npm
+      - install
+      - --global
+      - --no-audit
+      - --no-fund
+      - "{{ ratatoskr_state_dir }}/npm/obsidian-headless-{{ ratatoskr_obsidian_headless.version }}.tgz"
+  vars:
+    ratatoskr_npm_packages: "{{ (ratatoskr_npm_global.stdout | default('{}', true) | from_json).dependencies | default({}) }}"
+  when: ratatoskr_npm_packages['obsidian-headless'].version | default('') != ratatoskr_obsidian_headless.version
+  changed_when: true

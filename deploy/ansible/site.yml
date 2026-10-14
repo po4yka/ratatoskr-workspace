@@ -23,7 +23,11 @@
       ansible.builtin.include_role:
         name: host
 
-    - name: Binaries, units and secrets of every enrolled service
+    - name: Node.js and the Obsidian Headless client that the notes template units run
+      ansible.builtin.include_role:
+        name: nodejs
+
+    - name: Binaries, units and secrets of every enrolled service, and the template units
       ansible.builtin.include_role:
         name: ratatoskr_service
         tasks_from: install

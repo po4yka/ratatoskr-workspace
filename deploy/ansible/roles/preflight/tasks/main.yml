@@ -38,6 +38,7 @@
     ratatoskr_pins: "{{ lookup('ansible.builtin.file', ratatoskr_lock_file) | ratatoskr_lock }}"
     ratatoskr_needed: >-
       {{ (['platform'] + (ratatoskr_services | map(attribute='repository') | list)
+          + (ratatoskr_template_units | map(attribute='repository') | list)
           + (ratatoskr_database_roles | map(attribute='repository') | list)) | unique }}
     ratatoskr_published: "{{ ratatoskr_services | map(attribute='repository') | unique }}"
   run_once: true

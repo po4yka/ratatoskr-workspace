@@ -40,6 +40,8 @@ ratatoskr_groups:
   - ratatoskr
   - ratatoskr-telegram-secrets
   - ratatoskr-telegram-blobs
+  # Read access to the notes blob root (add-notes-vault-connections, design D12). Only notes writes.
+  - ratatoskr-notes-blobs
 
 # Each service user gets its own group (--user-group) and these memberships, as the deploy guides of
 # Platform, the extractor and Telegram create them.
@@ -51,6 +53,13 @@ ratatoskr_users:
   - {name: ratatoskr-telegram-webhook, groups: [ratatoskr, ratatoskr-telegram-secrets, ratatoskr-telegram-blobs]}
   - {name: ratatoskr-telegram-dispatcher, groups: [ratatoskr, ratatoskr-telegram-secrets]}
   - {name: ratatoskr-nats, groups: []}
+  # The notes service user, which starts and stops the notes template units (design D3), and the
+  # user those units run `ob` as. No other user shares the group of ratatoskr-notes-sync, because
+  # its 0700 client state holds the Sync token and the end-to-end key in plain text.
+  - {name: ratatoskr-notes, groups: [ratatoskr]}
+  - {name: ratatoskr-notes-sync, groups: []}
+  # Knowledge reads note bytes through the read group from OBS-023 on (design D12).
+  - {name: ratatoskr-knowledge, groups: [ratatoskr, ratatoskr-notes-blobs]}
 
 # The one layout the three deploy guides agree on once reconciled (DPL-022): the shared `ratatoskr`
 # group owns the configuration and log directories, and each data directory belongs to one service.
@@ -67,6 +76,7 @@ ratatoskr_directories:
   - {path: /mnt/nvme/ratatoskr/blobs, owner: root, group: root, mode: "0755"}
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-extractor, owner: ratatoskr-extractor, group: ratatoskr-extractor, mode: "0700"}
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-blobs, mode: "2750"}
+  - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes, owner: ratatoskr-notes, group: ratatoskr-notes-blobs, mode: "2750"}
   - {path: /mnt/nvme/backups, owner: root, group: root, mode: "0755"}
   - {path: /mnt/nvme/backups/ratatoskr, owner: root, group: root, mode: "0700"}
   - {path: /var/lib/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-webhook, mode: "0750"}
@@ -77,6 +87,19 @@ ratatoskr_host_files:
   - {repository: platform, src: deploy/logrotate/ratatoskr, dest: /etc/logrotate.d/ratatoskr, mode: "0644"}
   - {repository: platform, src: deploy/tmpfiles.d/ratatoskr-platform.conf, dest: /etc/tmpfiles.d/ratatoskr-platform.conf, mode: "0644"}
   - {repository: telegram, src: deploy/logrotate/ratatoskr-telegram, dest: /etc/logrotate.d/ratatoskr-telegram, mode: "0644"}
+
+# Node.js and the Obsidian Headless client (`ob`) that the notes template units run, at the version
+# and checksums spike 3.2 recorded (add-notes-vault-connections). ADR-0010: ob is installed from npm
+# on the host and never baked into a published image. NodeSource packages put node in /usr/bin and
+# npm's global prefix at /usr, so `npm install --global` gives /usr/bin/ob, which the units start.
+ratatoskr_nodejs_major: 22
+ratatoskr_nodesource_key_url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+# Key 6F71 F525 2828 41EE DAF8 51B4 2F59 B5F9 9B1B E0B4, "NSolid <nsolid-gpg@nodesource.com>".
+ratatoskr_nodesource_key_sha256: b42e0321dabdc24e892115da705cf061167eac12a317f23d329862d0aa0a271d
+ratatoskr_obsidian_headless:
+  version: 0.0.14
+  sha256: ef75298ed3a356dcb2a4de98c6efe10b2ac64b00556007118b6ac70535e73156
+  integrity: sha512-S1d/hxLKvCUG2g5tRyXFkzPqMs3Ntw1tDyzoF2yfHGRuB4B+Mi3X2vgT8LbfQKrkEEi3LfJRdXtYzAVHcbpccw==
 
 # Host secrets the playbook generates; each is created once and never read back.
 ratatoskr_generated_secrets:

@@ -308,7 +308,7 @@
           - notes_blob_root.stat.pw_name == 'ratatoskr-notes'
           - notes_blob_root.stat.gr_name == 'ratatoskr-notes-blobs'
           - notes_blob_root.stat.mode == '2750'
-        fail_msg: "{{ notes_blob_root.stat }}"
+        fail_msg: "blob root: {{ notes_blob_root.stat.pw_name | default('') }}:{{ notes_blob_root.stat.gr_name | default('') }} {{ notes_blob_root.stat.mode | default('missing') }}"
 
     - name: "notes_blob_read_group: a blob, written by ratatoskr-notes with umask 0027"
       ansible.builtin.command:

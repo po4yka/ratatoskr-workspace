@@ -1,5 +1,6 @@
 # Each enrolled service's binary, from its verified artifact, and its unit, unchanged from the
-# pinned repository. Then the host secrets the services read, generated here and never read back.
+# pinned repository; each template unit and the polkit rule of its manager. Then the host secrets
+# the services read, generated here and never read back.
 
 - name: Binaries, from the verified artifact of the pinned commit
   ansible.builtin.copy:
@@ -25,10 +26,78 @@
     label: "{{ item.unit }}"
   register: ratatoskr_units
 
+# A template unit is installed and never started or enabled: its manager starts each instance
+# through the systemd D-Bus API, as the polkit rule below allows.
+- name: Template units, unchanged from the pinned repository
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_workspace_root }}/{{ ratatoskr_pins[item.repository].path }}/deploy/systemd/{{ item.unit }}"
+    dest: "/etc/systemd/system/{{ item.unit }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ratatoskr_template_units }}"
+  loop_control:
+    label: "{{ item.unit }}"
+  register: ratatoskr_template_unit_files
+
 - name: systemd reads the units it was given
   ansible.builtin.systemd_service:
     daemon_reload: true
-  when: ratatoskr_units is changed
+  when: ratatoskr_units is changed or ratatoskr_template_unit_files is changed
+
+- name: polkitd, which systemd asks before a manager starts or stops an instance
+  ansible.builtin.apt:
+    name: polkitd
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  register: ratatoskr_polkitd
+
+# Without a reload the bus keeps its old policy, refuses polkitd its name, and polkitd exits.
+- name: The system bus reads the policy polkitd installed
+  ansible.builtin.systemd_service:
+    name: dbus
+    state: reloaded
+  when: ratatoskr_polkitd is changed
+
+- name: polkitd runs
+  ansible.builtin.systemd_service:
+    name: polkit
+    state: started
+
+# Each template unit's manager may start and stop an instance whose name is a lowercase UUID, and
+# nothing else: no other verb, no other unit, no unit file change. Every other request falls
+# through to systemd's own policy, which asks for an administrator.
+- name: The polkit rule of the template units
+  ansible.builtin.copy:
+    dest: /etc/polkit-1/rules.d/60-ratatoskr-template-units.rules
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      // Installed by ratatoskr-workspace deploy/ansible from ratatoskr_template_units.
+      var ratatoskrTemplates = {{ ratatoskr_template_units | map(attribute='manager') | zip(ratatoskr_template_units | map(attribute='unit') | map('replace', '@.service', '@')) | list | to_json }};
+      var ratatoskrInstance = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.service$/;
+
+      polkit.addRule(function (action, subject) {
+          if (action.id !== "org.freedesktop.systemd1.manage-units") {
+              return polkit.Result.NOT_HANDLED;
+          }
+          var verb = action.lookup("verb");
+          var unit = action.lookup("unit") || "";
+          if (verb !== "start" && verb !== "stop") {
+              return polkit.Result.NOT_HANDLED;
+          }
+          for (var i = 0; i < ratatoskrTemplates.length; i++) {
+              var manager = ratatoskrTemplates[i][0];
+              var prefix = ratatoskrTemplates[i][1];
+              if (subject.user === manager && unit.indexOf(prefix) === 0
+                      && ratatoskrInstance.test(unit.substring(prefix.length))) {
+                  return polkit.Result.YES;
+              }
+          }
+          return polkit.Result.NOT_HANDLED;
+      });
 
 - name: Remember which services have a new binary or unit
   ansible.builtin.set_fact:
