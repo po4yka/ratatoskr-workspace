@@ -46,6 +46,11 @@ fn release_calls(workflows: &[(String, String)]) -> Calls {
     calls
 }
 
+/// Whether the units a repository ships (paths under `deploy/systemd/`) oblige it to publish.
+fn publishes(units: &[&str]) -> bool {
+    !units.is_empty()
+}
+
 #[test]
 fn every_repository_that_ships_a_unit_publishes_through_the_reusable_workflow() {
     let manifest = committed_manifest();
@@ -80,6 +85,16 @@ fn every_repository_that_ships_a_unit_publishes_through_the_reusable_workflow() 
     }
     assert!(publishers > 0, "no pinned repository ships a systemd unit");
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn a_repository_that_ships_only_template_units_is_not_asked_to_publish() {
+    let template = "deploy/systemd/ratatoskr-notes-cleanup@.service";
+    let service = "deploy/systemd/ratatoskr-notes.service";
+    assert!(!publishes(&[]));
+    assert!(!publishes(&[template]));
+    assert!(publishes(&[service]));
+    assert!(publishes(&[template, service]));
 }
 
 #[test]
