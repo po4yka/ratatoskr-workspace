@@ -56,12 +56,12 @@ for name in edge chatgpt claude; do
     fail "the public key of $name is not in exactly one stanza"
 done
 
-for name in telegram x instagram threads extractor extractor_browser_worker knowledge github vault channel_digests; do
+for name in telegram x instagram threads extractor extractor_browser_worker knowledge github vault channel_digests notes; do
   [[ ! -e "$out/$name.nkey" ]] || fail "a throwaway identity ($name) left a seed behind"
 done
 
 tokens=$(rg --only-matching --no-filename '^[[:space:]]*nkey:[[:space:]]*U[A-Z0-9]+' "$conf" | sort -u | wc -l | tr -d ' ')
-[[ "$tokens" == 13 ]] || fail "expected 13 distinct nkeys, found $tokens"
+[[ "$tokens" == 14 ]] || fail "expected 14 distinct nkeys, found $tokens"
 
 # Only the store_dir override differs from the deployed file. Everything else, every allow list
 # included, is unchanged.

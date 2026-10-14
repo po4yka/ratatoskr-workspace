@@ -86,7 +86,8 @@
   ],
   "ratatoskr_template_units": [
     {"repository": "notes", "unit": "ratatoskr-notes-cleanup@.service", "manager": "ratatoskr-notes"},
-    {"repository": "notes", "unit": "ratatoskr-notes-login@.service", "manager": "ratatoskr-notes"}
+    {"repository": "notes", "unit": "ratatoskr-notes-login@.service", "manager": "ratatoskr-notes"},
+    {"repository": "notes", "unit": "ratatoskr-notes-sync@.service", "manager": "ratatoskr-notes"}
   ],
   "ratatoskr_database_roles": [
     {"repository": "extractor", "role": "ratatoskr_extractor"},
@@ -115,6 +116,7 @@
     {"identity": "knowledge", "group": "root"},
     {"identity": "github", "group": "root"},
     {"identity": "vault", "group": "root"},
-    {"identity": "channel-digests", "group": "root"}
+    {"identity": "channel-digests", "group": "root"},
+    {"identity": "notes", "group": "root"}
   ]
 }

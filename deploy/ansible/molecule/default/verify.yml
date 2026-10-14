@@ -538,7 +538,7 @@
         that:
           - "'REPLACE_ME' not in (nats_conf.content | b64decode)"
           - (nats_conf.content | b64decode) is not search('SU[A-Z2-7]{56}')
-          - (nats_conf.content | b64decode | regex_findall('nkey:\s*U[A-Z2-7]{55}') | length) == 13
+          - (nats_conf.content | b64decode | regex_findall('nkey:\s*U[A-Z2-7]{55}') | length) == 14
 
     - name: "seed_modes: each seed file"
       ansible.builtin.stat:

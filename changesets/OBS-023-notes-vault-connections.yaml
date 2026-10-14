@@ -20,10 +20,10 @@ repositories:
       - "a9289e27bcf53f496b5917889580965d97ff2358 feat(notes-contracts): mark the notes events user_content and match the blob media type"
   - id: ratatoskr-notes
     role: new-service-connections-index-sync-supervisor
-    branch: main@10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8
+    branch: main@d4586b4d837ecfc3bbc5746484e2e7e7385d5add
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/notes at 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced after tasks 5.6 to 5.19). The cleanup and login template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6 and 14.7)
+    pin: repos/notes at d4586b4d837ecfc3bbc5746484e2e7e7385d5add (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, and to d4586b4 after group 6 by task 14.4). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. Notes opens no NATS connection at this pin, and the relay of notes task 7.6 adds it, so bus_acl.rs keeps NOTES in WIRING_PENDING until then
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"
@@ -46,9 +46,31 @@ repositories:
       - "18a91140fda8c41a448e524a505a8e0bf889035d fix(notes): fail logins at a stop, check the row, bound the logins"
       - "e546728c9121145d77005d76cdf94f3afe435f23 test(notes): serve stops and starts logins, and a disconnect answers 404"
       - "10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 fix(notes): serve takes its bus and stop signal, and a disconnect answers 404"
+      - "4686a2e59b8454f2b69f43fbc96d3f3ed1433406 refactor(notes): share run_service between the test binaries"
+      - "3867445c2461fdc2d6e852e07c530d5fcb91cb08 test(notes): a connect starts one sync unit in pull-only mode"
+      - "4af136ebe3152f2a5d11a7aedf5c7a2207445130 feat(notes): the Sync supervisor starts one sync unit in pull-only mode"
+      - "2e06e8cb43c76aa6bd6e65893d7322ec18204f4a test(notes): a file written in three parts becomes one revision"
+      - "fac24b452a3568dc6167253d680c60bc8a9dc24a feat(notes): the inotify watcher turns a settled file into one revision"
+      - "27b971e50cd8f0b8e37e2a04a7964db9af45b563 test(notes): a new blob is readable by the read group only"
+      - "62158ba416d02ba8e5631ce3acce2e89d2de7827 feat(notes): blobs are mode 0640 and blob directories keep setgid 2750"
+      - "970808baa66f2abeb047365dc9ff0a1e6f3bd80f test(notes): an expired Sync login stops the unit once and waits"
+      - "7051a655f1c637e24c977d6875a8f111026fbc50 feat(notes): an expired Sync login stops the unit and waits for the owner"
+      - "83b78fd64069341303a618a48293b6b5e87b6b28 refactor(notes): move the route failures and the disconnect record out of api.rs"
+      - "d4586b4d837ecfc3bbc5746484e2e7e7385d5add docs(notes): record group 6 in the proposal and the project status"
   - id: ratatoskr-platform
     role: edge-route-durables-identity-device-kind-authority
-    branch: obs-023/notes-vault-connections
+    branch: main@6ccae27343d3ae24c86ceaa2e42a2aba489f76aa
+    base: 47c7fe47147735c61cac61eb87cb0bf6079c772c
+    pull_requests: none, pushed directly to main under the repository owner authorization
+    pin: repos/platform at 6ccae27343d3ae24c86ceaa2e42a2aba489f76aa (task 14.4, before Knowledge). Platform provisions ratatoskr_knowledge_notes_files and ratatoskr_knowledge_notes_vaults and grants them in the KNOWLEDGE stanza before Knowledge reads them, so bus_durables.rs keeps both in OWNER_PENDING and bus_acl.rs keeps the Knowledge copy in FRAGMENT_PENDING until the Knowledge pin of task 14.4
+    commits:
+      - "3784a276aad64b19f2ee840ab82558cba857133e docs(openspec): open the notes vault connection change"
+      - "f403d472d8c43cfd94305bb7bab35cee45f91c32 test(public-api): require the notes route, its device claim and a connect that keeps no body"
+      - "1ddeb65445a136aed6a766b8f636becb8915bead feat(public-api): route /v1/notes, name the device kind, and proxy the connect without its body"
+      - "188e63dbd138c9e4b0ed98952563abe479942341 test(operations): require a notes connect operation that only the notes lane reports"
+      - "0505b7175b5b9b7bb9c87d9e076083acb9aa53b2 feat(operations): mint the notes connect operation for the notes lane only"
+      - "9ab03719d0a0353d3293096e74621cad05f70893 test(eventing): require the NOTES identity and the two Knowledge note durables"
+      - "6ccae27343d3ae24c86ceaa2e42a2aba489f76aa feat(eventing): add the NOTES identity and the two Knowledge note durables"
   - id: ratatoskr-knowledge
     role: notes-intake-consumer
     branch: obs-023/notes-vault-connections

@@ -257,6 +257,14 @@ const PLATFORM_ONLY: [&str; 3] = [
 
 const PLATFORM_TABLE: &str = "crates/eventing/src/stream.rs";
 
+/// Durables that Platform provisions before their owner reads them. OBS-023 task 14.4 pins
+/// Platform before Knowledge; the Knowledge note intake (group 10) names both. The owner test
+/// skips a row here and reports it as stale when the owner names both its name and its filter.
+const OWNER_PENDING: [&str; 2] = [
+    "ratatoskr_knowledge_notes_files",
+    "ratatoskr_knowledge_notes_vaults",
+];
+
 /// The string value of `const NAME: &str = "value";` (any visibility) in `source`.
 fn string_constant(source: &str, name: &str) -> Option<String> {
     let needle = format!("const {name}: &str");
@@ -570,7 +578,18 @@ fn every_owner_hard_codes_its_durable_name_and_filter() {
             )
         })
         .collect::<BTreeMap<_, _>>();
-    let problems = owner_problems(&sources, &all_durables());
+    let (pending, checked): (Vec<Durable>, Vec<Durable>) = all_durables()
+        .into_iter()
+        .partition(|durable| OWNER_PENDING.contains(&durable.name));
+    let mut problems = owner_problems(&sources, &checked);
+    for durable in pending {
+        if owner_problems(&sources, &[durable]).is_empty() {
+            problems.push(format!(
+                "`{}` names `{}` and its filter now; remove it from OWNER_PENDING",
+                durable.owner, durable.name
+            ));
+        }
+    }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 

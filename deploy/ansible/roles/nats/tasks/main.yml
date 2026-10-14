@@ -1,6 +1,6 @@
 # The bus: Platform's deploy/nats/ratatoskr.conf with every placeholder replaced by the public key of
 # an nkey pair generated on the host, and Platform's compose file, both from the pinned commit.
-# NATS refuses the file while any placeholder is left, so all thirteen identities get a pair, and
+# NATS refuses the file while any placeholder is left, so all fourteen identities get a pair, and
 # a seed no enrolled service reads stays root-only until its service is enrolled.
 
 - name: One nkey pair per identity, generated on the host
