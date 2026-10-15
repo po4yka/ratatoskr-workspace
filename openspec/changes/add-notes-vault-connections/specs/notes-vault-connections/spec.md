@@ -53,7 +53,7 @@ database, its outbox, its idempotency records, its audit records or its logs.
 #### Scenario: Edge handles a connect request with marker secrets
 
 - **WHEN** a test sends a connect request whose password fields hold known markers through Edge to a stub notes upstream, and then searches every Platform table, the outbox, the idempotency and audit records and the captured Edge log output for the markers
-- **THEN** no marker is found, and the stub upstream received the body unchanged with the minted operation id, verified by `crates/public-api/tests/notes_routes.rs::connect_body_is_not_persisted_or_logged` in `ratatoskr-platform`
+- **THEN** no marker is found, and the stub upstream received the body unchanged with the minted operation id, verified by `crates/public-api/tests/notes_connect_log.rs::connect_body_is_not_persisted_or_logged` in `ratatoskr-platform`
 
 ### Requirement: Obsidian secrets never leave the notes service
 
