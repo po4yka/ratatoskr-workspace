@@ -31,10 +31,10 @@ repositories:
       - "75e954fb1af6b9d0f7b30383c7a993c64d01e2c9 fix(fixtures): state that the schema refuses a merge proposal on a binary file"
   - id: ratatoskr-notes
     role: write-consumer-pending-writes-conflicts-delivery-and-link-rewrite
-    branch: main@96a63fda85d8184d69fd3b049867fc27df429e6a
+    branch: main@9a264fc627e1d60fa222f469a33a8c9985044303
     base: 810edd8ca76376eb4df9555bfed2a637052c55dd
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: not pinned; the workspace stays at 810edd8 (OBS-023). Notes at 96a63fd locks the contracts at 76a0c35a53bb4432878d451bcb7b5f08275edbc6, the rest of the fleet at a9289e27bcf53f496b5917889580965d97ff2358, and harness contracts_pin.rs requires one revision in every Rust repository. 6d6d697 copies the NOTES stanza of Platform f76005e into deploy/nats/identity.conf, so Molecule runs when the pin lands
+    pin: not pinned; the workspace stays at 810edd8 (OBS-023). Notes at 9a264fc locks the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 like the rest of the fleet (XR-021 contracts_sha moves with the pin). Its ratatoskr-notes-sync@.service reads EnvironmentFile=-/run/ratatoskr-notes/sync-modes/%i, which the notes service writes, and expands ${RATATOSKR_SYNC_MODE} in ExecStartPre=; harness release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program refuses both, because such a file can set NODE_OPTIONS or LD_PRELOAD for ob. The pin also brings the host change of task 7.11 (ratatoskr-notes-sync in ratatoskr-notes-trees, the trees root 2770) and a full Molecule run, because deploy/nats/identity.conf and the two template units change
     commits:
       - "a49745a731131df791831b66c524b6c232570173 build(notes): pin the contracts at 76a0c35"
       - "b75d957b8ed8e0045df102f01e4933894c2e2474 test(notes): the write consumer verifies the durable of Edge"
@@ -69,12 +69,47 @@ repositories:
       - "070c7b957b53261a14ee97a1e36897abb43377a3 fix(notes): announce only open conflicts and drain every pending one"
       - "2989e7904f6dc94942dd17d497afccba98af9d77 test(notes): restore the table before any assertion of the nak test"
       - "96a63fda85d8184d69fd3b049867fc27df429e6a test(notes): give the test write commands a fixed issue time"
+      - "0426da39edb3e548daba92270d55e1ed0bdb1789 test(notes): the owner turns write mode on and off, and only the owner"
+      - "1f6175b119309f23da9dc0816b40ca70f1e28bcd feat(notes): set the write mode of a connection and report it"
+      - "d461f7e8694a79612feb1888a6a8fac0b42582ed test(notes): the write mode sets the mode of the sync client"
+      - "c454195f677b5a0a6d38fbf78b4748032e113f6d feat(notes): set the mode of the sync client from the write mode"
+      - "0bc3ee5129f6c61b012265ffe71ae915c5dd3759 test(notes): the connection list shows the write mode of each connection"
+      - "890a10558c49cd9de2ac53e993fb57a98f673ca3 feat(notes): name the write mode of each connection in the list"
+      - "af9a6df980d48fdff0fce617214ff15ee039f4e7 test(notes): the echo of a write acknowledges it, and another hash wins"
+      - "5c89db81a5d1ba9c4e0542cd8d91304472b96c27 feat(notes): take the echo of a write as its acknowledgement"
+      - "199484a378a1f5ba2270ff8f0d34f6ac7466a560 test(notes): a device reads the writes of its connection in order"
+      - "0b78a3ec6f290e8f52d505503d7f1b53eb5f0d6c feat(notes): give each device connection an ordered queue of writes"
+      - "0b79aa5d23bebaa8b9ca7baac40dfe8e54759792 test(notes): a tree change before the write of sync makes a conflict"
+      - "0023724f593bf04ca2c8dae18dd746788f837ff1 feat(notes): write the working tree of sync atomically under a file lock"
+      - "f74c0c2018658de6ef047d3c63ad6ba4283b3d7d test(notes): a reader of the working tree never sees a partial file"
+      - "ca714bdb6ec337475b72f4f0c52850ca022a4885 test(notes): run the partial-file reader against the atomic write"
+      - "613020e413dabeb4d62432e6285155f3e42b9b08 test(notes): the queue cursor of a device never skips a delivered write"
+      - "d55fe90c1beae91d945aa9344e9ca227db9e27c1 fix(notes): number each delivery and read the device queue by it"
+      - "0f875f4b5a8504f132f015fdbbf00ebaadb6155a test(notes): a link in the working tree never leads a write out of it"
+      - "4b6f9e67a83e1f3c97db6076daf25a0e839afafe fix(notes): keep every file operation of sync inside the working tree"
+      - "290ac6f4b137d44e0ad4b52685d450458e4b8f51 test(notes): the stage of a delivered write names what it waits for"
+      - "290727110120515d00b996f0e8831f782f1aee6c feat(notes): name the wait of a delivered write in its stage"
+      - "0fcbd36ed2e0df8a8b6a15298e1cfeeed8932771 build(deps): lock ratatoskr-contracts at 2c72602"
+      - "98e2021cd5008d6d42a9ae232ab1d163e0667c7e test(notes): a set_property on sync changes only its frontmatter key"
+      - "52d6376c0eec710d1a6fbed2d1de60d9f1a94a4b feat(notes): change a frontmatter key on sync and write it atomically"
+      - "8da027e4de632edf464ddc0b048dd6a3d29d9f20 test(notes): the group of the trees writes what notes and ob write"
+      - "636450078fb58e85649a5a60b99ceec9912b368c feat(notes): let the group of the trees write what notes and ob write"
+      - "70dcf9e7e962f3aec7e87ec1438fef21995500eb test(notes): the temporary file of a write is not a change of the tree"
+      - "3b28d48f955d5e7d77d6b5ee4fbed6c4d81b81db fix(notes): leave the temporary file of a write out of the tree index"
+      - "0b601093b225dd3b9220380109a1d702f8ec2824 test(notes): a formatted echo after a write landed acknowledges it"
+      - "43b714cc8a2233edef9f2a5fc8f26ea6aea58c50 feat(notes): take the first change after a landed write as its echo"
+      - "5cf80db2973ed01c3b6040dbd76999876f09d431 test(notes): write mode off fails a sync write that did not land"
+      - "c0cf2a80a1701ae5ea42b43c8ca7dec2d5697ee4 feat(notes): fail a sync write that did not land when write mode goes off"
+      - "227446e25365af40e3ce3278719be76974c67db9 refactor(notes): drop a nested block and keep the fault mode as a check"
+      - "a18947341a9025885773bafdd389c5e2c3ce0765 test(notes): a frontmatter value continues over its blank lines"
+      - "2acdca4072cabd1dabacb6e126f046e0a57be6d3 fix(notes): keep the blank lines of a frontmatter value inside it"
+      - "9a264fc627e1d60fa222f469a33a8c9985044303 refactor(notes): keep the path form of the atomic write test-only"
   - id: ratatoskr-platform
     role: edge-write-routes-operation-kinds-durables-and-bus-acl
     branch: main@f76005e4297142bb2a4ebb114b4140704cd5384f
     base: 6df97172f2feae9866fc7fe1d09400b9952bc2b4
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: not pinned; the workspace stays at 6df9717 (OBS-023). Platform at f76005e locks the contracts at 75e954fb1af6b9d0f7b30383c7a993c64d01e2c9, and harness contracts_pin.rs requires one revision in every Rust repository. The pin needs the harness change of bus_durables.rs (26 service rows with ratatoskr_notes_write_requests, platform_notes_conflict_projection among the Platform-only consumers, the notes ack wait of 30 s) and bus_acl.rs (the NOTES owner of ratatoskr_notes_write_requests); deploy/nats/ratatoskr.conf changes, so Molecule runs when the pin lands
+    pin: not pinned; the workspace stays at 6df9717 (OBS-023). The OBS-024 work of Platform ends at f76005e; main at 3a47f0f (SITE-025, recorded in that changeset) locks the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 and is the commit to pin, in one step with notes and the rest of the fleet (contracts_pin.rs). The pin needs the harness change of bus_durables.rs (26 service rows with ratatoskr_notes_write_requests, platform_notes_conflict_projection among the Platform-only consumers, the notes ack wait of 30 s) and bus_acl.rs (the NOTES owner of ratatoskr_notes_write_requests); deploy/nats/ratatoskr.conf changes, so Molecule runs when the pin lands
     commits:
       - "a6be0b265b5c7cb345379357b15a340f08d6f7d6 chore(deps): move the contracts pin to 75e954f"
       - "e835758c3fbf0938b93f77bfe5c304b19aa6801e test(public-api): require the notes write routes at Edge"

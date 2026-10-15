@@ -10,8 +10,8 @@ archived, and OBS-023 only after `xr-021-fleet-round-5`, because the `fleet-bus-
 modifies the text those two leave.
 
 - [x] 1.1 `ratatoskr-contracts`: `notes/write-request.v1`, `notes/conflict.v1`, fixtures, generated types and registry rows (group 3). It merges first, because every other repository builds against these types. Direct to `main` after review; pinned at `75e954f`, CI green (8 of 8 check runs). Group 3 is complete.
-- [ ] 1.2 `ratatoskr-notes`: the write consumer, pending writes, conflicts, write mode, `sync` delivery, the device queue, echo suppression, link rewrite and the durable check (groups 4–9). Direct to `main` after review; pushed at `96a63fd`, CI green (5 of 5 check runs), not pinned yet: notes locks the contracts at `76a0c35` and the fleet at `a9289e2`, and `contracts_pin.rs` requires one revision. Open: groups 6 to 9.
-- [ ] 1.3 `ratatoskr-platform`: the Edge routes, the operation kinds and their authority rows, the two durables and the NATS ACL lines (group 10). Direct to `main` after review; pushed at `f76005e`, CI green (7 of 7 check runs), not pinned yet: Platform locks the contracts at `75e954f` and the fleet at `a9289e2`, and `contracts_pin.rs` requires one revision. Group 10 is complete.
+- [ ] 1.2 `ratatoskr-notes`: the write consumer, pending writes, conflicts, write mode, `sync` delivery, the device queue, echo suppression, link rewrite and the durable check (groups 4–9). Direct to `main` after review; pushed at `9a264fc`, CI green (5 of 5 check runs), locking the contracts at `2c72602` like the rest of the fleet. Not pinned yet: `ratatoskr-notes-sync@.service` reads `EnvironmentFile=-/run/ratatoskr-notes/sync-modes/%i`, which the notes service writes, and expands `${RATATOSKR_SYNC_MODE}` in `ExecStartPre=`; `release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program` refuses both, because such a file can set `NODE_OPTIONS` or `LD_PRELOAD` for `ob`. Open: groups 8 and 9, 6.7 (spike 3.3), and that unit.
+- [ ] 1.3 `ratatoskr-platform`: the Edge routes, the operation kinds and their authority rows, the two durables and the NATS ACL lines (group 10). Direct to `main` after review; pushed at `3a47f0f`, CI green (7 of 7 check runs), locking the contracts at `2c72602`. Not pinned yet: the fleet moves to `2c72602` in one step (`contracts_pin.rs`), and the notes pin of 1.2 is blocked. Group 10 is complete.
 - [ ] 1.4 `ratatoskr-obsidian-plugin`: pull, apply and report for the `plugin` channel (group 11). PR: _link_
 - [ ] 1.5 `ratatoskr-export-agent`: apply and report for the `cli` channel (group 12). PR: _link_
 - [x] 1.6 `ratatoskr-web`: the editor, the write-mode switch and the conflict view (group 13). Direct to `main` after review; pinned at `f3c7320`, CI green (4 of 4 check runs). Group 13 is complete.
@@ -73,21 +73,47 @@ modifies the text those two leave.
 
 ## 6. Write mode (ratatoskr-notes)
 
-- [ ] 6.1 RED: add `services/notes/tests/write_mode.rs` with `turning_on_enables_writes`, `turning_off_fails_waiting_writes` and `foreign_toggle_is_not_found`. Confirm that they fail because the route does not exist.
-- [ ] 6.2 GREEN: implement `PUT /v1/notes/connections/{id}/write-mode` in the notes domain API, off by default, reporting the operation `notes.connection.write_mode`. Verify 6.1.
-- [ ] 6.3 RED: add `services/notes/tests/sync_mode.rs` with `write_mode_off_sets_pull_only` and `write_mode_on_sets_bidirectional`, against a fake `ob` that records its arguments. Confirm that they fail.
-- [ ] 6.4 GREEN: set the Headless client mode and conflict strategy from the write mode. Verify 6.3.
+- [x] 6.1 RED: add `services/notes/tests/write_mode.rs` with `turning_on_enables_writes`, `turning_off_fails_waiting_writes` and `foreign_toggle_is_not_found`. Confirm that they fail because the route does not exist.
+- [x] 6.2 GREEN: implement `PUT /v1/notes/connections/{id}/write-mode` in the notes domain API, off by default, reporting the operation `notes.connection.write_mode`. Verify 6.1.
+- [x] 6.3 RED: add `services/notes/tests/sync_mode.rs` with `write_mode_off_sets_pull_only` and `write_mode_on_sets_bidirectional`, against a fake `ob` that records its arguments, and `sync_supervisor.rs::connect_starts_one_unit_in_pull_only_mode` expects `--conflict-strategy conflict`, because the unit names the strategy on every start. Confirm that they fail.
+- [x] 6.4 GREEN: set the Headless client mode and conflict strategy from the write mode. Verify 6.3.
+- [x] 6.5 RED: add `services/notes/tests/write_mode.rs::connection_list_shows_the_write_mode`, asserting that `GET /v1/notes/connections` names `write_mode` (`off`, then `on` after the switch). Confirm that it fails because the connection view has no `write_mode`.
+- [x] 6.6 GREEN: add `write_mode` to the connection view of `GET /v1/notes/connections`. Verify 6.5.
+- [ ] 6.7 Re-check when spike 3.3 of `add-notes-vault-connections` runs: the modes `bidirectional` and `pull-only` with `--conflict-strategy conflict`; that `ob` pushes a file that notes wrote atomically into the working tree; that the watcher's echo of that file is the acknowledgement; what `ob` does with a race in each mode. Correct the unit and `sync_mode.rs` when the result differs. No test first: a re-check of a recorded behaviour.
 
 ## 7. Delivery and echo (ratatoskr-notes)
 
-- [ ] 7.1 RED: add `services/notes/tests/echo.rs` with `own_write_is_acknowledged_once` and `different_ack_hash_becomes_current`, against a fake `sync` channel. Confirm that the first fails with two events.
-- [ ] 7.2 GREEN: treat an inbound change with the path and hash of a pending write as its acknowledgement, and make the acknowledged bytes current with the warning `notes.write.transformed` when the hash differs. Verify 7.1.
-- [ ] 7.3 RED: add `services/notes/tests/delivery_plugin.rs` with `offline_device_delivers_on_reconnect`, `queue_keeps_order` and `foreign_device_reads_nothing`. Confirm that they fail because no device queue exists.
-- [ ] 7.4 GREEN: implement the ordered device queue, its cursor and the result endpoint. Verify 7.3, and document the queue endpoints in `ratatoskr-notes/README.md`.
-- [ ] 7.5 RED: add `services/notes/tests/sync_write.rs::tree_change_before_write_conflicts`: change the working-tree file after the queue check and before the write; assert no write and one conflict. Confirm that it fails.
-- [ ] 7.6 GREEN: implement the per-file lock, the tree hash check, the temporary file and the atomic rename. Verify 7.5.
-- [ ] 7.7 RED: add `sync_write.rs::reader_never_sees_partial_file`: a reader thread hashes the file in a loop during 1 000 writes; assert that every hash is the old or the new one. Confirm that it fails against a direct write in the test's own fault mode.
-- [ ] 7.8 GREEN: verify 7.7 with the atomic write from 7.6, and record the result in `ratatoskr-notes/DEVELOPMENT.md`.
+- [x] 7.1 RED: add `services/notes/tests/echo.rs` with `own_write_is_acknowledged_once` and `different_ack_hash_becomes_current`, against a fake `sync` channel. Confirm that the first fails because the write stays pending: equal bytes publish nothing, so there are not two events.
+- [x] 7.2 GREEN: treat an inbound change with the path and hash of a pending write as its acknowledgement, and make the acknowledged bytes current with the warning `notes.write.transformed` when the hash differs. Verify 7.1.
+- [x] 7.3 RED: add `services/notes/tests/delivery_plugin.rs` with `offline_device_delivers_on_reconnect`, `queue_keeps_order` and `foreign_device_reads_nothing`. Confirm that they fail because no device queue exists.
+- [x] 7.4 GREEN: implement the ordered device queue, its cursor and the result endpoint; a `rename` or a `move` is in the queue of its target too, so an update of the new path waits behind it. Verify 7.3, and document the queue endpoints in `ratatoskr-notes/README.md`.
+- [x] 7.5 RED: add `services/notes/tests/sync_write.rs::tree_change_before_write_conflicts`: change the working-tree file after the queue check and before the write; assert no write and one conflict. Confirm that it fails.
+- [x] 7.6 GREEN: implement the per-file lock, the tree hash check, the temporary file and the atomic rename. Verify 7.5.
+- [x] 7.7 RED: add `sync_write::tests::reader_never_sees_partial_file` in `services/notes/src/sync_write.rs` (7.31 moved it there): a reader thread hashes the file in a loop during 1 000 writes; assert that every hash is the old or the new one. Confirm that it fails against a direct write in the test's own fault mode.
+- [x] 7.8 GREEN: verify 7.7 with the atomic write from 7.6, and record the result in `ratatoskr-notes/DEVELOPMENT.md`.
+- [x] 7.9 Decision (no contract change): a delivered write reports the stage that names its wait, `awaiting_device` (`plugin`, `cli`) or `awaiting_obsidian` (`sync`), not `delivering` with a reason. Tested by 7.16/7.17.
+- [x] 7.10 Decision: on the `sync` channel notes changes the frontmatter of a `set_property` itself. Tested by 7.18/7.19.
+- [x] 7.11 Decision: `ratatoskr-notes` and `ratatoskr-notes-sync` are both in group `ratatoskr-notes-trees`, and the trees root is 2770. The sync and login units run with `UMask=0007`. Tested by 7.20/7.21. The host change belongs to group 14.
+- [x] 7.12 RED: add `delivery_plugin.rs::cursor_never_skips_a_later_delivered_write`. W1 and W2 update X.md in turn, and W3 updates Y.md. The device reads {W1, W3}, then reports W1 applied. A read after that `next_cursor` must return W2. Confirm that it fails because the cursor is the position of acceptance.
+- [x] 7.13 GREEN: give each write a delivery sequence (`connections.last_delivery`, taken under the connection row lock when the write becomes delivering), and use it as the cursor. Verify 7.12.
+- [x] 7.14 RED: add `sync_write.rs::symlinks_never_lead_out_of_the_tree`. The tree holds a link to an outside folder and links to outside files. An update, a delete and a mismatching update through them must change no outside file, each must fail with `notes.write.unsafe_path`, and no outside byte may reach the blob store. Confirm that it fails because the writer follows links.
+- [x] 7.15 GREEN: run every file operation of the sync writer relative to folder descriptors. Open the tree root as the watcher does, then each folder with O_DIRECTORY|O_NOFOLLOW. Open files with O_NOFOLLOW and require a regular file. Use openat with O_EXCL for the temporary file, then renameat and unlinkat. Verify 7.14.
+- [x] 7.16 RED: `delivery_plugin.rs::offline_device_delivers_on_reconnect`, `write_operation.rs::write_reports_to_success` and `echo.rs::own_write_is_acknowledged_once` expect the stages `awaiting_device` and `awaiting_obsidian`. Confirm that they fail on `delivering`.
+- [x] 7.17 GREEN: report those stages. Verify 7.16.
+- [x] 7.18 RED: add `sync_write.rs::set_property_changes_only_its_key` (set a key: only its line changes; add a missing key at the end of the frontmatter; give a file without frontmatter one; remove a key with its list lines; every other byte stays, and the new bytes are current). Confirm that it fails because the channel refuses `set_property`.
+- [x] 7.19 GREEN: edit the frontmatter key by lines. The value is written as compact JSON, which is valid YAML, and the key keeps the form the file writes it in. Store the new bytes, write them atomically, and acknowledge the write with their hash at once. A file that is not UTF-8, or whose frontmatter has no end, fails with `notes.write.unsupported`. Verify 7.18.
+- [x] 7.20 RED: `unit_files.rs` expects `UMask=0007` for the sync and login units. Add `sync_write.rs::tree_writes_are_group_writable`: a folder that notes creates has mode 2770 and a file 0660. Confirm that they fail.
+- [x] 7.21 GREEN: set `UMask=0007` in both units, and fchmod what the writer creates (the service keeps `UMask=0027` for its blob store). State the host requirement in the unit comments, README and DEVELOPMENT. Verify 7.20.
+- [x] 7.22 RED: add `sync_watcher.rs::temporary_file_of_a_write_is_not_a_change`. Confirm that `.ratatoskr-write-*.part` is reported as a change.
+- [x] 7.23 GREEN: leave such files out of the watcher (read and event) and out of `FileRecorder::record`. Verify 7.22.
+- [x] 7.24 RED: add `echo.rs::formatted_echo_after_the_write_landed_acknowledges_it`. Confirm that it fails because only the exact hash acknowledges a write.
+- [x] 7.25 GREEN: mark a write `landed` before the sync writer applies it (after a dry check, with a second check under the file lock), and take the next change of its path as its acknowledgement, with `notes.write.transformed` when the hash differs. Verify 7.24.
+- [x] 7.26 RED: add `sync_write.rs::write_mode_off_fails_a_sync_write_that_did_not_land`. Confirm that the write that did not land stays pending.
+- [x] 7.27 GREEN: write mode off also fails a delivering `sync` write that did not land, and the writer lands a write only while it is still delivering. Verify 7.26.
+- [x] 7.28 Refactor (no test): remove the nested block in `api/write_mode.rs`, and keep the direct-write fault mode as a self-check in `reader_never_sees_partial_file`.
+- [x] 7.29 RED: add the unit tests `a_block_scalar_continues_over_a_blank_line`, `a_list_continues_over_blank_lines_between_items` and `a_blank_line_before_the_next_key_ends_the_value` to `services/notes/src/property.rs`. Confirm that the first two fail because a value ends at its first blank line.
+- [x] 7.30 GREEN: a frontmatter value continues over blank and whitespace-only lines when an indented or list line follows them, and ends before the blank lines that precede the next key. Verify 7.29 and `sync_write.rs::set_property_changes_only_its_key`.
+- [x] 7.31 Refactor (no test): make the path form `write_atomically` private and test-only, and move `reader_never_sees_partial_file` into the unit tests of `services/notes/src/sync_write.rs`.
 
 ## 8. Link rewrite (ratatoskr-notes)
 

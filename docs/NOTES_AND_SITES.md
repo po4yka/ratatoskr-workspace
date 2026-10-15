@@ -306,7 +306,12 @@ SITE-027 adds `platform_site_events`.
   extension `conflict_id` names the conflict), `notes.write.disabled` (the write mode of the
   connection is off), `notes.write.transformed` (a warning), `notes.write.partially_applied`,
   `notes.conflict.not_found` (`404` of `GET /v1/notes/conflicts/{id}`, and the failure of a
-  resolution of an unknown or closed conflict), `notes.connection.not_found`, `notes.connection.vault_already_connected`,
+  resolution of an unknown or closed conflict), `notes.write.unsafe_path` (a `sync` write whose
+  path leads out of the working tree through a link), `notes.write.unsupported` (a `set_property`
+  on a file that is not UTF-8 or whose frontmatter has no end), `notes.sync.reconfigure_failed`
+  (the sync unit could not be started again in the mode of a new write mode),
+  `notes.device_operation.not_found` (an unknown operation of the device queue),
+  `notes.connection.not_found`, `notes.connection.vault_already_connected`,
   `notes.connection.removed` (`410` on a device route after the owner removed the connection; a
   device does not retry it), `notes.connection.cleanup_failed`, the device channel codes
   `notes.channel.sequence_gap` (with the committed sequence), `notes.channel.batch_too_large`,
@@ -319,8 +324,11 @@ SITE-027 adds `platform_site_events`.
   service), the file codes `notes.file.not_found` (a read of an unknown path or revision) and
   `notes.file.path_collision` (a status: two paths that differ only in case, of which one is
   published), `sites.site_not_found`, `sites.page_not_found`, `sites.asset_not_found`,
-  `sites.slug_collision`, `sites.publication_suspended`, `platform.manifest_digest_stale`,
-  `platform.site_hostname_taken` and `edge.capability_not_granted`.
+  `sites.slug_collision`, `sites.slug_invalid` (proposed: a frontmatter slug outside the slug
+  grammar), `sites.page_too_large` (a rendered page over 1 MiB), `sites.blob_length` (a note blob
+  over the 64 MiB bound or not of its stated length), `sites.publication_suspended`,
+  `platform.site.manifest_digest_stale`,
+  `platform.site.hostname_taken` and `edge.capability_not_granted`.
 - Registered device kinds: `obsidian_plugin` and `site_deployer`.
 
 ### Edge routes

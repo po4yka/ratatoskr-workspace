@@ -17,8 +17,8 @@ the operation.
 #### Scenario: A plugin device is offline
 
 - **WHEN** the owner writes to a `plugin` connection whose device has not connected for a day
-- **THEN** the operation stays `running` with the stage `delivering` and the reason
-  `awaiting_device`, and it succeeds after the device connects and acknowledges, verified by
+- **THEN** the operation stays `running` with the stage `awaiting_device`, and it succeeds after the
+  device connects and acknowledges, verified by
   `services/notes/tests/delivery_plugin.rs::offline_device_delivers_on_reconnect` in
   `ratatoskr-notes`
 
@@ -155,7 +155,7 @@ by an atomic file write.
 
 When the Obsidian app is not running or its CLI is not enabled, the export agent SHALL leave every
 operation in the queue and SHALL NOT launch Obsidian for a write. The operation SHALL stay `running`
-with the stage `delivering` and the reason `awaiting_obsidian`.
+with the stage `awaiting_device`, because notes sees only that the device has not reported.
 
 #### Scenario: Obsidian is closed
 
@@ -168,7 +168,8 @@ with the stage `delivering` and the reason `awaiting_obsidian`.
 When an inbound change has the path and hash of a write that notes delivered through the same
 channel and that is still pending, notes SHALL treat the change as the acknowledgement of that
 write. The write's revision then becomes current, and notes SHALL publish exactly one
-`evt.notes.file.changed.v1` for it.
+`evt.notes.file.changed.v1` for it. On the `sync` channel, while such a write waits for its echo,
+its operation SHALL report the stage `awaiting_obsidian`.
 
 #### Scenario: Sync brings back Ratatoskr's write
 
@@ -176,3 +177,19 @@ write. The write's revision then becomes current, and notes SHALL publish exactl
   path with the same hash
 - **THEN** exactly one revision and one `evt.notes.file.changed.v1` exist for that write, verified
   by `services/notes/tests/echo.rs::own_write_is_acknowledged_once`
+
+### Requirement: The first change after a landed sync write acknowledges it
+
+On the `sync` channel, after notes landed a delivered write in the working tree, the next change of
+its path that the watcher reports SHALL be the acknowledgement of that write, also when its hash
+differs: the vault rewrote the file after the write landed, for example Obsidian formatted it, and
+those bytes SHALL become current with the warning `notes.write.transformed`. A change of the path
+with another hash before the write landed SHALL fail the write as a conflict.
+
+#### Scenario: Obsidian formats a landed write
+
+- **WHEN** notes lands a write in the working tree of a `sync` connection, and the watcher then
+  reports the path with another hash because Obsidian formatted the file
+- **THEN** that change acknowledges the write, its bytes become current with the warning
+  `notes.write.transformed`, and no conflict is raised, verified by
+  `services/notes/tests/echo.rs::formatted_echo_after_the_write_landed_acknowledges_it`
