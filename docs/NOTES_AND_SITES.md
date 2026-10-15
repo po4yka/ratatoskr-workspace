@@ -339,6 +339,17 @@ SITE-027 adds `platform_site_events`.
 | `/v1/sites/{site}/drafts/sources/{source_ref}/blobs` | notes (upload before an edit) | `transfer`, site origin, `notes.edit` |
 | `/v1/sites/{site}/library`, `.../knowledge/search` | platform → knowledge | `control`, site origin, owner session |
 
+Three rules of Edge for the notes route (Platform at `2008709`):
+
+- **Capability.** The web client finds the notes route through the capability `notes.vaults`
+  (Platform `Capability::NotesVaults`), which starts at `POST /v1/notes/connections`.
+- **Device credentials.** A device credential reaches only the connect and the three device routes,
+  `.../{id}/changes`, `.../{id}/manifest` and `.../{id}/blobs`. Edge refuses a device on any other
+  notes path, such as the read routes, because a device that reads them could read every vault of
+  its owner. Edge also refuses a request without a device on a device route.
+- **Redirects.** Edge does not relay a redirect from a domain service. A `3xx` answer other than
+  `304` becomes `502`, because a client would follow it to a place that Edge did not choose.
+
 ### Ports (proposed; each change that adds a listener allocates its port in `DEPLOYMENT_TARGET.md`)
 
 | Port | Owner | Reachability |
