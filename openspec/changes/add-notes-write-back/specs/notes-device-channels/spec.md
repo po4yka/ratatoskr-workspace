@@ -14,8 +14,9 @@ unchanged.
 ### Requirement: Edge forwards a session upload on the blob route
 
 Edge SHALL forward an upload on `/v1/notes/connections/{id}/blobs` from a primary session to
-`ratatoskr-notes` in the `transfer` route class, with a minted claim that names the owner and the
-session kind and no device id. Edge SHALL NOT decide which connection the session may use.
+`ratatoskr-notes` in the `transfer` route class, with a minted claim that names the owner, a minted
+claim `x-ratatoskr-session-kind` that names the session kind, and no device id. Edge SHALL NOT
+decide which connection the session may use.
 
 #### Scenario: Edge forwards a session upload
 

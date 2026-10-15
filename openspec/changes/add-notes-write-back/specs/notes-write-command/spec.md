@@ -49,21 +49,26 @@ raises.
 - **THEN** `evt.notes.conflict.raised.v1` carries `origin` `site:docs`, verified by
   `services/notes/tests/conflict_merge.rs::conflict_repeats_the_origin` in `ratatoskr-notes`
 
-### Requirement: Each operation kind has its required fields
+### Requirement: Each file operation has its required fields
 
-The operation SHALL be one of `create` (path, `blob`), `update` (path, `base_hash`, `blob`),
-`rename` and `move` (path, `base_hash`, target path), `delete` (path, `base_hash`), `set_property`
-(path, `base_hash`, frontmatter key, and either a `BlobRef` of an `application/json` value, uploaded
-to notes first, or the instruction to remove the key) and `resolve_conflict` (conflict id, choice,
-and `blob` exactly when the choice is `custom`). The content field of an operation is `blob`.
-`resolve_conflict` carries no `base_hash`, because notes checks the resolution against the current
-revision that the conflict recorded. An operation that lacks a required field SHALL be refused.
+A file operation SHALL be one of `create` (path, `blob`), `update` (path, `base_hash`, `blob`),
+`rename` and `move` (path, `base_hash`, target path), `delete` (path, `base_hash`) and
+`set_property` (path, `base_hash`, frontmatter key, and either a `BlobRef` of an `application/json`
+value, uploaded to notes first, or the instruction to remove the key). The content field is `blob`.
+An operation that lacks a required field SHALL be refused.
 
 #### Scenario: An update without a base hash is refused
 
 - **WHEN** a producer serialises an `update` operation without `base_hash`
 - **THEN** the payload fails validation, verified by the invalid fixture
   `update-without-base-hash.json` and `write_request.rs::update_requires_base_hash`
+
+### Requirement: A conflict resolution names its conflict and its choice
+
+A `resolve_conflict` operation SHALL carry the conflict id, the choice, and `blob` exactly when the
+choice is `custom`. It carries no `base_hash`, because notes checks the resolution against the
+current revision that the conflict recorded. A resolution that lacks a required field or carries
+`blob` with another choice SHALL be refused.
 
 #### Scenario: A custom resolution without content is refused
 
@@ -279,7 +284,8 @@ Edge SHALL accept `POST /v1/notes/connections/{connection_id}/writes` and
 `POST /v1/notes/conflicts/{conflict_id}/resolution` only from an authenticated session with an
 `Idempotency-Key` header of 1 to 255 characters. It SHALL answer `202` with the operation id after
 one transaction that reserves the key, creates the operation and enqueues the command with the
-session's user as tenant and `origin` `platform`.
+session's user as tenant and `origin` `platform`. The resolution body names `connection_id`,
+`choice` and, for `custom`, `blob`.
 
 #### Scenario: The idempotency key is missing
 
@@ -293,6 +299,19 @@ session's user as tenant and `origin` `platform`.
 - **WHEN** a session posts a body that fails `notes/write-request.v1`
 - **THEN** Edge answers `400 platform.request.invalid` and no command is enqueued, verified by
   `notes_writes.rs::invalid_body_is_refused`
+
+### Requirement: One idempotency key names one write across the two write routes
+
+One `Idempotency-Key` SHALL name one write across `.../writes` and `.../resolution`. A key reused
+with another request on either route SHALL be refused with
+`409 platform.request.idempotency_conflict`, and the same request sent again SHALL replay its answer.
+
+#### Scenario: A key names one write across the two routes
+
+- **WHEN** a session sends a resolution with an `Idempotency-Key` that a write already took
+- **THEN** Edge answers `409 platform.request.idempotency_conflict`, and the first request sent again
+  with the same key replays its answer, verified by
+  `notes_writes.rs::a_key_is_one_write_across_the_write_and_resolution_routes`
 
 ### Requirement: Notes checks ownership and write mode
 

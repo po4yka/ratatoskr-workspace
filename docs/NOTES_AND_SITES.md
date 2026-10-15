@@ -302,9 +302,11 @@ SITE-027 adds `platform_site_events`.
   `resync`. Only `release.published` reaches anonymous clients, and it carries no list of slugs.
 - Operation kinds: `notes.connection.connect`, `notes.connection.write_mode`, `notes.file.write`
   and `sites.release.build`.
-- Error codes named so far: `notes.channel_mismatch`, `notes.write.conflict`,
-  `notes.write.disabled`, `notes.write.transformed` (a warning), `notes.write.partially_applied`,
-  `notes.connection.not_found`, `notes.connection.vault_already_connected`,
+- Error codes named so far: `notes.channel_mismatch`, `notes.write.conflict` (not retryable; its
+  extension `conflict_id` names the conflict), `notes.write.disabled` (the write mode of the
+  connection is off), `notes.write.transformed` (a warning), `notes.write.partially_applied`,
+  `notes.conflict.not_found` (`404` of `GET /v1/notes/conflicts/{id}`, and the failure of a
+  resolution of an unknown or closed conflict), `notes.connection.not_found`, `notes.connection.vault_already_connected`,
   `notes.connection.removed` (`410` on a device route after the owner removed the connection; a
   device does not retry it), `notes.connection.cleanup_failed`, the device channel codes
   `notes.channel.sequence_gap` (with the committed sequence), `notes.channel.batch_too_large`,
@@ -328,7 +330,7 @@ SITE-027 adds `platform_site_events`.
 | `/v1/notes/connections` (`POST` connects, 202), `.../{id}` (`DELETE` disconnects, 204) | notes | `control`; the connect body is never persisted at Edge |
 | `GET /v1/notes/connections` (the caller's connections), `GET .../{id}/files`, `GET .../{id}/files/{*path}` (the current bytes, or `?revision=` for a past revision), `GET .../{id}/index/{*path}` (links, backlinks, tags and properties), `PUT .../{id}/excluded-folders` | notes | `control`; read only, except the excluded folders; a file route refuses `PUT` and `DELETE` with 405 |
 | `POST .../{id}/changes` (at most 256 changes, body at most 2 MiB), `POST .../{id}/manifest` (at most 100 000 entries, body at most 32 MiB) | notes; device routes | `control`; a batch or a manifest names only a hash that its own connection uploaded, a revision of its own connection, or the blob of no bytes, else `notes.channel.bytes_missing` |
-| `POST .../{id}/blobs` (a session of at most 64 MiB), `PUT .../blobs/{token}/chunks/{index}` (a chunk of at most 16 MiB), `GET .../blobs/{token}/status`, `POST .../blobs/{token}/finalize` | notes; device routes | `transfer`; the shared transfer contract. An upload of 0 bytes is refused with `400`. A wrong SHA-256 is the finalize outcome `digest_mismatch` at `200`, not an error code |
+| `POST .../{id}/blobs` (a session of at most 64 MiB), `PUT .../blobs/{token}/chunks/{index}` (a chunk of at most 16 MiB), `GET .../blobs/{token}/status`, `POST .../blobs/{token}/finalize` | notes; device routes, and the owner's primary session for uploads | `transfer`; the shared transfer contract. An upload of 0 bytes is refused with `400`. A wrong SHA-256 is the finalize outcome `digest_mismatch` at `200`, not an error code |
 | `/v1/notes/connections/{id}/writes` | Edge publishes the write command | `control` |
 | `/v1/notes/connections/{id}/write-mode` | notes | `control` |
 | `/v1/notes/connections/{id}/device-operations` | notes | `control` (the device queue of OBS-024) |
