@@ -33,9 +33,11 @@ does not change SHALL NOT change. Known limit: notes does not rewrite a link in 
 
 ### Requirement: A rewrite keeps everything except the target
 
-A rewritten link SHALL keep its alias, heading, block reference, display text and link form, in
-Obsidian's default link form `shortest`; the fixtures also cover `relative` and `absolute`. No byte
-outside the rewritten link targets SHALL change.
+A rewritten link SHALL keep its alias, heading, block reference and display text, and notes SHALL
+write its target in Obsidian's default link form `shortest`. No byte outside the rewritten link
+targets SHALL change. Known limit: notes does not read the vault setting `newLinkFormat`, so it
+writes the `shortest` form also in a vault set to `relative` or `absolute`. The `relative` and
+`absolute` fixtures test the rewrite library only.
 
 #### Scenario: An alias and a heading survive
 

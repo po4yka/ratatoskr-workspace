@@ -156,9 +156,10 @@ Rules:
   through that channel is recorded as an acknowledgement, not as a new change.
 - **Rename.** A rename through Ratatoskr rewrites the links in every file that points to the old
   path, with the same rules as Obsidian's "Automatically update internal links". Golden fixtures
-  that the real Obsidian app produces are the test oracle for this. Two cases differ: a link nested
-  in another link is rewritten inside the new outer link, where Obsidian 1.14.4 loses it, and a link
-  in the frontmatter is not rewritten.
+  that the real Obsidian app produces are the test oracle for this. Three cases differ: a link
+  nested in another link is rewritten inside the new outer link, where Obsidian 1.14.4 loses it; a
+  link in the frontmatter is not rewritten; and notes writes every rewritten link in the form
+  `shortest`, because it does not read the vault setting `newLinkFormat`.
 
 ## 6. Sites
 
@@ -382,7 +383,7 @@ Three rules of Edge for the notes route (Platform at `2008709`):
 
 | Port | Owner | Reachability |
 |---|---|---|
-| 8099 | `ratatoskr-notes` domain API (`/v1/notes`) | loopback; reached only through Edge |
+| 8099 | `ratatoskr-notes` domain API (`/v1/notes`) | loopback; `/v1/notes` only through Edge; `/internal/` only to `ratatoskr-sites` on loopback |
 | 8100 | `ratatoskr-sites` domain API (`/v1/sites`) | loopback; reached only through Edge |
 | 8183 | `ratatoskr-sites-gateway` public listener | `cloudflared` tunnel |
 | 9471 | `ratatoskr-notes` operator listener | host only |

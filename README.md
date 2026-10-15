@@ -289,7 +289,7 @@ The snapshot slice is implemented and tested. Sections that describe task worktr
 profiles, agent runners, PR/release automation, or MCP are target architecture until their own
 changes land.
 
-The fleet is not. Thirteen of the twenty-one pinned product repositories hold code:
+The fleet is not. Fourteen of the twenty-one pinned product repositories hold code:
 
 | Repository | State |
 |---|---|
@@ -306,7 +306,8 @@ The fleet is not. Thirteen of the twenty-one pinned product repositories hold co
 | `ratatoskr-obsidian-plugin` | TypeScript. The `plugin` channel: pairing as a registered device through Edge, a device credential kept outside the vault folder, the vault manifest at each start, and each file change in order. It applies the writes of the device queue, also a rename with the link rewrites of its group, and keeps an unsent result across a restart. Not in the Obsidian community plugin list. |
 | `ratatoskr-site-sdk` | TypeScript. The starter template: a home page that lists the pages of a release and a page view that renders the `ast` of a page, never its `html`, against a stub of the Content Delivery API. The client of the four delivery routes is generated from the API description that `ratatoskr-sites` publishes, vendored byte-exact (ADR-0012), and the template reads its release through it. |
 | `ratatoskr-sites` | Rust. The service of SITE-025: the selection of the published notes, slugs, the privacy filter, the closed HTML allowlist, the canonical release with its id and its switch, the build triggers, the manifest and its approval projection, the effective set, the publication routes, and the four routes of the Content Delivery API with search. It serves a single owner. The sites gateway (SITE-026) remains planned. |
-| `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents and fleet/OpenSpec gates. No product manifest or runtime yet. |
+| `ratatoskr-export-agent` | Swift. A macOS menu-bar agent that finds and keeps the ChatGPT and Claude export archives of an inbox (the live upload is pending), and the `cli` channel of an Obsidian vault, which applies the writes of the device queue through the Obsidian CLI. No notarized build yet. |
+| `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension` | Documents and fleet/OpenSpec gates. No product manifest or runtime yet. |
 
 With `ratatoskr-notes`, `ratatoskr-obsidian-plugin` and `ratatoskr-site-sdk`, `ratatoskr-sites`
 connects Obsidian vaults and serves independent sites. `docs/NOTES_AND_SITES.md` describes the target, and ADR-0010 and
