@@ -113,10 +113,10 @@ repositories:
       - "352ed77c464834c5467a315045679d5a4485663a ci: pin the shared fleet workflows at 75b3ed8"
   - id: ratatoskr-knowledge
     role: notes-intake-consumer
-    branch: main@a7c981a4da98698bfd3af38a8c4b197984e539d5
+    branch: main@b01c5377cfce68494ad794f25c6fc95fd888f421
     base: c08df4b33147362d7435bedca797d5644cd6646e
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/knowledge at a7c981a4da98698bfd3af38a8c4b197984e539d5 (task 14.4; tasks 10.1 to 10.14). Knowledge names the two note durables and its fragment equals the KNOWLEDGE stanza, so bus_durables.rs drops OWNER_PENDING and bus_acl.rs drops FRAGMENT_PENDING; ACK_WAIT_RULES holds both note durables at 120 seconds. Knowledge ships ratatoskr-knowledge.service from this pin, so services.json enrols it (operator listener 9081, readiness path /ready), its nkey belongs to the group ratatoskr-knowledge, and its release artifact is checked by release_artifact_callers.rs like every unit that a pinned repository ships
+    pin: repos/knowledge at b01c5377cfce68494ad794f25c6fc95fd888f421 (first pinned at a7c981a4da98698bfd3af38a8c4b197984e539d5 by task 14.4 with tasks 10.1 to 10.14, advanced after tasks 10.15 and 10.16). Knowledge names the two note durables and its fragment equals the KNOWLEDGE stanza, so bus_durables.rs drops OWNER_PENDING and bus_acl.rs drops FRAGMENT_PENDING; ACK_WAIT_RULES holds both note durables at 120 seconds. Knowledge ships ratatoskr-knowledge.service from this pin, so services.json enrols it (operator listener 9081, readiness path /ready), its nkey belongs to the group ratatoskr-knowledge, and its release artifact is checked by release_artifact_callers.rs like every unit that a pinned repository ships
     commits:
       - "7508f0d7ffb272ed26feb1b6887b0b9113278e79 docs: open the OBS-023 notes intake change"
       - "3c034aa2e022cdd7200bb2ad65b4ba2b54b131a7 test(ingest): require one run per note revision and no run for an image"
@@ -140,6 +140,8 @@ repositories:
       - "ec683c472cdf8c972a983ce6f0213e673a89b006 docs: record the review fixes in the OBS-023 notes intake design"
       - "6c719cf79b3fdde4e771326e5da4124921e5d4dd fix(deps): update rustls to 0.23.46 for RUSTSEC-2026-0346 to 0349"
       - "a7c981a4da98698bfd3af38a8c4b197984e539d5 ci: pin the shared fleet workflows at 75b3ed8"
+      - "ad7bbf3575d7b1daf63977c76bbb17099499911b test(knowledge): require that a rejected note update removes the old search entry"
+      - "b01c5377cfce68494ad794f25c6fc95fd888f421 fix(knowledge): remove the old search entry when a note update is rejected"
   - id: ratatoskr-obsidian-plugin
     role: new-client-plugin-channel
     branch: main@587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00

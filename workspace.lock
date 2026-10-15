@@ -106,7 +106,7 @@ id = "knowledge"
 path = "repos/knowledge"
 remote = "https://github.com/po4yka/ratatoskr-knowledge.git"
 default_branch = "main"
-commit = "a7c981a4da98698bfd3af38a8c4b197984e539d5"
+commit = "b01c5377cfce68494ad794f25c6fc95fd888f421"
 digests = [
   { path = "openspec/config.yaml", kind = "file", sha256 = "17d40af640a0876042a9ec0a050de01c14bff0c75547e5ba49d00044e69d46d3" },
   { path = "schemas/article-analysis.v1.schema.json", kind = "file", sha256 = "503d5e81bdd331dba3429372462165e7fc8c34482959f252638da99b5bc43233" },

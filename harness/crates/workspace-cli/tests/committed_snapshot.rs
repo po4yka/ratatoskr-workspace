@@ -59,7 +59,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "knowledge",
         "repos/knowledge",
-        "a7c981a4da98698bfd3af38a8c4b197984e539d5",
+        "b01c5377cfce68494ad794f25c6fc95fd888f421",
     ),
     (
         "mobile",
