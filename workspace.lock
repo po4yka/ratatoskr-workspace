@@ -176,11 +176,11 @@ id = "sites"
 path = "repos/sites"
 remote = "https://github.com/po4yka/ratatoskr-sites.git"
 default_branch = "main"
-commit = "a4587f72cdc52db127520afe802660af8963366f"
+commit = "f0066a23071040c9d94ff4e33660ed537a82130f"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "fb149ef1609b2437618d7cca108fffc1e6074a34a5d93c0fd6768f1594b2db4a" },
+  { path = "Cargo.lock", kind = "file", sha256 = "31a195ff53ec5e3313d5c02af318e57eec01181f9a0d30f22c405744d8b8a015" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "bca12d4423084fb55a560a48eb70718c69662f8833e7717f23f7d45e79be3127" },
-  { path = "schema.sql", kind = "file", sha256 = "ae31d6e2031aab23b52657317439b1ee576f3704de3132adedeba27adcfb2aa3" },
+  { path = "schema.sql", kind = "file", sha256 = "cc0d9130cf21ee6f39688e2feecab32c3566b054ee91d47756ebc877fc8630e3" },
 ]
 
 [[repositories]]

@@ -333,7 +333,8 @@ SITE-027 adds `platform_site_events`.
   grammar), `sites.page_too_large` (a rendered page over 1 MiB), `sites.blob_length` (a note blob
   over the 64 MiB bound or not of its stated length), `sites.publication_suspended`,
   `sites.publication_not_found`, `sites.manifest_invalid`, `sites.notes_index_unavailable` (the
-  notes index route cannot be read, so a build cannot start), `sites.request.forbidden` (a request
+  notes index route cannot be read, so a build cannot start), `sites.connection_not_found` (the notes
+  index route answers `404` with the code `notes.connection.not_found`), `sites.request.forbidden` (a request
   without the owner claim outside `content/`), `sites.request.method_not_allowed`,
   `sites.route_not_found`, `sites.service_unavailable`,
   `platform.site.manifest_digest_stale`,

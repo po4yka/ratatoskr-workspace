@@ -137,8 +137,9 @@ page content.
 
 A build SHALL start when Edge publishes `cmd.sites.release.build_requested.v1`, or, for a publication
 in the release mode `automatic` that already has a release, after `evt.notes.file.changed.v1` reports
-a file that the publication selects now or selected in the current release. The sites service SHALL
-NOT publish a command itself.
+a file that the publication selects now or selected in the current release. A removal build (the
+next requirement) SHALL also start, in every release mode. The sites service SHALL NOT publish a
+command itself.
 
 #### Scenario: A change to a file outside the publication starts no build
 
@@ -152,6 +153,36 @@ NOT publish a command itself.
 - **WHEN** a selected file of a publication in `manual` mode changes
 - **THEN** no build starts until Edge publishes `cmd.sites.release.build_requested.v1` for that
   site, verified by `build_triggers.rs::manual_publication_ignores_file_changes`
+
+### Requirement: A removal build releases no new content
+
+When the effective publications of a released site shrink, or a released publication is changed or
+deleted, the sites service SHALL request a build of the origin `removal`, in every release mode. A
+removal build SHALL read only the files that the current release was built from, SHALL apply the
+publications that stay in the effective set, and SHALL publish no note change that the owner did not
+release. A build from the release SHALL only shrink a publication: a released row is eligible for
+publication P only when P published it at release time and the current configuration of P still
+selects it.
+
+#### Scenario: A removed publication leaves the kept pages
+
+- **WHEN** a publication is removed from the manifest of a released site in the release mode
+  `manual`
+- **THEN** a build starts, and the new release holds no slug or title of it in the kept pages,
+  verified by `services/sites/tests/removal_build.rs::removed_publication_is_built_out_of_the_kept_pages`
+
+#### Scenario: A removal build keeps the released text
+
+- **WHEN** in the release mode `manual` the owner changes a note after the release and then removes
+  another publication
+- **THEN** the release of the removal build holds the released text of the changed note, verified
+  by `removal_build.rs::removal_build_keeps_the_released_text`
+
+#### Scenario: A narrowed publication drops its notes
+
+- **WHEN** a PUT adds a folder to the excluded folders of a released manual publication
+- **THEN** the removal build removes the notes of that folder, verified by
+  `release_narrowing.rs::narrowed_publication_drops_its_pages_in_a_build_from_the_release`
 
 ### Requirement: The first release of a publication is explicit
 
