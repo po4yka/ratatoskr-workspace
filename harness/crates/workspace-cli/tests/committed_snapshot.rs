@@ -34,7 +34,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "contracts",
         "repos/contracts",
-        "a9289e27bcf53f496b5917889580965d97ff2358",
+        "75e954fb1af6b9d0f7b30383c7a993c64d01e2c9",
     ),
     (
         "export-agent",
@@ -69,7 +69,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "notes",
         "repos/notes",
-        "faf35bdaf58ac151c4cf5054dd4287f30258ce82",
+        "810edd8ca76376eb4df9555bfed2a637052c55dd",
     ),
     (
         "obsidian-plugin",
@@ -79,7 +79,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "platform",
         "repos/platform",
-        "20087096ea0966b40ec56cf12b296047aeec3a90",
+        "6df97172f2feae9866fc7fe1d09400b9952bc2b4",
     ),
     (
         "telegram",

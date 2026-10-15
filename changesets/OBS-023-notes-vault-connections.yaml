@@ -20,10 +20,10 @@ repositories:
       - "a9289e27bcf53f496b5917889580965d97ff2358 feat(notes-contracts): mark the notes events user_content and match the blob media type"
   - id: ratatoskr-notes
     role: new-service-connections-index-sync-supervisor
-    branch: main@faf35bdaf58ac151c4cf5054dd4287f30258ce82
+    branch: main@810edd8ca76376eb4df9555bfed2a637052c55dd
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/notes at faf35bdaf58ac151c4cf5054dd4287f30258ce82 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, to 301c53bfc1f6575b4cce68f22b09197b96b30583 after tasks 6.11 to 6.22 and a test-only fix (owner decisions A, the journal namespace ratatoskr-notes-sync, and B, the trees and clients roots, of 2026-10-14; the host role provisions both), to ae01361cfba16a78aafb87bc74dab492321f3515 after group 7 (the index, the file events and the outbox relay, the read routes, the connect that answers 202 at once, and the device claims), to 7fb421e6a55d50261caacc00d1c029cb87978a8a after group 8 and its follow-ups 8.9 to 8.26 (the device channel routes for changes, the manifest and the chunked blob upload), and to faf35bd after the follow-ups 8.27 to 8.43). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. From ae01361 on, the outbox relay of notes task 7.6 opens the NATS connection with the inbox prefix _INBOX_notes, so bus_acl.rs has no WIRING_PENDING exemption
+    pin: repos/notes at 810edd8ca76376eb4df9555bfed2a637052c55dd (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, to 301c53bfc1f6575b4cce68f22b09197b96b30583 after tasks 6.11 to 6.22 and a test-only fix (owner decisions A, the journal namespace ratatoskr-notes-sync, and B, the trees and clients roots, of 2026-10-14; the host role provisions both), to ae01361cfba16a78aafb87bc74dab492321f3515 after group 7 (the index, the file events and the outbox relay, the read routes, the connect that answers 202 at once, and the device claims), to 7fb421e6a55d50261caacc00d1c029cb87978a8a after group 8 and its follow-ups 8.9 to 8.26 (the device channel routes for changes, the manifest and the chunked blob upload), to faf35bdaf58ac151c4cf5054dd4287f30258ce82 after the follow-ups 8.27 to 8.43, and to 810edd8 after tasks 7.13 and 7.14, which add tests only). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. From ae01361 on, the outbox relay of notes task 7.6 opens the NATS connection with the inbox prefix _INBOX_notes, so bus_acl.rs has no WIRING_PENDING exemption
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"
@@ -129,12 +129,13 @@ repositories:
       - "922e1c01032af9748ed1974d7d1752f83f54fe56 fix(notes): log a failed interrupted login only when it was failed"
       - "4f847c58f05a3efcc5bff3ac249642d41b2ea3bd test(notes): the outbox skips a second end but refuses a repeated event id"
       - "faf35bdaf58ac151c4cf5054dd4287f30258ce82 fix(notes): skip only a second terminal report in the outbox"
+      - "810edd8ca76376eb4df9555bfed2a637052c55dd test(notes): pin the read routes and the owner check of excluded folders"
   - id: ratatoskr-platform
     role: edge-route-durables-identity-device-kind-authority
-    branch: main@20087096ea0966b40ec56cf12b296047aeec3a90
+    branch: main@6df97172f2feae9866fc7fe1d09400b9952bc2b4
     base: 47c7fe47147735c61cac61eb87cb0bf6079c772c
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/platform at 20087096ea0966b40ec56cf12b296047aeec3a90 (task 14.4; first pinned at 6ccae27343d3ae24c86ceaa2e42a2aba489f76aa, advanced to 352ed77c464834c5467a315045679d5a4485663a after the connect follow-ups 9.7 to 9.17, and to 2008709 after 9.18 to 9.28). deploy/systemd/edge.conf.example changes only in a comment, and a full molecule test ran at this pin Platform provisions ratatoskr_knowledge_notes_files and ratatoskr_knowledge_notes_vaults and grants them in the KNOWLEDGE stanza before Knowledge reads them, so bus_durables.rs keeps both in OWNER_PENDING and bus_acl.rs keeps the Knowledge copy in FRAGMENT_PENDING until the Knowledge pin of task 14.4
+    pin: repos/platform at 6df97172f2feae9866fc7fe1d09400b9952bc2b4 (task 14.4; first pinned at 6ccae27343d3ae24c86ceaa2e42a2aba489f76aa, advanced to 352ed77c464834c5467a315045679d5a4485663a after the connect follow-ups 9.7 to 9.17, to 20087096ea0966b40ec56cf12b296047aeec3a90 after 9.18 to 9.28, and to 6df9717 after 9.29 to 9.33). At 2008709 deploy/systemd/edge.conf.example changed only in a comment, and a full molecule test ran at that pin. 6df9717 changes no file under deploy/; its new check refuses a transfer budget below 32 MiB when the notes route is configured, and no deploy file sets that budget, so the default of 100 MiB applies. Platform provisions ratatoskr_knowledge_notes_files and ratatoskr_knowledge_notes_vaults and grants them in the KNOWLEDGE stanza before Knowledge reads them, so bus_durables.rs keeps both in OWNER_PENDING and bus_acl.rs keeps the Knowledge copy in FRAGMENT_PENDING until the Knowledge pin of task 14.4
     commits:
       - "3784a276aad64b19f2ee840ab82558cba857133e docs(openspec): open the notes vault connection change"
       - "f403d472d8c43cfd94305bb7bab35cee45f91c32 test(public-api): require the notes route, its device claim and a connect that keeps no body"
@@ -167,6 +168,11 @@ repositories:
       - "bc99fc070b5804f3c9790b6a8f37c4382c90f999 test(public-api): pin the raw path and the streamed bytes of a notes read"
       - "fcf7fd69092094076feb84d9a7b26b24476942f2 test(public-api): require Edge to keep a device off the notes owner routes"
       - "20087096ea0966b40ec56cf12b296047aeec3a90 fix(public-api): keep a device to the connect and the notes device routes"
+      - "67852432429d7f1fb9a399dbee1e6216f84189c6 test(public-api): pin the stream limit of a notes batch and manifest"
+      - "6e1bb28c499914b773e06f9fd3887a84195b847d test(core): require a transfer budget that holds the notes body limits"
+      - "215cd95bc44e2b93972e790e263a03110d15b5e5 fix(core): refuse a transfer budget below a notes body limit"
+      - "e55c1db50009130ff1c9c7f2cda50742e66a59aa test(public-api): give the connect log capture a test binary of its own"
+      - "6df97172f2feae9866fc7fe1d09400b9952bc2b4 test(http): keep the log captures off callsites of other test threads"
   - id: ratatoskr-knowledge
     role: notes-intake-consumer
     branch: main@b01c5377cfce68494ad794f25c6fc95fd888f421

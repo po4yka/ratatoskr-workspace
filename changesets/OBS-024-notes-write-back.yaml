@@ -4,11 +4,31 @@ goal: Let Ratatoskr create, edit, rename, move and delete files in a connected O
 openspec_change: add-notes-write-back
 depends_on:
   - OBS-023  # add-notes-vault-connections: connections, channels, index, revisions; archived first, after xr-021-fleet-round-5
-authorization: Planning records only. The workspace planning records use main, because the owner authorised direct commits for them. Each child repository works on its task branch and opens its own pull request.
+authorization: The owner authorised direct commits on main for the workspace planning records. For the child repositories the owner chose direct commits to main after an independent review instead of pull requests; each repository entry records its pushed commits, and the workspace pins a commit only after its CI is green.
 repositories:
   - id: ratatoskr-contracts
     role: write-request-and-conflict-contracts-and-registry
-    branch: obs-024/notes-write-back
+    branch: main@75e954fb1af6b9d0f7b30383c7a993c64d01e2c9
+    base: a9289e27bcf53f496b5917889580965d97ff2358
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/contracts at 75e954fb1af6b9d0f7b30383c7a993c64d01e2c9 (tasks 3.1 to 3.12; advanced from a9289e2, the OBS-023 pin). The command notes.file.write_requested.v1 and the events notes.conflict.raised.v1 and notes.conflict.resolved.v1 are registered with their schemas; no consumer reads them at this pin. The range also carries the shared fleet workflows at 75b3ed8 and rustls 0.23.46 for RUSTSEC-2026-0346 to 0349. A contracts repository ships no systemd unit
+    commits:
+      - "bd115e24a3b7be2b342c79b281656a3b0b2446ed ci: pin the shared fleet workflows at 75b3ed8"
+      - "15fdc4c211fb830ccd82ae1453f7772622085dd2 fix(deps): update rustls to 0.23.46 for RUSTSEC-2026-0346 to 0349"
+      - "7093e2217008d9d416b835c18c17942d2a32f424 test(notes-contracts): refuse malformed write requests before the type exists"
+      - "73b7d8e3b21dbceb5a775702d0ed358edf96384e feat(notes-contracts): add the notes write request command"
+      - "75bbc0c93f9b5becc1141426b8eeee5e7fbf4b62 test(notes-contracts): refuse a merge proposal on a binary conflict before the events exist"
+      - "7541c0c7abdb94b68b30ecd61069e09a26fdc5ba feat(notes-contracts): add the notes conflict raised and resolved events"
+      - "3dee70b4d87b1772ed6ee4714703283dd1f38fc2 test(contractsc): pin the one producer of the notes write request"
+      - "fb50a987c48ed382013912cfac4e60ecef756ec1 docs: describe the notes write request and conflict messages"
+      - "5cd8f805f3377f08aa47192ec027d57630144641 chore: bless the public API baselines for the OBS-024 notes contracts"
+      - "a4973075d894d6eb03a02eb109baf0adf5c6df84 test(notes-contracts): refuse an inline frontmatter value in a write request"
+      - "ff6d51597f893d6b031094a086032db7d53d505e feat(notes-contracts): carry the frontmatter value of a write as a blob"
+      - "9581a63e7d2711259bff05956787b04397c55035 test(notes-contracts): ask the schema to refuse a merge proposal it cannot accept"
+      - "352cdfbbaf79dfdba6856d0f9bee50eebc8ebea6 feat(notes-contracts): state the merge-proposal rules in the conflict schema"
+      - "76a0c35a53bb4432878d451bcb7b5f08275edbc6 chore: bless the notes-contracts API baseline after the review corrections"
+      - "e615b677ef016138c9b7e0d7660f111ac933c010 test(notes-contracts): pin the case-insensitive and bare-name .obsidian refusal"
+      - "75e954fb1af6b9d0f7b30383c7a993c64d01e2c9 fix(fixtures): state that the schema refuses a merge proposal on a binary file"
   - id: ratatoskr-notes
     role: write-consumer-pending-writes-conflicts-delivery-and-link-rewrite
     branch: obs-024/notes-write-back
