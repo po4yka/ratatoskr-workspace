@@ -42,7 +42,17 @@ repositories:
       - "a126e613118ba2f5b96f993ce60cb34ff360fdbb fix(fixtures): drop the stray article from the six URL expectation reasons"
   - id: ratatoskr-notes
     role: loopback-internal-index-route
-    branch: site-025/notes-internal-index
+    branch: main@496e9c1d78269bb62856e545e230898f3584e9ef
+    base: f39434654eedf3fe4371ceb1b077bf3ea18bc10d
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/notes at 496e9c1d78269bb62856e545e230898f3584e9ef (tasks 4.1, 4.2 and 4.5, and the notes half of 4.3 and 4.4; the range f394346..496e9c1 also holds OBS-024 7.34, 7.35, groups 8 and 9, recorded in that changeset), CI green (6 of 6 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. GET /internal/connections/{connection_id}/files on 8099 answers a loopback peer only; any other peer, and a forwarding header that names 127.0.0.1, gets the empty 404 of an unknown route. An unresolved link has target null. Still open is the Platform half of 4.3 and 4.4 (gateway.rs::no_public_path_reaches_notes_internal)
+    commits:
+      - "701f82d32e414c66943d9a690f56d4573da0724c test(notes): the internal index route gives each file with its resolved links"
+      - "da5d6d6f78e68f657b64a406b5ba61fe5b33833d feat(notes): serve the index of a connection on GET /internal/connections/{id}/files"
+      - "8bbc5a517fd88e6c40c2754bc7b10ab0fb01346d test(notes): the internal index route answers a non-loopback peer as an unknown route"
+      - "43ce4026597489ee9db46280e8b2d3dbca888fa3 fix(notes): answer /internal/ only to a loopback peer"
+      - "a6c728d60a737d84959bceb385aea6440f0f776a docs(notes): describe the internal index route and its loopback guard"
+      - "278697dddb293cbe18eebbae3f1405f18ad363f3 test(notes): pin that only the peer address opens /internal/"
   - id: ratatoskr-sites
     role: new-service-registry-publications-release-builder-approval-projection-delivery-api
     branch: main@a4587f72cdc52db127520afe802660af8963366f
@@ -201,6 +211,8 @@ repositories:
       - "9b725aa6a83296e2f2e0b0ca81f72b4b43c8db3a build: pin Platform at 943bc91 and record SITE-026 group 8"
       - "fdc76f56f0d7be9cd3c89b3b48772fe8669f974a build: pin sites at a4587f7 and record SITE-025 group 5"
       - "32a65ae2bd2dd4b5f039fc5048ef0c5db607fd26 build: pin site-sdk at a3a9215 and record SITE-025 group 7"
+      - "d34542519d20943aa99b2b42c44904fb6aa94793 docs(changesets): record the 2c72602 pins of OBS-024, SITE-025/026"
+      - "842caa0f9c34b7c84e00e95893614e7903c08498 build: pin notes at 496e9c1 and record OBS-024 groups 8 and 9"
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-notes

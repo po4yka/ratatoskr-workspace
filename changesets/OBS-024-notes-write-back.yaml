@@ -31,10 +31,10 @@ repositories:
       - "75e954fb1af6b9d0f7b30383c7a993c64d01e2c9 fix(fixtures): state that the schema refuses a merge proposal on a binary file"
   - id: ratatoskr-notes
     role: write-consumer-pending-writes-conflicts-delivery-and-link-rewrite
-    branch: main@f39434654eedf3fe4371ceb1b077bf3ea18bc10d
+    branch: main@496e9c1d78269bb62856e545e230898f3584e9ef
     base: 810edd8ca76376eb4df9555bfed2a637052c55dd
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/notes at f39434654eedf3fe4371ceb1b077bf3ea18bc10d (tasks 4.1 to 7.33; advanced from 810edd8, the OBS-023 pin), CI green (5 of 5 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 like the rest of the fleet (XR-021 contracts_sha). 7.32 and 7.33 replace the one sync unit, which read its mode from a file that the notes service wrote, with two fixed units, ratatoskr-notes-sync-pull@.service and ratatoskr-notes-sync-bidi@.service, so release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program passes and services.json lists four template units. The pin brings the host change of decision 7.11, in which ratatoskr-notes-sync joins ratatoskr-notes-trees, the trees root is 2770 and the deploy role changes the folders and files of an existing tree to 2770 and 0660; the full Molecule scenario passes. Still open are groups 8 and 9, 6.7 (spike 3.3), and 7.34 and 7.35 (one lock per connection for the sync units)
+    pin: repos/notes at 496e9c1d78269bb62856e545e230898f3584e9ef (tasks 4.1 to 7.33 at f394346, which advanced from 810edd8, the OBS-023 pin; 7.34, 7.35, 8.1 to 8.28 and 9.1 after it, with SITE-025 4.1, 4.2, 4.5 and the notes half of 4.3 and 4.4 between them, recorded in that changeset), CI green (6 of 6 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 like the rest of the fleet (XR-021 contracts_sha). 7.32 and 7.33 replace the one sync unit, which read its mode from a file that the notes service wrote, with two fixed units, ratatoskr-notes-sync-pull@.service and ratatoskr-notes-sync-bidi@.service, so release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program passes and services.json lists four template units. The pin brings the host change of decision 7.11, in which ratatoskr-notes-sync joins ratatoskr-notes-trees, the trees root is 2770 and the deploy role changes the folders and files of an existing tree to 2770 and 0660; the full Molecule scenario passes. Group 8 adds the rename group with its link rewrites on every channel, the 14 fixtures recorded with Obsidian 1.14.4, and the code notes.write.internal (not retryable) for a write command that panicked; schema.sql (edited in place) adds notes.writes.group_id, notes.writes.local_hash, notes.conflicts.stale_paths and the partial index writes_delivering_idx. No deploy file changes after f394346. Still open is 6.7 (spike 3.3)
     commits:
       - "a49745a731131df791831b66c524b6c232570173 build(notes): pin the contracts at 76a0c35"
       - "b75d957b8ed8e0045df102f01e4933894c2e2474 test(notes): the write consumer verifies the durable of Edge"
@@ -106,6 +106,42 @@ repositories:
       - "9a264fc627e1d60fa222f469a33a8c9985044303 refactor(notes): keep the path form of the atomic write test-only"
       - "39e164ec021c052e951cc758515ff7829eeff09c test(notes): each write mode starts a fixed sync unit and no file sets its mode"
       - "f39434654eedf3fe4371ceb1b077bf3ea18bc10d fix(notes): run a fixed sync unit for each write mode, with no mode file"
+      - "5ad521d1f3732f05558b11872c561382caeb3bda test(notes): record the link-rewrite fixtures with the real Obsidian 1.14.4"
+      - "1a6fa2c2a6e7045ae0ba26b23c90caa68e13aefc test(notes): replay every link-rewrite fixture against the Obsidian recording"
+      - "d1e217dbf0d623187c08c02e769321bf46843c4c feat(notes): rewrite the links of a rename as Obsidian 1.14.4 does"
+      - "44ed8260664237487d8f65d07afcd833a641cbfc test(notes): a rename and its link rewrites succeed or fail as one group"
+      - "e92d7cce7caf8bb42592cccba7bd223efae2529a feat(notes): deliver a rename and its link rewrites as one write group"
+      - "4627b4795c1e011c7947af71e3f1f164f91269e8 test(notes): the sync channel writes a rename group into the working tree"
+      - "689f027e386efcc55863a80d771d818f4fd7595e feat(notes): write a rename group into the sync tree in order"
+      - "677a4f8496575a72bcb97dcd2414456ae5a50302 test(notes): a start and a write-mode change never run two sync units"
+      - "04a862c8d166651ca46808aa994c9d0ec17063b1 fix(notes): hold one lock of the connection for each start of its sync units"
+      - "701f82d32e414c66943d9a690f56d4573da0724c test(notes): the internal index route gives each file with its resolved links"
+      - "da5d6d6f78e68f657b64a406b5ba61fe5b33833d feat(notes): serve the index of a connection on GET /internal/connections/{id}/files"
+      - "8bbc5a517fd88e6c40c2754bc7b10ab0fb01346d test(notes): the internal index route answers a non-loopback peer as an unknown route"
+      - "43ce4026597489ee9db46280e8b2d3dbca888fa3 fix(notes): answer /internal/ only to a loopback peer"
+      - "a6c728d60a737d84959bceb385aea6440f0f776a docs(notes): describe the internal index route and its loopback guard"
+      - "6e55d519816e373c4847dd61e28bf94f44c8ec01 test(notes): a link nested in the text of a Markdown link is rewritten inside it"
+      - "14d524893a3f27fdc49b35d9784ad37dc02164e0 fix(notes): rewrite a nested link inside the link that holds it"
+      - "ed874e3696a5c570a70066fc853a55217ff92a4e test(notes): a panic in one write does not stop the write consumer"
+      - "fb66049d1b57e7bb984b03dcbf8fd0d7040734a7 fix(notes): run each write command in its own task and keep the consumer alive"
+      - "278697dddb293cbe18eebbae3f1405f18ad363f3 test(notes): pin that only the peer address opens /internal/"
+      - "61b27a95a49ca7d1c96e537f4f6115f0e4a179aa test(notes): a retried device result settles the rest of a write group"
+      - "faef3aecd9f473df9222152aac84a5e1935c5bcf fix(notes): let a retried device result end the rewrites still delivering"
+      - "4c0b9afcc58511c32b245f05d5db79639d8188fc test(notes): a rename that the device fails ends its group with the device's code"
+      - "3ec4db33bee0c1de640bc3e1e5efa85619280203 fix(notes): end a group that the channel failed with the channel's code"
+      - "c87df133ecd5c173579d814c330f07ca86537a05 test(notes): write mode off ends a write group with exactly one report"
+      - "8b5d197c340e6d903f9ad0dcada3412349680c06 fix(notes): end a write group once when write mode goes off"
+      - "509f71b2bda9aed3eacb168df16f45c9b543d79c test(notes): a group base_mismatch names the local hash of each file"
+      - "7cdb2a2d47806602dc8f1b540ae8d8042769133f feat(notes): take the local hash of each linking note from a group base_mismatch"
+      - "77242507a9d53f1f59da9305b4da5b2d1a745888 test(notes): a rename with open rewrites stays in the device queue"
+      - "822cd6ed4d032f1d266d6ded558958206f4f6f61 fix(notes): keep a rename with open rewrites in the device queue"
+      - "4c222f25338b26b577960585bbb121bca5166504 test(notes): a nested link is rewritten where it stands, not its copy in code"
+      - "c67fb7264b6efe44835405a733c99808a5d425b1 fix(notes): place a nested link edit by its offset in the outer link"
+      - "a3470c58391c21395097110d97ae35e95f475c5a test(notes): a panic after the commit of a write gives its operation no second end"
+      - "1e777ff748223a4af6b57fbc6e8af58c1a2d89ee fix(notes): end a command that panicked by what it committed"
+      - "ea31b739bb104f2abfd389fc9a9de326de32feb4 test(notes): a link in the alias of a wikilink is rewritten where it stands"
+      - "76453a91040ce055784e5949d949fb71fb99b68e fix(notes): map a nested link through the kept part of the outer link"
+      - "496e9c1d78269bb62856e545e230898f3584e9ef refactor(notes): read the device queue from delivering writes only"
   - id: ratatoskr-platform
     role: edge-write-routes-operation-kinds-durables-and-bus-acl
     branch: main@f76005e4297142bb2a4ebb114b4140704cd5384f
@@ -131,10 +167,10 @@ repositories:
       - "f76005e4297142bb2a4ebb114b4140704cd5384f fix(public-api): refuse a notes write key reused on the other write route"
   - id: ratatoskr-obsidian-plugin
     role: plugin-channel-apply-and-report
-    branch: main@5ed98a96387f0c47a8ce5dbe6847950c1b756896
+    branch: main@36bdb20404dca9a49b804e6245248c1ba194821c
     base: dc494a1ad2cfd733813fae618a5495ffc9431784
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/clients/obsidian-plugin at 5ed98a96387f0c47a8ce5dbe6847950c1b756896 (tasks 11.1 to 11.17; advanced from dc494a1, the OBS-023 pin), CI green (4 of 4 check runs). A client ships no systemd unit. The plugin refuses a segment that ends in a dot or a space and a colon, which the contract does not refuse yet (tasks 3.13 and 3.14, open)
+    pin: repos/clients/obsidian-plugin at 36bdb20404dca9a49b804e6245248c1ba194821c (tasks 11.1 to 11.17 at 5ed98a9, which advanced from dc494a1, the OBS-023 pin; 11.18 to 11.23 after it), CI green (4 of 4 check runs). 11.18 to 11.23 apply a rename with the link rewrites of its group, send a result again in place of a new apply, and keep the unsent results in the plugin data across a restart. A client ships no systemd unit. The plugin refuses a segment that ends in a dot or a space and a colon, which the contract does not refuse yet (tasks 3.13 and 3.14, open)
     commits:
       - "310c56fa5aa8556576abe76d556d27f0425ea56d test(apply): the plugin applies the device queue of notes"
       - "cd35bdb3f92b41933d262e024ae45b28075c0f3d feat(apply): apply the device queue of notes through the vault API"
@@ -153,12 +189,18 @@ repositories:
       - "a08b941f29ae63f10449a47c8efac0cdb8403165 fix(apply): refuse a Windows name in any segment, a colon, the configDir"
       - "72ee64c57db827305bd5fffc639d04274bee66e9 test(apply): the re-delivery rule by kind, and a rename that already ran"
       - "5ed98a96387f0c47a8ce5dbe6847950c1b756896 fix(apply): the re-delivery rule by kind, and a rename that already ran"
+      - "f7d89208ac579556b5a46a8334fe25ef1391f375 test(apply): a rename with the link rewrites of its group"
+      - "b3d2086aad109e3101d86bc6c4b970dbbddccb48 feat(apply): apply a rename with the link rewrites of its group"
+      - "b4a6da5bb3548ac1e80602ff0f03cfffaf13dfe0 test(apply): a group refusal names each linking note; a result is resent"
+      - "9d2a6a60549a17cd1d4e62773866f959d51f88eb fix(apply): name each linking note in a group refusal; resend a result"
+      - "94d30b85f53c6125bcb11ddc4a9cebe959d219a3 test(apply): a kept result survives a restart, and never blocks the queue"
+      - "36bdb20404dca9a49b804e6245248c1ba194821c fix(apply): keep unsent results in the plugin data; drop a hopeless one"
   - id: ratatoskr-export-agent
     role: cli-channel-apply-and-report
-    branch: main@0ddda7164d72b7c100ff6334e14809e2d2ebda8c
+    branch: main@573fedbcd67b5595026b83ca8f0e23c06290204a
     base: 73a2a037bcc182c3c94a9a7d6b2fff795d8fec7e
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/clients/export-agent at 0ddda7164d72b7c100ff6334e14809e2d2ebda8c (tasks 12.1 to 12.14; advanced from 73a2a03), CI green (4 of 4 check runs). A client ships no systemd unit
+    pin: repos/clients/export-agent at 573fedbcd67b5595026b83ca8f0e23c06290204a (tasks 12.1 to 12.14 at 0ddda71, which advanced from 73a2a03; 12.15 to 12.22 after it), CI green (4 of 4 check runs). 12.15 to 12.22 report the link rewrites of a rename as one group, send a kept result again in place of a new apply, and keep the unsent results in device-results.json (0600, in a 0700 folder) across a restart. A known risk is that, when the Obsidian setting "Automatically update internal links" is off, the agent reports the linking notes applied with their base hashes, and notes then records them as transformed or stale. A client ships no systemd unit
     commits:
       - "f701a8a5fe3596a4b5e9940cccb15f70a2c745bb test: the cli channel applies queued writes through the Obsidian CLI"
       - "024021cf75c033f9c79856213111b8d64871674f feat: apply the queued writes of a cli connection through the Obsidian CLI"
@@ -174,6 +216,14 @@ repositories:
       - "8c98868f7ae210053cada06c1d590026eb4c61f1 fix: check the content of set_property against its digest"
       - "803474f496ccd833273481ff9ea9dacc4a7126f2 test: finish an unfinished create and bound the content read"
       - "0ddda7164d72b7c100ff6334e14809e2d2ebda8c fix: finish an unfinished create and bound the content read"
+      - "a380462ebf1f1c1d1e46d69750e5f88890d9c022 test: a rename with its link rewrites is one group"
+      - "58b469a659dd9f8ed96fa0e59622a35b43bd615d feat: report the link rewrites of a rename as one group"
+      - "851c350bae20db3221c456d8a2bec5fdf3fa14f2 test: a group refusal names each linking note; results are sent again"
+      - "cb50daab0fc897b517faf7be8b25e1f88137791d fix: name each linking note in a group refusal; send a kept result again"
+      - "3817c293203cb3516c49c779fe3715d2283488d7 test: refuse a group on the renamed file, keep results across a restart"
+      - "31993bd9c501da13d0a9d81a7731e90453b7edbb fix: refuse a group on the renamed file and keep results across a restart"
+      - "5d7dd78a386d8c3c1bb052579ec2036dbabb9abe test: the result file is the owner's; which answers keep a result"
+      - "573fedbcd67b5595026b83ca8f0e23c06290204a fix: write the result file 0600 and keep a result on retryable answers"
   - id: ratatoskr-web
     role: editor-write-mode-and-conflict-view
     branch: main@4972d4348d829f0cc9a32c4a606e53d31d4d80cd
@@ -203,6 +253,11 @@ repositories:
       - "9b725aa6a83296e2f2e0b0ca81f72b4b43c8db3a build: pin Platform at 943bc91 and record SITE-026 group 8"
       - "fdc76f56f0d7be9cd3c89b3b48772fe8669f974a build: pin sites at a4587f7 and record SITE-025 group 5"
       - "32a65ae2bd2dd4b5f039fc5048ef0c5db607fd26 build: pin site-sdk at a3a9215 and record SITE-025 group 7"
+      - "d34542519d20943aa99b2b42c44904fb6aa94793 docs(changesets): record the 2c72602 pins of OBS-024, SITE-025/026"
+      - "b082ec4c82c9b523f6acd1ee7f3ed4d2b33d4f59 fix(ansible): migrate the old notes trees as ratatoskr-notes-sync, once"
+      - "842caa0f9c34b7c84e00e95893614e7903c08498 build: pin notes at 496e9c1 and record OBS-024 groups 8 and 9"
+      - "973965bee2c1681a98753a4d8ecbdc6674e50709 build: pin the obsidian plugin at 36bdb20 and record OBS-024 11.18 to 11.23"
+      - "204d602026acaf89bd01a379312e57e52df6b857 build: pin the export agent at 573fedb and record OBS-024 12.15 to 12.22"
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-notes      # ships with write mode off; its consumer waits for the durable Edge creates
@@ -253,10 +308,10 @@ rollback:
   - Revert each repository's commit; nothing has shipped.
 verification:
   - crates/notes-contracts/tests/write_request.rs and conflict.rs, and tools/contractsc/tests/live_message_types.rs in ratatoskr-contracts
-  - services/notes/tests/bus_durables.rs, write_queue.rs, write_base_hash.rs, write_pending.rs, write_content.rs, write_idempotency.rs, write_authority.rs, write_operation.rs, write_mode.rs, conflict_merge.rs, echo.rs, delivery_plugin.rs, sync_mode.rs, sync_write.rs, link_rewrite_golden.rs and link_rewrite_atomic.rs in ratatoskr-notes
+  - services/notes/tests/bus_durables.rs, write_queue.rs, write_base_hash.rs, write_pending.rs, write_content.rs, write_idempotency.rs, write_authority.rs, write_operation.rs, write_mode.rs, conflict_merge.rs, echo.rs, delivery_plugin.rs, sync_mode.rs, sync_write.rs, link_rewrite_golden.rs and link_rewrite_atomic.rs, and crates/notes-index/tests/rewrite.rs in ratatoskr-notes
   - crates/public-api/tests/notes_writes.rs, crates/operations/tests/report_authority.rs, crates/eventing/tests/stream_table.rs and nats_permissions.rs in ratatoskr-platform
-  - tests/apply-operation.test.ts, apply-kinds.test.ts, apply-paths.test.ts, apply-hardening.test.ts, transport-limits.test.ts and request-url.test.ts in ratatoskr-obsidian-plugin
-  - Tests/AgentCoreTests/ObsidianCliApplyTests.swift, ObsidianCliApplyPathTests.swift, ObsidianCliApplyResultTests.swift, ObsidianCliApplyLocalTests.swift, ObsidianCliPropertyTests.swift, VaultSyncObsidianStatusTests.swift and NotesChannelHTTPTests.swift in ratatoskr-export-agent
+  - tests/apply-operation.test.ts, apply-kinds.test.ts, apply-paths.test.ts, apply-hardening.test.ts, transport-limits.test.ts, request-url.test.ts, apply-rewrites.test.ts and apply-retry.test.ts in ratatoskr-obsidian-plugin
+  - Tests/AgentCoreTests/ObsidianCliApplyTests.swift, ObsidianCliApplyPathTests.swift, ObsidianCliApplyResultTests.swift, ObsidianCliApplyLocalTests.swift, ObsidianCliPropertyTests.swift, VaultSyncObsidianStatusTests.swift, NotesChannelHTTPTests.swift, ObsidianCliRewriteTests.swift, ObsidianCliResendTests.swift, ObsidianCliRestartTests.swift and DeviceResultStoreTests.swift in ratatoskr-export-agent
   - src/features/notes/conflict-view.test.tsx and editor.test.tsx in ratatoskr-web
   - harness bus_acl.rs and the durable-name scan, and the notes-write-back integration profile in ratatoskr-workspace
 evidence: {}
