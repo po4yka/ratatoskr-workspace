@@ -136,13 +136,18 @@ Rules:
   and embeds, each resolved with Obsidian's rules (`[[name]]`, `[[name|alias]]`, `[[name#heading]]`,
   `[[name#^block]]`, `![[embed]]`). `.canvas` and `.base` files are stored and indexed as files
   only.
-- **Write.** Every write names a `base_hash`. A write whose `base_hash` is not the current revision
-  makes a **conflict** with a three-way merge proposal. It never overwrites in silence. The write
-  operations are `create`, `update`, `rename`, `move`, `delete` (to the trash), `set_property` and
-  `resolve_conflict`. Each write records its `origin`: `platform` or `site:<site id>`.
+- **Write.** Every write except `create` and `resolve_conflict` names a `base_hash`. A write whose
+  `base_hash` is not the current revision makes a **conflict** with a three-way merge proposal. It
+  never overwrites in silence. The write operations are `create`, `update`, `rename`, `move`,
+  `delete` (to the trash), `set_property` and `resolve_conflict`. Notes checks a resolution against
+  the current revision that the conflict recorded. Each write records
+  its `origin`: `platform` or `site:<site id>`. A path whose first segment is `.obsidian`, in any
+  letter case, is refused.
 - **No content in commands.** The client first uploads the new content to notes over the `transfer`
-  route. The write command carries only a `BlobRef` and hashes. Private file bytes never enter
-  Edge's outbox or JetStream.
+  route. The write command carries only a `BlobRef`, in the field `blob`, and hashes. The value of a
+  `set_property` is also a `BlobRef`, of an `application/json` value that the client uploads to notes
+  first; the command never carries the value itself. A `resolve_conflict` carries `blob` only when its
+  choice is `custom`. Private file bytes never enter Edge's outbox or JetStream.
 - **Pending writes.** An accepted write is pending. Writes to one file wait in one queue, and the
   `base_hash` of a write is checked when the write reaches the head of the queue. A revision becomes
   current, and `evt.notes.file.changed.v1` is published, only after the channel acknowledges the
@@ -288,7 +293,8 @@ SITE-027 adds `platform_site_events`.
   `notes.file.write_requested.v1`, `notes.conflict.raised.v1`, `notes.conflict.resolved.v1`,
   `platform.site_approval.changed.v1`, `sites.release.build_requested.v1`,
   `sites.release.published.v1`, `sites.draft.changed.v1`.
-- `notes/write-request.v1` carries `origin` and a `BlobRef` for the content, never the content.
+- `notes/write-request.v1` carries `origin` and a `BlobRef` for the content and for a property
+  value, never the content or the value.
 - Documents: `sites/site-manifest.v1`, `sites/release.v1`, `sites/page.v1` (an mdast-compatible
   tree with the node types `callout`, `wikiLink` and `embed`, plus sanitised HTML; not Document IR),
   `sites/site-event.v1` and `sites/bundle-manifest.v1`.

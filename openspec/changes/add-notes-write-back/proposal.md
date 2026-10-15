@@ -16,7 +16,7 @@ rename.
 - Add the command `cmd.notes.file.write_requested.v1` (contract `notes/write-request.v1`). Edge is
   its only producer. It carries `origin` (`platform` or `site:<site id>`) and one operation:
   `create`, `update`, `rename`, `move`, `delete`, `set_property` or `resolve_conflict`. Every
-  operation except `create` names a required `base_hash`. Every command carries an idempotency key.
+  operation except `create` and `resolve_conflict` names a required `base_hash`. Every command carries an idempotency key.
 - Write content never travels in a command. The caller uploads it first to
   `/v1/notes/connections/{id}/blobs`, and the command names a `BlobRef` and its hash. No byte of a
   note enters Edge's outbox or JetStream.

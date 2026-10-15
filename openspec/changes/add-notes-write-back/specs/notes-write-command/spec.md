@@ -51,11 +51,13 @@ raises.
 
 ### Requirement: Each operation kind has its required fields
 
-The operation SHALL be one of `create` (path, content), `update` (path, `base_hash`, content),
+The operation SHALL be one of `create` (path, `blob`), `update` (path, `base_hash`, `blob`),
 `rename` and `move` (path, `base_hash`, target path), `delete` (path, `base_hash`), `set_property`
-(path, `base_hash`, frontmatter key, and a JSON value or the instruction to remove the key) and
-`resolve_conflict` (conflict id, choice, and content when the choice is `custom`). An operation that
-lacks a required field SHALL be refused.
+(path, `base_hash`, frontmatter key, and either a `BlobRef` of an `application/json` value, uploaded
+to notes first, or the instruction to remove the key) and `resolve_conflict` (conflict id, choice,
+and `blob` exactly when the choice is `custom`). The content field of an operation is `blob`.
+`resolve_conflict` carries no `base_hash`, because notes checks the resolution against the current
+revision that the conflict recorded. An operation that lacks a required field SHALL be refused.
 
 #### Scenario: An update without a base hash is refused
 
@@ -65,33 +67,54 @@ lacks a required field SHALL be refused.
 
 #### Scenario: A custom resolution without content is refused
 
-- **WHEN** a `resolve_conflict` operation has the choice `custom` and no content
-- **THEN** the payload fails validation, verified by the invalid fixture
-  `custom-resolution-without-content.json` and `write_request.rs::custom_resolution_requires_content`
+- **WHEN** a `resolve_conflict` operation has the choice `custom` and no `blob`, or another choice
+  and a `blob`
+- **THEN** the payload fails validation, verified by the invalid fixtures
+  `custom-resolution-without-content.json` and `blob-without-custom-resolution.json` and
+  `write_request.rs::custom_resolution_requires_content`
 
 ### Requirement: Paths stay inside the vault and outside its configuration
 
 Every path and target path in a write SHALL be relative to the vault root. A path that is absolute,
-that contains a `..` segment, or that starts with `.obsidian/` SHALL be refused.
+that contains a `..` segment, or whose first segment is `.obsidian` in any letter case SHALL be
+refused. A folder whose name only starts with `.obsidian`, such as `.obsidian-archive`, is not the
+configuration folder.
 
 #### Scenario: A path leaves the vault
 
-- **WHEN** a payload names `../secrets.md`, `/etc/passwd` or `.obsidian/app.json`
+- **WHEN** a payload names `../secrets.md`, `/Projects/Plan.md` or `.obsidian/app.json`
 - **THEN** the payload fails validation and notes records nothing, verified by the invalid fixtures
   `parent-segment.json`, `absolute-path.json` and `config-folder.json` and
   `write_request.rs::paths_stay_inside_the_vault`
 
+#### Scenario: The configuration folder is refused in any letter case
+
+- **WHEN** a payload names `.OBSIDIAN/app.json`, `.Obsidian/x` or the bare name `.obsidian`
+- **THEN** the payload fails validation, verified by the invalid fixtures
+  `config-folder-uppercase.json`, `config-folder-mixed-case.json` and `config-folder-bare.json` and
+  `write_request.rs::config_folder_is_refused_in_any_case`, and a payload that names
+  `.obsidian-archive/Plan.md` is accepted, verified by the valid fixture `obsidian-like-folder.json`
+
 ### Requirement: Write content never travels in the command
 
-Content SHALL be a `BlobRef` owned by `ratatoskr-notes` with its SHA-256, which the caller uploaded
-first through `/v1/notes/connections/{connection_id}/blobs`. A payload that carries content inline
-SHALL be refused. No byte of a note SHALL enter Edge's outbox or JetStream.
+Content, and the value that a `set_property` sets, SHALL be a `BlobRef` owned by `ratatoskr-notes`
+with its SHA-256, which the caller uploaded first through
+`/v1/notes/connections/{connection_id}/blobs`. The `BlobRef` of a property value SHALL have the media
+type `application/json`. A payload that carries content or a property value inline SHALL be refused.
+No byte of a note SHALL enter Edge's outbox or JetStream.
 
 #### Scenario: Inline content is refused
 
 - **WHEN** a payload carries the file text in a string field instead of a `BlobRef`
 - **THEN** it fails validation, verified by the invalid fixture `inline-content.json` and
   `write_request.rs::content_is_a_blob_ref`
+
+#### Scenario: An inline property value is refused
+
+- **WHEN** a `set_property` carries the JSON value itself, or a `BlobRef` whose media type is not
+  `application/json`
+- **THEN** it fails validation, verified by the invalid fixtures `inline-property-value.json` and
+  `property-value-not-json.json` and `write_request.rs::property_value_is_a_blob_ref`
 
 #### Scenario: A marker in the note never reaches the bus
 
