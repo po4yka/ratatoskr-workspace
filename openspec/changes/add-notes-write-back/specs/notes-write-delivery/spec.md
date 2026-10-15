@@ -93,7 +93,10 @@ For `plugin` and `cli` connections, notes SHALL hold checked writes in a queue o
 connection. The registered device SHALL read it through
 `GET /v1/notes/connections/{connection_id}/device-operations?after=<cursor>` and SHALL report each
 result through `POST /v1/notes/connections/{connection_id}/device-operations/{operation_id}/result`.
-Only the device registered for the connection SHALL read or answer its queue.
+Only the device registered for the connection SHALL read or answer its queue. When a result names
+bytes that notes does not hold, notes SHALL answer `409 notes.channel.bytes_missing` with the
+extension `missing_sha256`, which lists the missing hashes; the device SHALL upload those bytes and
+send the result again.
 
 #### Scenario: Another device reads the queue
 
@@ -117,19 +120,21 @@ file with the operation's base hash. When they differ, it SHALL NOT apply the op
 
 - **WHEN** the plugin receives an `update` whose base hash differs from the local file's hash
 - **THEN** the local file does not change and the plugin reports `base_mismatch`, verified by
-  `test/apply-operation.test.ts::base mismatch is reported, not applied` in
+  `tests/apply-operation.test.ts::base mismatch is reported, not applied` in
   `ratatoskr-obsidian-plugin`
 
 ### Requirement: The plugin renames through Obsidian
 
 The plugin SHALL apply a `rename` or a `move` through Obsidian's own file manager rename, so that
-Obsidian updates the links on the device, and SHALL report the new hash of every file that changed.
+Obsidian updates the links on the device, and SHALL report the hash of the renamed file in the
+result, and send every file whose links changed through the change channel.
 
 #### Scenario: A rename on the device
 
 - **WHEN** the plugin applies `rename` of `Projects/Alpha.md` to `Projects/Apollo.md`
-- **THEN** it calls the file manager rename once, and its result lists every file whose links
-  changed, verified by `test/apply-operation.test.ts::rename uses fileManager.renameFile`
+- **THEN** it calls the file manager rename once, reports `applied` with the hash of
+  `Projects/Apollo.md`, and sends each file whose links changed as an `updated` change through the
+  change channel, verified by `tests/apply-operation.test.ts::rename uses fileManager.renameFile`
 
 ### Requirement: The export agent applies operations through the Obsidian CLI
 
@@ -141,7 +146,7 @@ by an atomic file write.
 #### Scenario: A rename through the CLI
 
 - **WHEN** the agent applies `rename` of `Projects/Alpha.md` to `Projects/Apollo.md`
-- **THEN** it runs `obsidian rename path=Projects/Alpha.md name=Apollo`, verified by
+- **THEN** it runs `obsidian vault=<name> rename path=Projects/Alpha.md name=Apollo`, verified by
   `Tests/AgentCoreTests/ObsidianCliApplyTests.swift::testRenameUsesObsidianRename` in
   `ratatoskr-export-agent`
 

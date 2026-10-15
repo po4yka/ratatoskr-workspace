@@ -79,6 +79,13 @@ change the
 connection is configured with `ob sync-config --mode pull-only --configs "" --excluded-folders
 <owner list>`, and `--device-name ratatoskr-<connection id>`.
 
+OBS-024 (`add-notes-write-back`, design D5 and decision 7.11) changes this decision at the notes pin
+`f394346`: the one sync unit is replaced by two fixed units, `ratatoskr-notes-sync-pull@*.service`
+(write mode off) and `ratatoskr-notes-sync-bidi@*.service` (write mode on), each with its mode as a
+literal argument, so the polkit rule allows four template units. `ratatoskr-notes-sync` joins the
+group `ratatoskr-notes-trees`, the trees root is 2770, and the sync and login units run with
+`UMask=0007`, so a tree is 2770 with files 0660.
+
 `ratatoskr-notes` takes file changes only from the working tree, never from the output of `ob`. It
 watches the tree with inotify, with a full rescan at start and every 15 minutes, and turns each
 settled file state into a revision. A file is settled when its size and modification time have not

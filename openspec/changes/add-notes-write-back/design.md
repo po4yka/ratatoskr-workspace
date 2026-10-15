@@ -116,7 +116,18 @@ only a write that the channel acknowledges turns an uploaded blob into a revisio
 
 - **`sync`.** Write mode on sets the Headless client to `bidirectional` with the conflict strategy
   `conflict`, so a race inside Obsidian Sync leaves a conflict file that notes indexes as a new
-  file, instead of a merge that nobody reviewed. Write mode off sets `pull-only`.
+  file, instead of a merge that nobody reviewed. Write mode off sets `pull-only`. Each mode has its
+  own fixed systemd unit: `ratatoskr-notes-sync-pull@<id>.service` while the write mode is off, and
+  `ratatoskr-notes-sync-bidi@<id>.service` while it is on. Each unit names its mode and
+  `--conflict-strategy conflict` as literal arguments and reads no environment file, so no file that
+  the notes service writes can set the mode, `PATH`, `NODE_OPTIONS` or `LD_PRELOAD` of `ob`. The
+  supervisor stops the unit of the other mode before it starts one, and does not start it when that
+  stop fails; a disconnect and an expired login stop both (tasks 7.32 and 7.33). An earlier form, one
+  unit that read its mode from a file that the notes service wrote, is refused by the workspace
+  policy `release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program`. The
+  notes service writes into the working tree as a member of `ratatoskr-notes-trees`, the group that
+  `ratatoskr-notes-sync` is in too; the trees root is 2770 and the sync and login units run with
+  `UMask=0007` (decision 7.11).
 - **`plugin`.** The device pulls, because a phone cannot keep a connection open. The queue is
   ordered per connection, so a `rename` and a later `update` of the new path arrive in order.
   Renames use `app.fileManager.renameFile`, which updates links on the device by Obsidian's rules.
@@ -176,8 +187,8 @@ yet; a write already delivered finishes, because the vault may already hold it.
 - [The Headless client changes a file between notes' hash check and its rename] → The window is a few
   milliseconds under the per-file lock. The conflict strategy `conflict` turns a lost race into a
   conflict file that notes indexes. The OBS-023 spike measures the client's behaviour.
-- [Pending writes wait behind an offline device] → The operation shows `delivering` with the reason
-  `awaiting_device` or `awaiting_obsidian`, so the owner sees why. The queue is bounded per
+- [Pending writes wait behind an offline device] → The operation shows the stage `awaiting_device`
+  or `awaiting_obsidian` (decision 7.9), so the owner sees why. The queue is bounded per
   connection; when it is full, new writes fail with the retryable `notes.write.queue_full`.
 - [Obsidian changes its link-update rules in a new version] → Fixtures record the Obsidian version.
   A new version is recorded again, and a diff in the fixtures is a visible change in review.

@@ -138,7 +138,9 @@ repositories can be removed from the fleet by reverting the workspace item.
   `notes.file.changed.v1`, and the operation kind `notes.connection.connect`.
 - New on the host: Node.js 22, the `obsidian-headless` npm package at a pinned version, the system
   user `ratatoskr-notes-sync`, the template units `ratatoskr-notes-sync@.service`,
-  `ratatoskr-notes-login@.service` and `ratatoskr-notes-cleanup@.service` with one polkit rule, the
+  `ratatoskr-notes-login@.service` and `ratatoskr-notes-cleanup@.service` with one polkit rule
+  (OBS-024 replaces the sync unit with `ratatoskr-notes-sync-pull@.service` and
+  `ratatoskr-notes-sync-bidi@.service`, so the rule allows four template units), the
   group `ratatoskr-notes-blobs`, the database role
   `ratatoskr_notes`, the NATS identity `NOTES`, and the paths under
   `/mnt/nvme/ratatoskr/notes/` and `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes/`.

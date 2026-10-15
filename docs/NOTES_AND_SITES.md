@@ -315,7 +315,8 @@ SITE-027 adds `platform_site_events`.
   `notes.connection.removed` (`410` on a device route after the owner removed the connection; a
   device does not retry it), `notes.connection.cleanup_failed`, the device channel codes
   `notes.channel.sequence_gap` (with the committed sequence), `notes.channel.batch_too_large`,
-  `notes.channel.bytes_missing` (with the missing hashes) and `notes.channel.manifest_missing` (no
+  `notes.channel.bytes_missing` (with the missing hashes, in `missing_sha256` on a device result)
+  and `notes.channel.manifest_missing` (no
   manifest within 30 minutes of a device connect), `notes.request.unauthenticated`,
   `notes.request.invalid`, `notes.service.unavailable`, the four login codes
   `notes.sync.login_failed`, `notes.sync.mfa_required`, `notes.sync.e2e_password_wrong` and
