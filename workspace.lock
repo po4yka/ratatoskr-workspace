@@ -221,9 +221,9 @@ id = "web"
 path = "repos/clients/web"
 remote = "https://github.com/po4yka/ratatoskr-web.git"
 default_branch = "main"
-commit = "4972d4348d829f0cc9a32c4a606e53d31d4d80cd"
+commit = "0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f"
 digests = [
-  { path = "openapi/openapi.lock.json", kind = "file", sha256 = "20ac286db7044cea31adfcd5f6fe39ff1ae2e5f8f8c684157a0315b28d3daebe" },
+  { path = "openapi/openapi.lock.json", kind = "file", sha256 = "95bb37bb4d04cfaefed201b6162a601fb0afd32724ac0efd1d494479440b993e" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "fb6ab0888f3cc431a9f8d573c6a2edc8a1aab1c3d27d6cec609151ba9ae3f8a3" },
   { path = "package-lock.json", kind = "file", sha256 = "4096229f75eac009a595e37b754d0ad4c8fadabef16cfe1281f40973e7e3ea9e" },
 ]

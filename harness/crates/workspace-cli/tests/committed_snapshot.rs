@@ -109,7 +109,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "web",
         "repos/clients/web",
-        "4972d4348d829f0cc9a32c4a606e53d31d4d80cd",
+        "0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f",
     ),
     (
         "x",

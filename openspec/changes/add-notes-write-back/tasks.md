@@ -17,7 +17,7 @@ modifies the text those two leave.
 - [x] 1.3 `ratatoskr-platform`: the Edge routes, the operation kinds and their authority rows, the two durables and the NATS ACL lines (group 10). Direct to `main` after review; pinned at `943bc91` (the OBS-024 work ends at `f76005e`; the later commits are SITE-025 and SITE-026), CI green (7 of 7 check runs), locking the contracts at `2c72602`. Group 10 is complete.
 - [x] 1.4 `ratatoskr-obsidian-plugin`: pull, apply and report for the `plugin` channel (group 11). Direct to `main` after review; pinned at `36bdb20` (11.1 to 11.17 at `5ed98a9`), CI green (4 of 4 check runs). Group 11 is complete.
 - [x] 1.5 `ratatoskr-export-agent`: apply and report for the `cli` channel (group 12). Direct to `main` after review; pinned at `573fedb` (12.1 to 12.14 at `0ddda71`), CI green (4 of 4 check runs). Group 12 is complete.
-- [x] 1.6 `ratatoskr-web`: the editor, the write-mode switch and the conflict view (group 13). Direct to `main` after review; pinned at `f3c7320` for 13.1 to 13.6, and at `4972d43` with 13.7 and 13.8, CI green (4 of 4 check runs). Group 13 is complete.
+- [x] 1.6 `ratatoskr-web`: the editor, the write-mode switch and the conflict view (group 13). Direct to `main` after review; pinned at `f3c7320` for 13.1 to 13.6, at `4972d43` with 13.7 and 13.8, and at `0f5f8c8` with the follow-ups 13.9 to 13.14 (the sentence of `notes.write.partially_applied`, the list of `stale_paths`, and the reason of a conflict after its operation answers), CI green (4 of 4 check runs). Group 13 is complete.
 - [ ] 1.7 `ratatoskr-workspace`, last, on `main`: the harness checks, the pins, the integration profile and the documentation (group 14). PR or pushed head: _link_
 
 ## 2. Planning records
@@ -235,6 +235,12 @@ modifies the text those two leave.
 - [x] 13.6 GREEN: keep Save disabled until the write operation ends, and run `onSucceeded` and `onEnded` once per operation. Verify 13.5 and `npm run check`.
 - [x] 13.7 RED: `src/features/notes/write-progress.test.tsx` "names the stage %s of a running write", "names the failure %s of a write" and "names the warning notes.write.transformed of a succeeded write". Confirm that they fail on the text assertion because the view shows no stage, has no sentence for `notes.write.unsafe_path`, `notes.write.unsupported` and `notes.sync.reconfigure_failed`, and shows no warning. Web `6cffab0`.
 - [x] 13.8 GREEN: name the stages `awaiting_device` and `awaiting_obsidian`, add the sentences for the three failures, and show the warning `notes.write.transformed`. Verify 13.7 and `npm run check`. Web `0b0ee6f`.
+- [x] 13.9 RED: `src/features/notes/write-progress.test.tsx` "names the failure notes.write.partially_applied and links to its conflict" and `src/features/notes/conflict-view.test.tsx` "says that the vault applied only a part of the change". Confirm that they fail on the text assertion, because the view shows the general sentence of the code and the conflict view shows the sentence of a stale base. Web `721e751`.
+- [x] 13.10 GREEN: give `notes.write.partially_applied` its own sentence in the write progress, and let the conflict view read the operation of the conflict and say that the vault applied only a part of the rename and its link updates. Verify 13.9, and run the gate list of `DEVELOPMENT.md`. Web `4081898`.
+- [x] 13.11 RED: `src/features/notes/conflict-view.test.tsx` "lists the stale paths of a write group". Confirm that it fails on the lookup of the list of the files of the change, because the view does not read `stale_paths`. Web `864d5c7`.
+- [x] 13.12 GREEN: list each path of `stale_paths`, with a link to the file, when the conflict has them. Verify 13.11, and run the gate list of `DEVELOPMENT.md`. Web `448b74b`.
+- [x] 13.13 RED: `src/features/notes/conflict-view.test.tsx` "shows no reason until the operation answers". Confirm that it fails on the assertion that the sentence of a stale base is absent while the operation read waits. Web `534b5f8`.
+- [x] 13.14 GREEN: show the reason of a conflict only after the operation answers, and read it again for another operation. Verify 13.13, and run the gate list of `DEVELOPMENT.md`. Web `8b6edaf`.
 
 ## 14. Integration (ratatoskr-workspace)
 
