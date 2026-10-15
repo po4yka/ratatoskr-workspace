@@ -20,10 +20,10 @@ repositories:
       - "a9289e27bcf53f496b5917889580965d97ff2358 feat(notes-contracts): mark the notes events user_content and match the blob media type"
   - id: ratatoskr-notes
     role: new-service-connections-index-sync-supervisor
-    branch: main@ae01361cfba16a78aafb87bc74dab492321f3515
+    branch: main@7fb421e6a55d50261caacc00d1c029cb87978a8a
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/notes at ae01361cfba16a78aafb87bc74dab492321f3515 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, to 301c53bfc1f6575b4cce68f22b09197b96b30583 after tasks 6.11 to 6.22 and a test-only fix, and to ae01361 after group 7 (the index, the file events and the outbox relay, the read routes, the connect that answers 202 at once, and the device claims), which apply owner decisions A (the journal namespace ratatoskr-notes-sync) and B (the trees and clients roots) of 2026-10-14; the host role provisions both). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. From ae01361 on, the outbox relay of notes task 7.6 opens the NATS connection with the inbox prefix _INBOX_notes, so bus_acl.rs has no WIRING_PENDING exemption
+    pin: repos/notes at 7fb421e6a55d50261caacc00d1c029cb87978a8a (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, to 301c53bfc1f6575b4cce68f22b09197b96b30583 after tasks 6.11 to 6.22 and a test-only fix, to ae01361cfba16a78aafb87bc74dab492321f3515 after group 7 (the index, the file events and the outbox relay, the read routes, the connect that answers 202 at once, and the device claims), and to 7fb421e after group 8 and its follow-ups 8.9 to 8.26 (the device channel routes for changes, the manifest and the chunked blob upload), which apply owner decisions A (the journal namespace ratatoskr-notes-sync) and B (the trees and clients roots) of 2026-10-14; the host role provisions both). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. From ae01361 on, the outbox relay of notes task 7.6 opens the NATS connection with the inbox prefix _INBOX_notes, so bus_acl.rs has no WIRING_PENDING exemption
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"
@@ -84,6 +84,33 @@ repositories:
       - "76bed3c40d0ae8f9f35847da41cc5ac0ee0b7a90 feat(notes): answer the connect at once and report its operation"
       - "3f22adbe1c12d7f77caea459db39572a423ab41c test(notes): a device connect needs the device claims of Edge"
       - "ae01361cfba16a78aafb87bc74dab492321f3515 feat(notes): read the device claims of Edge on a device connect"
+      - "6dc7bd416451ccc096bec153a36a37c3d8f0cb60 test(notes): a change batch is idempotent, ordered and bounded"
+      - "e388c54db124072b23e111cb7188e4248614ac1b feat(notes): commit the change batches of a device in sequence"
+      - "c1bb36d204406f62036c127f485c3016922c3341 test(notes): a batch is checked against the owner, channel and device"
+      - "3005415b1fe6da0722f6d592cd39e9e7fe17b53e feat(notes): take a batch only from the device of the connection"
+      - "10135f21251bdc135ba9bc1f01ba87ae0f9662d4 test(notes): an upload with a wrong digest registers no blob"
+      - "62f1fec045a6926b5c40756caa9f1151da7fab46 feat(notes): receive device uploads with the shared transfer contract"
+      - "184c987257a4df787fdd6e70b333cc47562b6eb4 test(notes): a manifest reconciles the offline changes of a vault"
+      - "386b31795e184297d480f2668c3a6cc6cd43c490 feat(notes): reconcile a device vault from its manifest"
+      - "49ae37fe5c70ca7bf919737abe38c5e870eed0b5 test(notes): a case-only rename leaves the new path indexed"
+      - "22a7fbb19de78eb2fb338867f77a193b4755dded fix(notes): give a freed path key to the collision that waits for it"
+      - "8d1b11d3bff735d34419a526a9747decd5e194d1 test(notes-index): .obsidian and .trash match by path key"
+      - "e9e63876f024b556425bef726ca6cdfcdbfb8af8 fix(notes-index): match .obsidian and .trash by path key"
+      - "be436a1a9222eb17b9a3a7a211adc0ba5ac75eb0 test(notes): a device connect ends after its first manifest or a bound"
+      - "64abaad2f41413456a000e3b55bff44f2129800b feat(notes): end a device connect at its first manifest or its bound"
+      - "62a0fc3107679df55c0eb11dcbca7c0b1cdd6e07 test(notes): a report of the connect correlates to its operation"
+      - "6984695a4621bb4860bc668ae12ea3bbd98e8b5f fix(notes): correlate each connect report to its operation"
+      - "ae9e86cd021a9623d9cb057197a9730bb7baa44b docs(notes): describe the device channel routes and their wire format"
+      - "d3de695926cd64cfb71ab685403b8cb0d8845410 test(notes): an empty file needs no upload on a device channel"
+      - "216b971744bd70dabfa077c70d81884a005d1473 fix(notes): take an empty file on a device channel without an upload"
+      - "0d6f7f662a4ebe91f446fcf0762a1481afb7bbda test(notes): a device cannot name the bytes of another connection"
+      - "ec46e86d4a7f785acb34ee0dfb22291c4e197fcc fix(notes): let a device name only the bytes of its own connection"
+      - "9e0fa6736447b0f23222706c1cfffd5d24025454 test(notes): the manifest bound cannot fail a committed manifest"
+      - "6d07f885620ca2a6685abaedd3dc092994e850d7 fix(notes): complete a device connect in its first manifest transaction"
+      - "95907e1bcb1673010f3429237c4325d101bfd64c test(notes-index): a PathTable case-only rename publishes the new path"
+      - "2d4b34cc98f7b89414fe5cd585fb9251bf34089a fix(notes-index): publish a waiting collision when PathTable frees its key"
+      - "0b1bbb7f86b1d27624068e201a17cc00d2954897 test(notes): a removed connection is gone for its device"
+      - "7fb421e6a55d50261caacc00d1c029cb87978a8a feat(notes): answer 410 notes.connection.removed to the device of a removed connection"
   - id: ratatoskr-platform
     role: edge-route-durables-identity-device-kind-authority
     branch: main@352ed77c464834c5467a315045679d5a4485663a
@@ -144,10 +171,10 @@ repositories:
       - "b01c5377cfce68494ad794f25c6fc95fd888f421 fix(knowledge): remove the old search entry when a note update is rejected"
   - id: ratatoskr-obsidian-plugin
     role: new-client-plugin-channel
-    branch: main@587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00
+    branch: main@dc494a1ad2cfd733813fae618a5495ffc9431784
     created: 2026-10-14, public, ruleset "protect main" (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate; no deny job, because the stack is TypeScript)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/clients/obsidian-plugin at 587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00 (first pinned at a6afdbce2247c9298a328a5a9033a281ef35618b by tasks 14.8 and 14.9, advanced after tasks 11.19 to 11.24). A client ships no systemd unit, so no release artifact, deploy inventory or port row applies
+    pin: repos/clients/obsidian-plugin at dc494a1ad2cfd733813fae618a5495ffc9431784 (first pinned at a6afdbce2247c9298a328a5a9033a281ef35618b by tasks 14.8 and 14.9, advanced to 587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00 after tasks 11.19 to 11.24, and to dc494a1 after tasks 11.25 to 11.37). A client ships no systemd unit, so no release artifact, deploy inventory or port row applies
     commits:
       - "22e84836e779f0cdf95e49c103963ce7d1e96d53 chore: create the repository with the Obsidian sample plugin layout"
       - "8724f392d8a060a6c288fa3a60b47a85fe81226f test(batcher): a rename arrives as one renamed change"
@@ -178,6 +205,19 @@ repositories:
       - "2c21dc551ac412cc386ca469ec16efa8aab5ea33 fix(session): unpair, renew only the session fields, name an older credential"
       - "9f36e058972bcdf73172fdf73870fd205eab45fa docs(transport): the transport of each platform; gitleaks names the fake secrets"
       - "587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00 ci: pin the shared fleet workflows at 75b3ed8"
+      - "6a3cf6fde36d8c46d8c930a50d2a5b50da12c7bb test(batcher): a rename sends the previous path in previous_path"
+      - "4a7681849cd18520c1fa3bec2b3d3ab70e60ecfe fix(batcher): send the path before a rename as previous_path"
+      - "98fc260875bf395de7d35cef4e266d0959150491 test(channel): upload only the bytes that notes names"
+      - "4db59d0ccd9d296900863f503e8f59ce8b693e49 fix(channel): send the batch first and upload what notes names"
+      - "28c8ede3f28bb6752f5f081fc72d3419e5b72297 test(sync): a batch that is too large is split"
+      - "2014cd17073bd978bdb829c6100f8c573d7bb6ce fix(channel): split a batch that notes refuses as too large"
+      - "19db0af9a5b5773062ac282eaaaf54533d4653ef test(sync): a connection that notes failed is connected again"
+      - "a3bd787ce251bb5afe30bb2031741448875aaaab fix(sync): connect again when notes failed the connection"
+      - "e760e5a63ea02e42c0f0f7294b66b671ab0b4780 feat(api): read the optional operation of the connect answer"
+      - "6276b2293c5f85bbc9e69617240a1793cf04144d docs(readme): the device wire format of notes"
+      - "8cf7fa3340e683c5eace563b17694ea9408f57c6 test(sync): a connection that the owner removed stops the plugin"
+      - "268132f014cc9e0b3629ec0b33e8bab32049d93d fix(sync): stop when the owner removed the connection"
+      - "dc494a1ad2cfd733813fae618a5495ffc9431784 docs(readme): a connection that the owner removed stops the plugin"
   - id: ratatoskr-export-agent
     role: cli-channel
     branch: obs-023/notes-vault-connections

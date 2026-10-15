@@ -129,11 +129,11 @@ id = "notes"
 path = "repos/notes"
 remote = "https://github.com/po4yka/ratatoskr-notes.git"
 default_branch = "main"
-commit = "ae01361cfba16a78aafb87bc74dab492321f3515"
+commit = "7fb421e6a55d50261caacc00d1c029cb87978a8a"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "47f6adbd5ddff8521f96d3dda7b8cb104269804abfb7d3ce97180d79067e1d54" },
+  { path = "Cargo.lock", kind = "file", sha256 = "36477f902694eb1df036580d4baf658811111d48b64df5a5d285fdff6cdc1a40" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "1393a3f18882941a3334e4a1111e88e9588f58fecc59922190ab0a857afcc9a9" },
-  { path = "schema.sql", kind = "file", sha256 = "9f4a362b8c39c0a7efa83955d1c5aaf233ab3547c89e2f5af05b2692818398f0" },
+  { path = "schema.sql", kind = "file", sha256 = "172b2872bdd5c670ca9a4c6ab1d1f07ec63f9d6a89e9909a8709626693ac70dd" },
 ]
 
 [[repositories]]
@@ -141,7 +141,7 @@ id = "obsidian-plugin"
 path = "repos/clients/obsidian-plugin"
 remote = "https://github.com/po4yka/ratatoskr-obsidian-plugin.git"
 default_branch = "main"
-commit = "587ee0a3dd1d91b1ab6332ee7a863a8afe5ddf00"
+commit = "dc494a1ad2cfd733813fae618a5495ffc9431784"
 digests = [
   { path = "openapi/openapi.lock.json", kind = "file", sha256 = "f5d8724a24d7dee679f44edb7f5425b87a30c0c9d09acaa49c2ab3eeb9678d1b" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "037d9a3c8acf0dcc0b87bf8de4362fdb9f5f619eddb9a4140269d9821a24f7ab" },
