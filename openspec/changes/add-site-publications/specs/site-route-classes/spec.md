@@ -42,6 +42,22 @@ The routes that this change adds SHALL have these classes in Edge's route table:
 - **THEN** each route of the table above has exactly the class it lists, verified by
   `site_route_classes.rs::site_routes_have_their_listed_classes`
 
+### Requirement: Edge lists the sites capability to the owner
+
+Platform SHALL list the client capability `sites.manage` (`Capability::SitesManage`) with the route
+`/v1/sites` to a primary session with the live `platform.owner` grant, when the sites route is
+configured and the database is reachable, and SHALL NOT list it otherwise. It is a capability of the
+web client, not a site capability: the web client shows its sites section only when it is listed,
+and the guards of the site route classes do not read it.
+
+#### Scenario: The sites route is not configured
+
+- **WHEN** the owner reads the capabilities of a Platform whose route table has no sites route
+- **THEN** `sites.manage` is not listed, and it is listed with the route `/v1/sites` once the route
+  is configured and the database is reachable, verified by
+  `crates/public-api/tests/capabilities.rs::sites_manage_follows_the_sites_route` in
+  `ratatoskr-platform`
+
 ### Requirement: A management route needs the primary owner session
 
 A `management` route SHALL be served only to a primary Platform session whose principal holds the live

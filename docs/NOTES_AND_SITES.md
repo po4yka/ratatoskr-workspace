@@ -359,7 +359,10 @@ SITE-027 adds `platform_site_events`.
 Three rules of Edge for the notes route (Platform at `2008709`):
 
 - **Capability.** The web client finds the notes route through the capability `notes.vaults`
-  (Platform `Capability::NotesVaults`), which starts at `POST /v1/notes/connections`.
+  (Platform `Capability::NotesVaults`), which starts at `POST /v1/notes/connections`. In the same way
+  it finds the sites section through the capability `sites.manage` (Platform
+  `Capability::SitesManage`, SITE-025 tasks 6.16 and 6.17, open), with the route `/v1/sites`, which
+  Platform lists to the owner when the sites route is configured and the database is reachable.
 - **Device credentials.** A device credential reaches only the connect and the three device routes,
   `.../{id}/changes`, `.../{id}/manifest` and `.../{id}/blobs`. Edge refuses a device on any other
   notes path, such as the read routes, because a device that reads them could read every vault of
