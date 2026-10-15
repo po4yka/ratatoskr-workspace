@@ -21,6 +21,17 @@ publish `cmd.sites.release.build_requested.v1`.
 - **WHEN** a client connected with only the SITES stanza publishes to `cmd.sites.release.build_requested.v1` on a real broker
 - **THEN** the publish is not acknowledged, and a publish of `evt.sites.release.published.v1` is acknowledged, verified by `crates/eventing/tests/nats_permissions.rs::sites_identity_reads_its_durables_and_publishes_only_its_events` in `ratatoskr-platform`
 
+### Requirement: EDGE publishes the commands and the site approval event
+
+EDGE SHALL publish `cmd.>` and `evt.platform.site_approval.changed.v1`, and no other `evt.` subject.
+Its publish allow list SHALL be exactly `cmd.>`, `evt.platform.site_approval.changed.v1`,
+`$JS.API.>` and `$JS.ACK.>`.
+
+#### Scenario: The EDGE stanza names the approval event and no other event
+
+- **WHEN** `harness/crates/workspace-core/tests/bus_acl.rs::non_edge_stanzas_obey_the_permission_invariants` reads the pinned Platform configuration
+- **THEN** the EDGE publish allow list is exactly `cmd.>`, `evt.platform.site_approval.changed.v1`, `$JS.API.>` and `$JS.ACK.>`
+
 ## RENAMED Requirements
 
 - FROM: `### Requirement: There are fourteen NATS identities in one reviewed file`

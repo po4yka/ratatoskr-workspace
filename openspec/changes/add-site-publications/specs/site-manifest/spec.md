@@ -85,13 +85,13 @@ capabilities, hostname, state `approved` or `withdrawn`).
 ### Requirement: An approval names the active digest
 
 An approval request SHALL name the digest of the manifest it approves. When that digest is not the
-digest of the active manifest, the approval SHALL fail with `platform.manifest_digest_stale` and
+digest of the active manifest, the approval SHALL fail with `platform.site.manifest_digest_stale` and
 change nothing.
 
 #### Scenario: A stale digest is refused
 
 - **WHEN** the owner approves a digest and a newer manifest became active before the request
-- **THEN** the approval fails with `platform.manifest_digest_stale` and no row changes, verified by
+- **THEN** the approval fails with `platform.site.manifest_digest_stale` and no row changes, verified by
   `crates/public-api/tests/site_approvals.rs::stale_digest_is_refused` in `ratatoskr-platform`
 
 ### Requirement: The sites service keeps only a projection of approvals
@@ -152,11 +152,11 @@ site that has no approval or a withdrawn approval, SHALL be answered with HTTP 4
 ### Requirement: A hostname belongs to one approved site
 
 Two approved sites SHALL NOT have the same hostname. An approval that would give a hostname to a
-second site SHALL fail with `platform.site_hostname_taken` and SHALL leave both approvals unchanged.
+second site SHALL fail with `platform.site.hostname_taken` and SHALL leave both approvals unchanged.
 
 #### Scenario: A second site claims a hostname
 
 - **WHEN** the owner approves a manifest of site `b` that names the hostname of approved site `a`
-- **THEN** the approval fails with `platform.site_hostname_taken`, verified by
+- **THEN** the approval fails with `platform.site.hostname_taken`, verified by
   `crates/public-api/tests/site_approvals.rs::hostname_is_unique_across_approved_sites` in
   `ratatoskr-platform`

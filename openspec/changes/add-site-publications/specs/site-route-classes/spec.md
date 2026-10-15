@@ -9,15 +9,16 @@ Edge, and the check in the sites service that keeps an anonymous claim on the pu
 
 ### Requirement: Every site route has exactly one class
 
-Every route under `/v1/sites/{site}/` SHALL have exactly one class (`management`, `site-origin`,
-`sign-in` or `release`) in Edge's route table, and Edge SHALL fail to start when one has none. A
+Every route under `/v1/sites`, the collection itself and every route under `/v1/sites/{site}/`,
+SHALL have exactly one class (`management`, `site-origin`, `sign-in` or `release`) in Edge's route
+table, and Edge SHALL fail to start when one has none. A
 later change that needs another class adds it to this requirement.
 
 #### Scenario: A route without a class stops Edge
 
 - **WHEN** Edge's route table holds a route under `/v1/sites/{site}/` with no class
 - **THEN** Edge refuses to start and names the route, verified by
-  `crates/http/tests/site_route_classes.rs::unclassified_site_route_fails_start_up` in
+  `crates/public-api/tests/site_route_classes.rs::unclassified_site_route_fails_start_up` in
   `ratatoskr-platform`
 
 ### Requirement: The routes of this change have fixed classes
@@ -26,6 +27,8 @@ The routes that this change adds SHALL have these classes in Edge's route table:
 
 | Route | Class |
 |---|---|
+| `GET /v1/sites` | management |
+| `GET .../manifest` | management |
 | `PUT .../manifest` | management |
 | `POST`, `DELETE .../manifest/approval` | management, served by Edge |
 | `.../publications` and `.../publications/{publication}` (`GET`, `PUT`, `DELETE`) | management |

@@ -34,7 +34,7 @@ Edge with HTTP 405 and the contract error envelope, and SHALL NOT reach the site
 
 - **WHEN** a client sends `POST /v1/sites/{site}/content/pages/home`
 - **THEN** Edge answers 405 with the contract envelope and the sites service receives no request,
-  verified by `crates/http/tests/public_route_class.rs::write_method_is_refused_before_proxy` in
+  verified by `crates/public-api/tests/public_route_class.rs::write_method_is_refused_before_proxy` in
   `ratatoskr-platform`
 
 ### Requirement: Only the current release is served
