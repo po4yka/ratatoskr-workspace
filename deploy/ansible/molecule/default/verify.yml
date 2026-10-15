@@ -511,7 +511,9 @@
     # end-to-end key in plain text, so only ratatoskr-notes-sync may enter it. The login and cleanup
     # units have both roots in ReadWritePaths= with no `-`, so systemd fails them when one does not
     # exist. The fixture tree is written as the units and the notes writer write, with umask 0007.
-    # prepare.yml leaves a tree with the modes of umask 0027, which the converge must change.
+    # prepare.yml leaves a tree from before OBS-024 with the modes of umask 0027 and two links to
+    # root-owned canaries. The converge migrates the tree once, as ratatoskr-notes-sync, and must not
+    # follow a link.
     - name: "notes_trees_and_clients: the group of the trees"
       ansible.builtin.command: getent group ratatoskr-notes-trees
       register: notes_trees_group
@@ -604,14 +606,13 @@
         - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder
         - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder/note.md
 
-    # prepare.yml made its tree as root before the users and the tree group existed, so the tree
-    # keeps the owner and group root; its modes show that the converge changed 2750 and 0640 to
-    # 2770 and 0660.
+    # The modes of the tree from prepare.yml show that the converge changed 2750 and 0640 to 2770 and
+    # 0660.
     - name: "notes_trees_and_clients: each inherits the tree group; directories 2770, the notes 0660"
       ansible.builtin.assert:
         that:
-          - item.stat.pw_name == ('ratatoskr-notes' if '/written' in item.item else 'root' if '0b9e2f4a' in item.item else 'ratatoskr-notes-sync')
-          - item.stat.gr_name == ('root' if '0b9e2f4a' in item.item else 'ratatoskr-notes-trees')
+          - item.stat.pw_name == ('ratatoskr-notes' if '/written' in item.item else 'ratatoskr-notes-sync')
+          - item.stat.gr_name == 'ratatoskr-notes-trees'
           - item.stat.mode == ('2770' if item.stat.isdir else '0660')
         fail_msg: "{{ item.item }}: {{ item.stat.pw_name }}:{{ item.stat.gr_name }} {{ item.stat.mode }}"
         quiet: true
@@ -646,13 +647,45 @@
           [ -z "$wrong" ]
       changed_when: false
 
-    - name: "notes_trees_and_clients: remove the fixture trees"
+    - name: "notes_trees_and_clients: the links of the old tree, their root-owned targets and the migration marker"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: notes_tree_links
+      loop:
+        - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder/file-link.md
+        - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder-link
+        - /etc/ratatoskr-molecule-canary
+        - /etc/ratatoskr-molecule-canary.d
+        - /mnt/nvme/ratatoskr/notes/.trees-migrated-obs024-7.11
+
+    - name: "notes_trees_and_clients: the migration followed no link; the canaries keep root 0600 and 0700; root owns the marker"
+      ansible.builtin.assert:
+        that:
+          - notes_tree_links.results[0].stat.islnk | default(false)
+          - notes_tree_links.results[1].stat.islnk | default(false)
+          - notes_tree_links.results[2].stat.pw_name == 'root'
+          - notes_tree_links.results[2].stat.gr_name == 'root'
+          - notes_tree_links.results[2].stat.mode == '0600'
+          - notes_tree_links.results[3].stat.pw_name == 'root'
+          - notes_tree_links.results[3].stat.gr_name == 'root'
+          - notes_tree_links.results[3].stat.mode == '0700'
+          - notes_tree_links.results[4].stat.isreg | default(false)
+          - notes_tree_links.results[4].stat.pw_name == 'root'
+          - notes_tree_links.results[4].stat.mode == '0644'
+        fail_msg: >-
+          {% for result in notes_tree_links.results %}{{ result.item }}:
+          {{ result.stat.pw_name | default('') }}:{{ result.stat.gr_name | default('') }}
+          {{ result.stat.mode | default('missing') }} link={{ result.stat.islnk | default('') }}; {% endfor %}
+
+    - name: "notes_trees_and_clients: remove the fixture trees and the canaries"
       ansible.builtin.file:
         path: "{{ item }}"
         state: absent
       loop:
         - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b
         - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f
+        - /etc/ratatoskr-molecule-canary
+        - /etc/ratatoskr-molecule-canary.d
 
     # --- notes_journal_namespace ---------------------------------------------------------------------
     # Owner decision A of 2026-10-14. The sync unit logs to the journal namespace

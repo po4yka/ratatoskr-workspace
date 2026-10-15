@@ -40,16 +40,32 @@
     label: "{{ item.path }}"
 
 # OBS-024, decision 7.11: the notes service writes into the working trees, and ob changes what it
-# wrote, so the tree group may write both. A tree made before the trees root became 2770 keeps the
-# modes of UMask=0027 (folders 2750, files 0640) until this task changes them. It prints each path
-# it changes, so a second run changes nothing.
-- name: The folders and files of an existing working tree, writable by the tree group
+# wrote, so the tree group may write both. The directory task above sets the trees root to 2770; that
+# is the one change root makes. A tree made before OBS-024 keeps the modes of UMask=0027 (folders
+# 2750, files 0640) until the one-time migration below changes them.
+#
+# ratatoskr-notes and ratatoskr-notes-sync can write inside the trees, so a link planted there could
+# lead a root chmod to any path of the host. The migration therefore runs as ratatoskr-notes-sync,
+# which made every tree before OBS-024, and never as root: find does not follow a link (-P), takes
+# only folders and regular files that ratatoskr-notes-sync owns, and chmod can change nothing that
+# ratatoskr-notes-sync does not own. A marker file in the parent of the trees root, which belongs to
+# root and which no service can write, records that the migration ran, so a later run leaves the
+# trees alone.
+- name: Whether the working trees were migrated to the modes of decision 7.11
+  ansible.builtin.stat:
+    path: "{{ ratatoskr_notes_trees_migration_marker }}"
+  register: ratatoskr_notes_trees_migrated
+
+- name: The folders and files of each tree made before OBS-024, writable by the tree group
   ansible.builtin.command:
     argv:
       - find
+      - -P
       - /mnt/nvme/ratatoskr/notes/trees
       - -mindepth
       - "1"
+      - -user
+      - ratatoskr-notes-sync
       - (
       - -type
       - d
@@ -60,8 +76,7 @@
       - chmod
       - "2770"
       - "{}"
-      - ;
-      - -print
+      - +
       - )
       - -o
       - (
@@ -74,11 +89,23 @@
       - chmod
       - "0660"
       - "{}"
-      - ;
-      - -print
+      - +
       - )
-  register: ratatoskr_notes_tree_modes
-  changed_when: ratatoskr_notes_tree_modes.stdout | length > 0
+  become: true
+  become_user: ratatoskr-notes-sync
+  vars:
+    ansible_pipelining: true
+  when: not ratatoskr_notes_trees_migrated.stat.exists
+  changed_when: true
+
+- name: The marker of the migration, which root owns and no service can write
+  ansible.builtin.copy:
+    dest: "{{ ratatoskr_notes_trees_migration_marker }}"
+    content: "OBS-024 decision 7.11: the trees made before it are 2770 and 0660.\n"
+    owner: root
+    group: root
+    mode: "0644"
+  when: not ratatoskr_notes_trees_migrated.stat.exists
 
 - name: The playbook's own host state
   ansible.builtin.file:

@@ -106,6 +106,10 @@ ratatoskr_directories:
   - {path: /mnt/nvme/backups/ratatoskr, owner: root, group: root, mode: "0700"}
   - {path: /var/lib/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-webhook, mode: "0750"}
 
+# The marker of the one-time migration of decision 7.11 (roles/host/tasks/main.yml). Its folder,
+# /mnt/nvme/ratatoskr/notes, belongs to root with mode 0755, so no service can write or remove it.
+ratatoskr_notes_trees_migration_marker: /mnt/nvme/ratatoskr/notes/.trees-migrated-obs024-7.11
+
 # Child files installed unchanged outside the units: (repository, path in it, destination).
 ratatoskr_host_files:
   - {repository: platform, src: deploy/systemd/ratatoskr.target, dest: /etc/systemd/system/ratatoskr.target, mode: "0644"}

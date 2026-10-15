@@ -95,7 +95,10 @@ units have `UMask=0007` (OBS-024, decision 7.11). So each tree gets that
 group, folders get mode 2770 and files mode 0660. `ratatoskr-notes` and `ratatoskr-notes-sync` are
 the members of the group: the notes service reads the trees through it and writes the delivered
 writes of the `sync` channel into them, and `ob` changes what the notes service wrote. The deploy
-role changes the folders and files of a tree made before OBS-024 (2750 and 0640) to 2770 and 0660.
+role migrates a tree made before OBS-024 (folders 2750, files 0640) once, to 2770 and 0660. The
+migration runs as `ratatoskr-notes-sync`, never as root, and follows no link, because both service
+users can write inside the trees; a root-owned marker file,
+`/mnt/nvme/ratatoskr/notes/.trees-migrated-obs024-7.11`, records that it ran.
 Each client state
 holds the Obsidian Sync token and the derived end-to-end key in plain text, so only
 `ratatoskr-notes-sync` may enter the clients root, and no other user is a member of its group. The

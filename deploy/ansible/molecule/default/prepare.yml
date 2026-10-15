@@ -131,15 +131,49 @@
       loop_control:
         label: "{{ item.name }}"
 
-    # A working tree as the host holds it from before OBS-024 (decision 7.11): made with
-    # UMask=0027, so a folder is 2750 and a file 0640. The converge must give the tree group write
-    # access to both; verify.yml (notes_trees_and_clients) checks the modes after the run.
-    - name: A working tree from before OBS-024, with the modes of UMask=0027
+    # A host as OBS-023 left it: ratatoskr-notes-sync and the tree group exist, the trees root is 2750,
+    # and a tree made with UMask=0027 has folders 2750 and files 0640 (decision 7.11 of OBS-024). ob
+    # wrote the tree as ratatoskr-notes-sync, which can also plant links in it: one to a root-owned
+    # file and one to a root-owned folder. The converge must give the tree group write access to the
+    # folders and files of the tree, and must not follow a link; verify.yml
+    # (notes_trees_and_clients) checks both. The playbook later manages this user and group like any
+    # other.
+    - name: The user and the group of the notes trees from before OBS-024
       ansible.builtin.shell:
         cmd: >-
-          umask 0027
-          && mkdir -p /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder
-          && printf legacy > /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder/note.md
-          && chmod 2750 /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f
-          /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder
+          groupadd --system ratatoskr-notes-trees
+          && useradd --system --user-group --no-create-home --shell /usr/sbin/nologin ratatoskr-notes-sync
+        creates: /mnt/nvme/ratatoskr/notes/trees
+
+    - name: Two root-owned canaries that a link in the tree points at
+      ansible.builtin.shell:
+        cmd: >-
+          printf canary > /etc/ratatoskr-molecule-canary
+          && chmod 0600 /etc/ratatoskr-molecule-canary
+          && mkdir -p /etc/ratatoskr-molecule-canary.d
+          && chmod 0700 /etc/ratatoskr-molecule-canary.d
+        creates: /etc/ratatoskr-molecule-canary
+
+    - name: The trees root from before OBS-024
+      ansible.builtin.shell:
+        cmd: >-
+          install -d -m 0755 /mnt/nvme/ratatoskr /mnt/nvme/ratatoskr/notes
+          && install -d -o ratatoskr-notes-sync -g ratatoskr-notes-trees -m 2750 /mnt/nvme/ratatoskr/notes/trees
+        creates: /mnt/nvme/ratatoskr/notes/trees
+
+    - name: A working tree from before OBS-024, written by ratatoskr-notes-sync with umask 0027, with two links
+      ansible.builtin.command:
+        argv:
+          - setpriv
+          - --reuid=ratatoskr-notes-sync
+          - --regid=ratatoskr-notes-sync
+          - --init-groups
+          - /bin/sh
+          - -c
+          - >-
+            umask 0027
+            && mkdir -p /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder
+            && printf legacy > /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder/note.md
+            && ln -s /etc/ratatoskr-molecule-canary /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder/file-link.md
+            && ln -s /etc/ratatoskr-molecule-canary.d /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder-link
         creates: /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f
