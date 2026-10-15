@@ -96,9 +96,8 @@ stream. Its ack-wait test, `service_ack_wait_constants_agree_with_edges_durable_
 CONTRACTS S04 fixes (120 for the four Knowledge ingest durables, 30 for the recap and the
 notification durable). `edge_provisions_the_sites_durables_with_their_contract_ack_waits` compares
 Edge's rows of the four sites durables with the waits that SITE-025 fixes (300, 120, 30 and 30
-seconds), because the sites service states no constant yet; `OWNER_PENDING` lets those four rows
-wait for their consumer in the sites service, and the owner test fails when the consumer names a row
-that is still listed. It cannot see a constant that is computed, a wait set through a differently
+seconds), because the sites service states the waits as arguments of one table, not as one constant
+for each durable; the owner test finds the four names and filters in the sites consumer. It cannot see a constant that is computed, a wait set through a differently
 named builder, or a service that ignores its own constant; a mutation test changes one literal on each
 side. It failed first for Telegram, which stated no constant before round 4.
 `schema_in_place.rs` (round 4) fails when a tracked `schema.sql` of any repository holds an

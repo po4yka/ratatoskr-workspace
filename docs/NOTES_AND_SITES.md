@@ -328,6 +328,10 @@ SITE-027 adds `platform_site_events`.
   `sites.slug_collision`, `sites.slug_invalid` (proposed: a frontmatter slug outside the slug
   grammar), `sites.page_too_large` (a rendered page over 1 MiB), `sites.blob_length` (a note blob
   over the 64 MiB bound or not of its stated length), `sites.publication_suspended`,
+  `sites.publication_not_found`, `sites.manifest_invalid`, `sites.notes_index_unavailable` (the
+  notes index route cannot be read, so a build cannot start), `sites.request.forbidden` (a request
+  without the owner claim outside `content/`), `sites.request.method_not_allowed`,
+  `sites.route_not_found`, `sites.service_unavailable`,
   `platform.site.manifest_digest_stale`,
   `platform.site.hostname_taken` and `edge.capability_not_granted`.
 - Registered device kinds: `obsidian_plugin` and `site_deployer`.

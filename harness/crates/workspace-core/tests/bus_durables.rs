@@ -230,20 +230,9 @@ const DOMAIN: [Durable; 30] = [
     ),
 ];
 
-/// Durables that Platform provisions before their owner reads them. SITE-025 pins Platform with
-/// the four sites durables while the sites service has no consumer yet (its groups 5 and 6 of the
-/// sites change add them). The owner test skips a row here and reports it as stale when the owner
-/// names both its name and its filter.
-const OWNER_PENDING: [&str; 4] = [
-    "ratatoskr_sites_release_builds",
-    "ratatoskr_sites_note_changes",
-    "ratatoskr_sites_vault_disconnections",
-    "ratatoskr_sites_approvals",
-];
-
 /// `(durable, ack wait in seconds)` that the site-publications delta of `fleet-bus-topology` fixes
-/// for the sites durables. Edge's table is checked against it directly while the sites service
-/// states no constant of its own.
+/// for the sites durables. Edge's table is checked against it directly, because the sites service
+/// states the waits as arguments of one table, not as one constant for each durable.
 const SITES_ACK_WAITS: [(&str, u64); 4] = [
     ("ratatoskr_sites_release_builds", 300),
     ("ratatoskr_sites_note_changes", 120),
@@ -645,18 +634,7 @@ fn every_owner_hard_codes_its_durable_name_and_filter() {
             )
         })
         .collect::<BTreeMap<_, _>>();
-    let (pending, checked): (Vec<Durable>, Vec<Durable>) = all_durables()
-        .into_iter()
-        .partition(|durable| OWNER_PENDING.contains(&durable.name));
-    let mut problems = owner_problems(&sources, &checked);
-    for durable in pending {
-        if owner_problems(&sources, &[durable]).is_empty() {
-            problems.push(format!(
-                "`{}` names `{}` and its filter now; remove it from OWNER_PENDING",
-                durable.owner, durable.name
-            ));
-        }
-    }
+    let problems = owner_problems(&sources, &all_durables());
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 

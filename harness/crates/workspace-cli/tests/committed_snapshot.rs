@@ -89,7 +89,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "sites",
         "repos/sites",
-        "d6aeab28d0f85c8617f77c2bc816b6fdc1e4b772",
+        "a4587f72cdc52db127520afe802660af8963366f",
     ),
     (
         "telegram",
