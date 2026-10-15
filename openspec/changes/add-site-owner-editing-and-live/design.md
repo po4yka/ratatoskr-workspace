@@ -254,6 +254,24 @@ user as the only tenant authority and the same bounds. Any tenant selector is re
 - [Clients behind one address share the per-client bound] → Accepted; the per-site bound is the real
   protection, and the per-client bound only stops one client from taking it all.
 
+Known limits that the review of Platform groups 5 to 8 accepted (Platform `da2242b`):
+
+- [Edge reads the upload of a site edit into memory] → Up to 16 MiB per request (one chunk of the
+  notes transfer contract). The per-site and per-client bounds limit how many such reads run at once.
+- [The owner shares the public rate bucket of the site] → An owner request from a site, an owner
+  stream included, takes a token of the public bucket of that site, so heavy anonymous traffic can
+  slow the owner. Accepted: a separate bucket would need a second key per site.
+- [`content_blob` is not checked to be the blob of this upload] → Edge checks the `BlobRef` and its
+  digest, not that the same request uploaded it. The same digest means the same bytes, so the write
+  is the same.
+- [The manifest is read on every content request] → Edge has no manifest cache, so each content
+  request of a site costs one read of the sites service (an owner decision: a cache could serve a
+  withdrawn manifest).
+- [A late event never reaches a live stream] → An event older than 24 hours when Edge settles it is
+  not appended to the buffer of a live stream. A client sees it through `resync` or a new read.
+- [An open stream is not session activity] → An owner stream does not keep its session alive: the
+  stream ends at the earlier of the session expiry and 1 hour after the last use of the session.
+
 ## Migration Plan
 
 There is no migration. The Platform schema definition is edited in place. Deploy order follows the

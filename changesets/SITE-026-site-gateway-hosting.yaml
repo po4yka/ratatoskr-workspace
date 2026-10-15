@@ -30,7 +30,7 @@ repositories:
     branch: main@943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2
     base: 3a47f0f8a70203f74e432f20ade4c8bcd2fba034
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/platform at 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 (tasks 8.1 to 8.8 with 8.2a and 8.2b; the last two commits are SITE-025 tasks 6.16 and 6.17), CI green (7 of 7 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. The workspace sets RATATOSKR__SITES__GATEWAY_PEER=127.0.0.83 in the rendered edge.conf (services.json, Molecule edge_sites_gateway_peer), and edge_upstreams.rs binds the SITES route to sites
+    pin: repos/platform at 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 for tasks 8.1 to 8.8; the review fixes 8.9 and 8.10 (3680a05, 2259ff9) are not pinned yet, because Platform 1b65f2bdc690eb934ef4434c5cb19e00f3f67351 is its pushed main, CI green (7 of 7 check runs), and its SITES stanza allows evt.sites.draft.changed.v1, which the copy in ratatoskr-sites (deploy/nats/identity.conf, SITE-027 task 9.6) at the pinned f0066a2 does not, so harness bus_acl.rs::every_service_fragment_equals_its_platform_stanza fails until Platform and sites move in one step (tasks 8.1 to 8.8 with 8.2a and 8.2b; the last two commits are SITE-025 tasks 6.16 and 6.17), CI green (7 of 7 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. The workspace sets RATATOSKR__SITES__GATEWAY_PEER=127.0.0.83 in the rendered edge.conf (services.json, Molecule edge_sites_gateway_peer), and edge_upstreams.rs binds the SITES route to sites
     commits:
       - "dce004475c3b0846cf853c0fe03980655d717291 test(identity): require one site for a site_deployer pairing"
       - "d14a96fbdb71c3b08091e555f77af44118574a53 feat(identity): pair a site_deployer device for one site"
@@ -44,12 +44,36 @@ repositories:
       - "dd76a107d98cefd6cf60146161c41c796c2b2e25 feat(public-api): trust the client address header from the sites gateway only"
       - "302279d48d644d95b3dce30d14b2670a4188d818 test(public-api): require sites.manage where Edge routes sites"
       - "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 feat(core): report sites.manage where Edge routes sites"
+      - "3680a052b7c7c810c8863fa4494596d264232e04 test(platform): require the low fixes of the review of SITE-026"
+      - "2259ff92971421ed41d45e5a7d47813ee17aebe1 fix(platform): close the low findings of the review of SITE-026"
   - id: ratatoskr-site-sdk
     role: reusable-bundle-workflow-login-and-deploy-commands
-    branch: site-026/bundle-workflow-and-deploy
+    branch: main@f29520de29724e63bea55a140671af40b2b2ee42
+    base: a3a9215f6cb33163c15840f4c1b75a6e32b3f24f
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/site-sdk at f29520de29724e63bea55a140671af40b2b2ee42 (tasks 9.1 to 9.11, group 9 complete with the review fixes), CI green (4 of 4 check runs). 3b10833 vendors the bundle manifest and the deploy answers of ratatoskr-contracts at 2c72602. Open low items of the review are that the build job of reusable-site-bundle.yml holds id-token write and packages write, and that ratatoskr-site deploy has no --source-ref. No repository binds a bundle to a site (open decision of the owner, design Open Questions). The range also holds SITE-027 group 10, recorded in that changeset. A client ships no systemd unit
+    commits:
+      - "3b1083324857e444b9e8c2e6f762ab51491ec82f build(contracts): vendor the bundle manifest and the deploy answers"
+      - "acf05faef83b38813c5d885e3795b456ac8ab33f test(bundle): the manifest marks hashed files and names GITHUB_SHA"
+      - "56a130b5e2b9b215ed6faaf5c3c6eaa19822c7dc test(bundle): a published tag never moves"
+      - "bf08d2abfb32adf28db176e1e7f9d679f15916c8 feat(bundle): publish an attested bundle per commit"
+      - "1d0a5eaf86642b31f1809637b1a055d5fe29a976 test(deploy): verify before any request, keep the secret out of the repo"
+      - "e7725a3ddbeb2cb8f02eb14aa040711a3ae04164 feat(deploy): pair a deployer device and deploy a verified bundle"
+      - "e4810b18c5b846439fec8a56361552f0caccac47 test(bundle): stop when oras cannot tell whether the tag exists"
+      - "ae56662ae4c4a2d028378ba0204aa088bf4ed398 fix(bundle): push only when oras answers that the tag is not found"
+      - "02896a8f1934fdf0d0d41b4f9b7ce2048c0bd800 test: pin the low findings of the site-sdk review"
+      - "7cab01b8dffa9e4c193a9cb321ff0741e8696d27 fix: close the low findings of the site-sdk review"
+      - "6f460687f58e56057f67dbf60e959306b16f2272 test(bundle): \"not found\" in another oras message is not an absent tag"
+      - "f29520de29724e63bea55a140671af40b2b2ee42 fix(bundle): count only the oras not-found forms as an absent tag"
   - id: ratatoskr-workspace
     role: planning-records-then-pins-enrolment-ingress-block-port-and-storage-rows-docs
     branch: main
+    pull_requests: none, local commits on main, not pushed by the writer
+    commits:
+      - "6ba5903c03d53b4520974841fe95e560e4bf62df build: pin notes at e16068a and record SITE-027 group 4"
+      - "d163f9f10dadbb53315dce00dbb3757fa17fe743 build: pin site-sdk at f29520d and record SITE-027 group 10, SITE-026 group 9"
+      - "48c5b2ead2b826a2b199228653ffba7e6db54ca0 build: pin web at 0f5f8c8 and record SITE-027 group 11"
+      - "392f58cbe9c6b6b9b3be0b53697700840f2a8a16 fix(integration): forbid framing of the web client pages"
 dependency_order:
   - ratatoskr-contracts   # first: every repository below reads sites/bundle-manifest.v1
   - ratatoskr-sites

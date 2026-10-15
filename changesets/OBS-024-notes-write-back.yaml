@@ -34,7 +34,7 @@ repositories:
     branch: main@496e9c1d78269bb62856e545e230898f3584e9ef
     base: 810edd8ca76376eb4df9555bfed2a637052c55dd
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/notes at 496e9c1d78269bb62856e545e230898f3584e9ef (tasks 4.1 to 7.33 at f394346, which advanced from 810edd8, the OBS-023 pin; 7.34, 7.35, 8.1 to 8.28 and 9.1 after it, with SITE-025 4.1, 4.2, 4.5 and the notes half of 4.3 and 4.4 between them, recorded in that changeset), CI green (6 of 6 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 like the rest of the fleet (XR-021 contracts_sha). 7.32 and 7.33 replace the one sync unit, which read its mode from a file that the notes service wrote, with two fixed units, ratatoskr-notes-sync-pull@.service and ratatoskr-notes-sync-bidi@.service, so release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program passes and services.json lists four template units. The pin brings the host change of decision 7.11, in which ratatoskr-notes-sync joins ratatoskr-notes-trees, the trees root is 2770 and the deploy role changes the folders and files of an existing tree to 2770 and 0660; the full Molecule scenario passes. Group 8 adds the rename group with its link rewrites on every channel, the 14 fixtures recorded with Obsidian 1.14.4, and the code notes.write.internal (not retryable) for a write command that panicked; schema.sql (edited in place) adds notes.writes.group_id, notes.writes.local_hash, notes.conflicts.stale_paths and the partial index writes_delivering_idx. No deploy file changes after f394346. Still open is 6.7 (spike 3.3)
+    pin: repos/notes at e16068aed6d9a33acb4eaf90485d00b3a2ec2331 (the OBS-024 work ends at 496e9c1, and the later commits are SITE-027 group 4, recorded in that changeset; tasks 4.1 to 7.33 at f394346, which advanced from 810edd8, the OBS-023 pin; 7.34, 7.35, 8.1 to 8.28 and 9.1 after it, with SITE-025 4.1, 4.2, 4.5 and the notes half of 4.3 and 4.4 between them, recorded in that changeset), CI green (6 of 6 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 like the rest of the fleet (XR-021 contracts_sha). 7.32 and 7.33 replace the one sync unit, which read its mode from a file that the notes service wrote, with two fixed units, ratatoskr-notes-sync-pull@.service and ratatoskr-notes-sync-bidi@.service, so release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program passes and services.json lists four template units. The pin brings the host change of decision 7.11, in which ratatoskr-notes-sync joins ratatoskr-notes-trees, the trees root is 2770 and the deploy role changes the folders and files of an existing tree to 2770 and 0660; the full Molecule scenario passes. Group 8 adds the rename group with its link rewrites on every channel, the 14 fixtures recorded with Obsidian 1.14.4, and the code notes.write.internal (not retryable) for a write command that panicked; schema.sql (edited in place) adds notes.writes.group_id, notes.writes.local_hash, notes.conflicts.stale_paths and the partial index writes_delivering_idx. No deploy file changes after f394346. Still open is 6.7 (spike 3.3)
     commits:
       - "a49745a731131df791831b66c524b6c232570173 build(notes): pin the contracts at 76a0c35"
       - "b75d957b8ed8e0045df102f01e4933894c2e2474 test(notes): the write consumer verifies the durable of Edge"
@@ -226,10 +226,10 @@ repositories:
       - "573fedbcd67b5595026b83ca8f0e23c06290204a fix: write the result file 0600 and keep a result on retryable answers"
   - id: ratatoskr-web
     role: editor-write-mode-and-conflict-view
-    branch: main@4972d4348d829f0cc9a32c4a606e53d31d4d80cd
+    branch: main@0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f
     base: 05764b18628d65ee1997d09aa6f703719958b755
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/clients/web at 4972d4348d829f0cc9a32c4a606e53d31d4d80cd (tasks 13.1 to 13.6 at f3c7320, and 13.7 and 13.8 at 6cffab0 and 0b0ee6f; the range f3c7320..4972d43 also holds SITE-025 group 8, recorded in that changeset), CI green (4 of 4 check runs). A client ships no systemd unit
+    pin: repos/clients/web at 0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f (tasks 13.1 to 13.6 at f3c7320, 13.7 and 13.8 at 6cffab0 and 0b0ee6f, and the follow-ups 13.9 to 13.14 between 4972d43 and 0f5f8c8, whose other commits are SITE-027 group 11 and SITE-025 8.7 to 8.10; the range f3c7320..4972d43 also holds SITE-025 group 8, recorded in that changeset), CI green (4 of 4 check runs). A client ships no systemd unit
     commits:
       - "4ca9c18108207cb86ec0f4879ac6ffb0a4c54f73 test(notes): edit a note, switch write mode, resolve a conflict"
       - "5e194941a7f0a91feefd9da0c5f2cc95e32bb764 feat(notes): edit a note, switch write mode, resolve a conflict"
@@ -240,6 +240,12 @@ repositories:
       - "f3c7320b6b255ae6481a75e82cf2e8e8d592be96 fix(notes): keep Save disabled while a write runs, and report its end once"
       - "6cffab0da1e21f4873936e0fed52c22991ab9e17 test(notes): the write progress names the delivery stages and codes"
       - "0b0ee6f1d8f2b9ecc269cdd964855a7c1f3449c7 fix(notes): name the delivery stages, the new codes and the warning"
+      - "721e751ea1fc79a87c16565837469420e744f374 test(notes): a partly applied write group has its own sentence"
+      - "408189874d22ca74c2158109a8d4658ba929ebf4 fix(notes): name a write group that the vault applied only in part"
+      - "864d5c735793b120e4ab71b5bb3e4e7e42acdae8 test(notes): the conflict view lists the stale paths of a write group"
+      - "448b74b1e13211178bbacff8eb3182eb6854ca6c feat(notes): list the files of a write group in its conflict"
+      - "534b5f849dba58d1cd24ec45ce94215540f19f73 test(notes): the reason of a conflict waits for its operation"
+      - "8b6edafcca08d68e772d2f9cd243da18e3aaee80 fix(notes): show the reason of a conflict when its operation answers"
   - id: ratatoskr-workspace
     role: harness-checks-pins-integration-profile-and-documentation
     branch: main
@@ -258,6 +264,11 @@ repositories:
       - "842caa0f9c34b7c84e00e95893614e7903c08498 build: pin notes at 496e9c1 and record OBS-024 groups 8 and 9"
       - "973965bee2c1681a98753a4d8ecbdc6674e50709 build: pin the obsidian plugin at 36bdb20 and record OBS-024 11.18 to 11.23"
       - "204d602026acaf89bd01a379312e57e52df6b857 build: pin the export agent at 573fedb and record OBS-024 12.15 to 12.22"
+      - "9e764b4bb88560f49ff6eb1a1b156e1c44291a39 docs(openspec): own no deferred contracts task, and state the link form"
+      - "6ba5903c03d53b4520974841fe95e560e4bf62df build: pin notes at e16068a and record SITE-027 group 4"
+      - "d163f9f10dadbb53315dce00dbb3757fa17fe743 build: pin site-sdk at f29520d and record SITE-027 group 10, SITE-026 group 9"
+      - "48c5b2ead2b826a2b199228653ffba7e6db54ca0 build: pin web at 0f5f8c8 and record SITE-027 group 11"
+      - "392f58cbe9c6b6b9b3be0b53697700840f2a8a16 fix(integration): forbid framing of the web client pages"
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-notes      # ships with write mode off; its consumer waits for the durable Edge creates

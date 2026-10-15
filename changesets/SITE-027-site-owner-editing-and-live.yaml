@@ -1,5 +1,5 @@
 id: SITE-027
-state: planned
+state: implementing
 goal: Let the owner of a site sign in on the site's own origin with a session valid only for that site, edit the site's source notes through the notes write path, request releases, receive live events, and read the owner's library and knowledge search, all bounded by the effective capability set that SITE-025 defines.
 openspec_change: add-site-owner-editing-and-live
 depends_on:
@@ -22,10 +22,69 @@ repositories:
       - "81be23a391b08640d40caa5c8809c5ff7beb9a43 chore: bless the sites-contracts API baseline for the deploy responses and site events"
   - id: ratatoskr-notes
     role: site-owner-blob-upload-registration-only
-    branch: site-027/site-owner-uploads
+    branch: main@e16068aed6d9a33acb4eaf90485d00b3a2ec2331
+    base: 496e9c1d78269bb62856e545e230898f3584e9ef
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/notes at e16068aed6d9a33acb4eaf90485d00b3a2ec2331 (tasks 4.1 to 4.11, group 4 complete), CI green (5 of 5 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. The blob routes take a site_owner claim only with its origin site:<id>; DELETE /v1/notes/connections/{id}/blobs/{token} closes an upload session; a guard serves a site_owner claim only on the four upload routes and the conflict read; an unknown session kind is unauthenticated. Of 4.1, the two named tests passed at once; the RED that failed is site_owner_without_site_origin_is_refused
+    commits:
+      - "d85c2b4d88c53a4ad13c2d0227af959f6f8ea0c0 test(notes): a site owner upload must name its site"
+      - "c271793651597c96fbd87fd8f6475707bf55118f feat(notes): accept a site owner upload only with its site origin"
+      - "bdb3fe115c62b174d98a589f45eb8f7383c93f01 test(notes): an open upload session can be closed"
+      - "236d4af38ea3567df562ddab801f8d6786784e18 feat(notes): close an open upload session"
+      - "e9a3080b7d38dcd7feb1cef88fd0df069ba4092a test(notes): a site owner claim reaches only uploads and conflicts"
+      - "db13e98294b411e9bd3a8c5eb158e1f4281b68ab feat(notes): serve a site owner claim only on uploads and conflicts"
+      - "b5dcd0fceee6eb44dc71bf8913b5e93e868c4522 refactor(notes): guard every domain route by construction"
+      - "5e4553e9d7b9d3d176247f5bc712bf3ba1c6c17b test(notes): an unknown session kind is unauthenticated"
+      - "cb55e0d892600ca83f70b9fdae86abfc92ae521d fix(notes): refuse a session kind that Platform does not mint"
+      - "b6be1cd1c46553f7ba2b851f9eb1e6b74c77a600 test(notes): a chunk that waited for a closed session finds no session"
+      - "e16068aed6d9a33acb4eaf90485d00b3a2ec2331 test(notes): a served site owner row needs a code of its handler"
   - id: ratatoskr-platform
     role: site-owner-session-route-classes-capability-check-event-stream-routes-and-route-bodies
-    branch: site-027/site-owner-edge
+    branch: main@1b65f2bdc690eb934ef4434c5cb19e00f3f67351
+    base: 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: not pinned yet, because Platform 1b65f2bdc690eb934ef4434c5cb19e00f3f67351 is its pushed main, CI green (7 of 7 check runs), and its SITES stanza allows evt.sites.draft.changed.v1, which the copy in ratatoskr-sites (deploy/nats/identity.conf, SITE-027 task 9.6) at the pinned f0066a2 does not, so harness bus_acl.rs::every_service_fragment_equals_its_platform_stanza fails until Platform and sites move in one step. Tasks 5.1 to 8.7 and the review fixes 8.8 to 8.19 end at da2242b, and 1b65f2b makes the new tests read an injected clock (no task). The range also holds SITE-026 8.9 and 8.10 and the Platform half of SITE-025 4.3 and 4.4, recorded in those changesets. Review item L8 is that the RED of 5.3 was amended in 652b1f2, its GREEN, and the history keeps both commits. The known limits of the review are in the design of add-site-owner-editing-and-live
+    commits:
+      - "f5777e7d8f2d5c0a1ccb045b41399c64783f6588 test(identity): require single-use PKCE site sign-in codes"
+      - "17de3f848d794cbfdd5be28e6d2411bf95a27171 feat(identity): issue and redeem site sign-in codes"
+      - "9e22c1462caeac3dc20e15f5b4c972d52a2f0573 test(identity): require the site_owner session rules"
+      - "652b1f26f3e043cc005b103a6df8a9293525686e feat(identity): add the site_owner session kind and its lifetime"
+      - "36d63c989a7c8643f032bec61ab149e463513a5a test(public-api): require the site sign-in routes and the site cookie"
+      - "5196f8df39720fe7d88e54f10370762f75a04b75 feat(public-api): serve the site sign-in and the site cookie"
+      - "922a7359fb4ac0914702ebf3de65e7a941c5aba9 test(public-api): require site sessions in the list and revoke-by-site"
+      - "b5b39590b5e81c827fee07f8eec28e9e4c6fea27 feat(public-api): list site sessions and revoke them by site"
+      - "3413f8ff7e361e34159652228805c3b24c249bfc test(public-api): require the site-origin rows of the site owner"
+      - "40c1c3bbca68b7be79e2a978e1685576a042c020 feat(public-api): add the site-origin rows of the site owner"
+      - "7bebc4a3741452446478eb0d2210fe7f2d66284a test(public-api): require the site owner guard of the release class"
+      - "fb9aa5a187e65161a6c78cf173f0618d5890359a feat(public-api): add the site owner guard of the release class"
+      - "69380796d3d88ee77caf09ceb96e936a9eacb650 test(public-api): require the capability check of site-origin routes"
+      - "c936fe8a053c381b0b88dc7ba44b86771012a763 feat(public-api): check each site-origin route against the effective set"
+      - "eaa287eff2bf29fa9bae22cc16073ca0cd0c1b47 test(public-api): require the site event stream"
+      - "dfa32b25cad6aea7c578fc9ade2ab54ad8e16a3d feat(public-api): serve the site event stream"
+      - "8432bd42bcedf78d59415ed3aa104b6d361ce188 test(eventing): require Edge's durable of the site event stream"
+      - "347d4dc2934109d83b1642818b13d90b9510e676 feat(eventing): add platform_site_events to Edge's own consumers"
+      - "ba601dc7f603eb960ce247bf0df3108894e4229b test(eventing): require that SITES may publish the draft change"
+      - "3f28e068e5ea0bcea6d12b997b8a01ad04a44bec feat(deploy): allow SITES to publish the draft change"
+      - "e3fbffe61903fa1e40bdc8c6055e57900b354022 test(public-api): require the bodies of the site routes in the description"
+      - "d2e161e3de31ad5fb89edf752bbac5bfa01f1e62 feat(public-api): describe the site routes and their bodies"
+      - "d6d52433733129107d7330db8ad741237bf54f88 test(public-api): require owner editing from a site"
+      - "b04cb19378e2ca2a6c6b109856dd230c0b7f27db feat(public-api): serve owner editing from a site"
+      - "5f0895e6068230983cbadb7413cdee33dffadd6c test(public-api): require the owner's library from a site"
+      - "b2265ae1322ade310e9c9b2f72262e848ecc0833 feat(public-api): serve the owner's library from a site"
+      - "66252825241bae63f15de1c3c4c2834ec43d3d40 docs: list the routes of the site owner session"
+      - "fdeae67ad4720d33d0261189fb03e10686b67815 test(public-api): require the edit row in the edit's transaction"
+      - "f6ba86e52c652461be11f71bd6468e5681b35358 fix(public-api): write the edit row in the edit's transaction"
+      - "f71ee79537fc93b180db2af7c8198959df599061 test(public-api): require the public rate limit on the site stream"
+      - "deeee1438a4f2b3fcead637c38099fb9b7e606af fix(public-api): apply the public rate limit to the site stream"
+      - "e0a059a3be4516691e9d9b56ce83a2d4595d7767 test(public-api): require that owner streams end with their session"
+      - "e7426b3df46e98fda3df7460cbe3c6fea7b714b5 fix(public-api): end owner streams with their session"
+      - "e7a1488110fcbd0222c3f9a3854122e6c96607d9 test(platform): require the low fixes of the review of SITE-027"
+      - "b7d1f1ec4992c4f679f7a1b97d3f9556e0e856b4 fix(platform): close the low findings of the review of SITE-027"
+      - "38727652400a9a0df5964d52b91684d0cf9097e4 test(public-api): require the owner check under event traffic"
+      - "50227cddd325a95674d8b7d0c4518a33022367c2 fix(public-api): check owner streams whatever events arrive"
+      - "e48b8b52dedafa7db880b49b4ac6fb9948b61ee6 test(platform): require the second low fixes of the review of SITE-027"
+      - "da2242b1f04965983c008afee2621fc30baebda6 fix(platform): close the second low findings of the review of SITE-027"
+      - "1b65f2bdc690eb934ef4434c5cb19e00f3f67351 test(public-api): read an injected clock or say why not"
   - id: ratatoskr-sites
     role: scope-query-draft-read-anonymous-claim-refusal-and-draft-changed-producer
     branch: site-027/site-owner-drafts
@@ -34,13 +93,59 @@ repositories:
     branch: site-027/site-owner-verification
   - id: ratatoskr-site-sdk
     role: owner-sign-in-reserved-callback-sse-client-editing-helpers
-    branch: site-027/site-owner-sdk
+    branch: main@f29520de29724e63bea55a140671af40b2b2ee42
+    base: a3a9215f6cb33163c15840f4c1b75a6e32b3f24f
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/site-sdk at f29520de29724e63bea55a140671af40b2b2ee42 (tasks 10.1 to 10.10, group 10 complete), CI green (4 of 4 check runs). 3d40b3d vendors openapi/openapi.json of ratatoskr-platform as openapi/platform.json, byte-exact from e7a1488, the same digest as that file at 1b65f2b. The range also holds SITE-026 group 9, recorded in that changeset. A client ships no systemd unit
+    commits:
+      - "0da571b4302d5daa6125815675dd5fafc1aa6fcf docs(openspec): plan SITE-027 group 10 and SITE-026 group 9"
+      - "3d40b3db8f4b16df462ac5ea50909f15002e0abe build(client): vendor the Platform description and the site event contract"
+      - "ce092ffb438bab858ad1f6fbd2710ba4139ac169 test(owner): keep the verifier on the site and the code out of the URL"
+      - "16b84bce2326c3b37be9c5fb53fdf32db3022cab feat(owner): sign in the owner of a site with PKCE"
+      - "8cd75231d94ae78fb298595de70735074b3ab47f test(live): resume the site event stream and refetch on resync"
+      - "4ce25a117d89bc007cb25f52a382f44c044bc221 feat(live): follow the site event stream and resume after a break"
+      - "2bb40c75fd474638cf03dd5696ec392af5668887 test(owner): upload the content first and post only the BlobRef"
+      - "524a4c708ff67deff1265394c0e7ae979a92340e feat(owner): edit a note from the site through a blob"
+      - "0f2fd3e8446f5fb7404a69db7e7aa946847d8bb7 test(owner): a return path with a control character leaves the site"
+      - "25bd601db4d81b31136da03567d5540634d3c53d fix(owner): keep the return path of a sign-in on the site"
+      - "02896a8f1934fdf0d0d41b4f9b7ce2048c0bd800 test: pin the low findings of the site-sdk review"
+      - "7cab01b8dffa9e4c193a9cb321ff0741e8696d27 fix: close the low findings of the site-sdk review"
   - id: ratatoskr-web
     role: consent-page-and-session-list
-    branch: site-027/site-owner-web
+    branch: main@0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f
+    base: 4972d4348d829f0cc9a32c4a606e53d31d4d80cd
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/web at 0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f (tasks 11.1 to 11.16, group 11 complete with the review fixes), CI green (4 of 4 check runs). The API types are generated from the Platform description of e7a1488 (573e7fe). The range also holds OBS-024 13.9 to 13.14 and SITE-025 8.7 to 8.10, recorded in those changesets. A client ships no systemd unit
+    commits:
+      - "2740981333dc2289b636bda9437fb000e9bae96d docs(openspec): record the site sign-in, the site sessions and four follow-ups"
+      - "573e7fe984294c5e33b95a652478dc4c5525475f build(api): generate the API types from Platform e7a1488"
+      - "acce0ce2ceece47666ac40cf8bbebd2d63427446 test(sites): the consent page of a site sign-in"
+      - "7eec74a45649026ab97f0520b4f4538bc488ca04 feat(sites): approve a sign-in of the owner on a site"
+      - "43b7d37ee809b18a69e7b3651ca066158335fae2 test(sessions): the site sessions are grouped by site and can end"
+      - "c2b2c91f3ff6b185865164195e2e939bf0a93969 feat(sessions): list the sessions and end the sessions of a site"
+      - "aa11981a249b82e44f2d2e7eda513a3a1d3c4666 docs(openspec): record the fixes of the review of the site sign-in"
+      - "e1c5070e8dfb1745b337a56f83f67b1fdfecf28c test(sites): no sign-in while a new manifest waits for approval"
+      - "c09c9f60a46c329f7553b922bd48eadd1d1262e6 fix(sites): offer no sign-in while a new manifest waits for approval"
+      - "4aa79f45d95313579e082b624c602ff9efdd9d50 test(sites): the consent page follows only the callback page of the site"
+      - "c4d1b713fc169ee51d3fda8664675535d2ec70fd fix(sites): follow only the parsed callback page of the approved host"
+      - "239650239936f967d889ab064c337ed8326dd951 refactor(sites): name the callback check isSignInCallback"
+      - "dfa6c4cab316819d9d14f63bb3c1fa9ab071a1ea test(sites): the approval link stays when the manifest read fails"
+      - "2968c1cfa22460df2aca4e64bd75e0a69795a676 fix(sites): link to the approval even when the manifest read fails"
+      - "81d6106fc2d96b6f88c8b55635323bb73f8f80bb test(sessions): a revocation keeps the pages, counts, and waits"
+      - "8ba365223aae2ad40bb8dae6acc842b166039d47 fix(sessions): keep the loaded pages after a revocation, and wait"
+      - "e3a652a3f263011ea4b97e44c01e817bb05f09ec docs(capabilities): state that Platform reports sites.manage"
+      - "dbc4a3ddd1d295d586f82d17975a9e261b222f93 docs(openspec): the consent page follows the reported sites.manage"
+      - "ddebf1bfc9df3af2de3569aeae20d5e319c787ac test(sessions): own pending per site, focus after a group, and not-found"
+      - "0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f fix(sessions): pend per site, focus the outcome, and drop unknown ones"
   - id: ratatoskr-workspace
     role: pins-composed-profile-and-documentation
     branch: main
+    pull_requests: none, local commits on main, not pushed by the writer
+    commits:
+      - "6ba5903c03d53b4520974841fe95e560e4bf62df build: pin notes at e16068a and record SITE-027 group 4"
+      - "d163f9f10dadbb53315dce00dbb3757fa17fe743 build: pin site-sdk at f29520d and record SITE-027 group 10, SITE-026 group 9"
+      - "48c5b2ead2b826a2b199228653ffba7e6db54ca0 build: pin web at 0f5f8c8 and record SITE-027 group 11"
+      - "392f58cbe9c6b6b9b3be0b53697700840f2a8a16 fix(integration): forbid framing of the web client pages"
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-notes       # accepts the site_owner upload claim before Platform forwards one
@@ -97,13 +202,13 @@ rollback:
 verification:
   - contracts crates/sites-contracts/tests/site_event.rs; tools/contractsc/tests/live_message_types.rs
   - platform crates/public-api/tests/site_routes.rs (route_schemas_round_trip, edit_request_refuses_inline_content)
-  - notes services/notes/tests/device_channel.rs (site_owner_upload_registers_blob_only, site_owner_cannot_send_change_batches)
-  - platform crates/http/tests/site_route_classes.rs; crates/public-api/tests/sites_build_command.rs; site_edits.rs::site_upload_claim_is_not_relabelled_as_primary
+  - notes services/notes/tests/device_channel.rs (site_owner_upload_registers_blob_only, site_owner_cannot_send_change_batches, site_owner_without_site_origin_is_refused), device_uploads.rs and site_owner_routes.rs
+  - platform crates/public-api/tests/site_route_classes.rs; crates/public-api/tests/sites_build_command.rs; site_edits.rs::site_upload_claim_is_not_relabelled_as_primary
   - platform crates/identity/tests/site_sign_in.rs and site_owner_session.rs; crates/eventing/tests/stream_table.rs and nats_permissions.rs
   - workspace harness/crates/workspace-core/tests/bus_acl.rs and bus_durables.rs
-  - platform crates/public-api/tests/site_sessions.rs, site_capabilities.rs, site_events.rs, site_edits.rs, site_library.rs and sessions.rs
+  - platform crates/public-api/tests/site_sessions.rs, site_capabilities.rs, site_events.rs, site_edits.rs, site_library.rs, sessions.rs, public_route_class.rs, gateway.rs and site_upload_failures.rs
   - sites crates/sites/tests/scope.rs and draft_events.rs; services/sites/tests/route_classes.rs; services/sites/tests/bus.rs
-  - site-sdk src/owner/sign-in.test.ts, template/template.test.ts, src/live/events.test.ts and src/owner/edit.test.ts
-  - web src/features/sites/SiteSignInConsent.test.tsx and the session list test
+  - site-sdk src/owner/sign-in.test.ts, template/template.test.ts, src/live/events.test.ts, src/owner/edit.test.ts, src/owner/return-path.test.ts and src/live/reconnect.test.ts
+  - web src/features/sites/SiteSignInConsent.test.tsx, src/features/sites/site-sign-in.test.ts and src/features/sessions/SessionList.test.tsx
   - workspace integration/run-site-owner-editing.sh and integration/tests/site_owner_editing_profile_test.sh
 evidence: {}

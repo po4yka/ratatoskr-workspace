@@ -45,7 +45,7 @@ repositories:
     branch: main@496e9c1d78269bb62856e545e230898f3584e9ef
     base: f39434654eedf3fe4371ceb1b077bf3ea18bc10d
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/notes at 496e9c1d78269bb62856e545e230898f3584e9ef (tasks 4.1, 4.2 and 4.5, and the notes half of 4.3 and 4.4; the range f394346..496e9c1 also holds OBS-024 7.34, 7.35, groups 8 and 9, recorded in that changeset), CI green (6 of 6 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. GET /internal/connections/{connection_id}/files on 8099 answers a loopback peer only; any other peer, and a forwarding header that names 127.0.0.1, gets the empty 404 of an unknown route. An unresolved link has target null. Still open is the Platform half of 4.3 and 4.4 (gateway.rs::no_public_path_reaches_notes_internal)
+    pin: repos/notes at e16068aed6d9a33acb4eaf90485d00b3a2ec2331 (the group 4 work ends at 496e9c1, and the later commits are SITE-027 group 4, recorded in that changeset; tasks 4.1, 4.2 and 4.5, and the notes half of 4.3 and 4.4; the range f394346..496e9c1 also holds OBS-024 7.34, 7.35, groups 8 and 9, recorded in that changeset), CI green (5 of 5 check runs at e16068a, 6 of 6 at 496e9c1), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. GET /internal/connections/{connection_id}/files on 8099 answers a loopback peer only; any other peer, and a forwarding header that names 127.0.0.1, gets the empty 404 of an unknown route. An unresolved link has target null. The Platform half of 4.3 and 4.4 is recorded under ratatoskr-platform
     commits:
       - "701f82d32e414c66943d9a690f56d4573da0724c test(notes): the internal index route gives each file with its resolved links"
       - "da5d6d6f78e68f657b64a406b5ba61fe5b33833d feat(notes): serve the index of a connection on GET /internal/connections/{id}/files"
@@ -192,7 +192,7 @@ repositories:
     branch: main@3a47f0f8a70203f74e432f20ade4c8bcd2fba034
     base: f76005e4297142bb2a4ebb114b4140704cd5384f
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/platform at 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 (tasks 6.1 to 6.15 at 3a47f0f, 6.16 and 6.17 at 302279d and 943bc91; advanced from 6df9717 with the whole fleet to the contracts 2c72602; the range also holds SITE-026 group 8), CI green (7 of 7 check runs). The harness holds the SITES identity, the four sites durables with the ack waits 300, 120, 30 and 30 s (the sites consumer names each one), EDGE's grant of evt.platform.site_approval.changed.v1, the sites route (8100) and bus_acl.rs::sites_stanza_allows_its_durables_and_events; docs/DEPLOYMENT_TARGET.md allocates 8100 and 9472. Still open is the Platform half of 4.3
+    pin: repos/platform at 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 (tasks 6.1 to 6.15 at 3a47f0f, 6.16 and 6.17 at 302279d and 943bc91; advanced from 6df9717 with the whole fleet to the contracts 2c72602; the range also holds SITE-026 group 8), CI green (7 of 7 check runs). The harness holds the SITES identity, the four sites durables with the ack waits 300, 120, 30 and 30 s (the sites consumer names each one), EDGE's grant of evt.platform.site_approval.changed.v1, the sites route (8100) and bus_acl.rs::sites_stanza_allows_its_durables_and_events; docs/DEPLOYMENT_TARGET.md allocates 8100 and 9472. The Platform half of 4.3 and 4.4 (0cdb2d5 and ae74b43; gateway/paths.rs::forwardable resolves %2e, %2f, %5c and dot segments, and refuses a path that leaves its prefix or starts with internal) is not pinned yet, because Platform 1b65f2bdc690eb934ef4434c5cb19e00f3f67351 is its pushed main, CI green (7 of 7 check runs), and its SITES stanza allows evt.sites.draft.changed.v1, which the copy in ratatoskr-sites (deploy/nats/identity.conf, SITE-027 task 9.6) at the pinned f0066a2 does not, so harness bus_acl.rs::every_service_fragment_equals_its_platform_stanza fails until Platform and sites move in one step; it was the open Platform half of 4.3
     commits:
       - "07105d644ae694ba834dd63db80702c736c88b54 chore(deps): move the contracts pin to df646b0"
       - "0a249bce54b5b738bc012881af37e7f9b79a0b58 docs(adr): record the public route class and the site route classes"
@@ -215,6 +215,8 @@ repositories:
       - "3a47f0f8a70203f74e432f20ade4c8bcd2fba034 feat(public-api): forward the site list and the manifest read as management routes"
       - "302279d48d644d95b3dce30d14b2670a4188d818 test(public-api): require sites.manage where Edge routes sites"
       - "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 feat(core): report sites.manage where Edge routes sites"
+      - "0cdb2d582ab127b6ce6fab95c027fc61ea250d1b test(public-api): require that no public path reaches notes internal"
+      - "ae74b435f0524f3e0c1a1272267bdd8dd0135f2f fix(public-api): forward no path that resolves to an internal route"
   - id: ratatoskr-site-sdk
     role: new-generated-client-and-starter-template
     branch: main@a3a9215f6cb33163c15840f4c1b75a6e32b3f24f
@@ -236,10 +238,10 @@ repositories:
       - "a3a9215f6cb33163c15840f4c1b75a6e32b3f24f feat(client): add HEAD, check the search query, read the template through it"
   - id: ratatoskr-web
     role: site-registry-manifest-approval-publication-editor-release-history
-    branch: main@4972d4348d829f0cc9a32c4a606e53d31d4d80cd
+    branch: main@0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f
     base: f3c7320b6b255ae6481a75e82cf2e8e8d592be96
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/clients/web at 4972d4348d829f0cc9a32c4a606e53d31d4d80cd (tasks 8.1 to 8.6; the range also holds OBS-024 tasks 13.7 and 13.8, recorded in that changeset), CI green (4 of 4 check runs). The web client shows its sites section only when Platform lists the capability sites.manage (tasks 6.16 and 6.17). A client ships no systemd unit
+    pin: repos/clients/web at 0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f (tasks 8.1 to 8.6 at 4972d43, and 8.7 to 8.10, the state of a publication and the approval hint, after it; the range 4972d43..0f5f8c8 also holds SITE-027 group 11 and OBS-024 13.9 to 13.14; the range also holds OBS-024 tasks 13.7 and 13.8, recorded in that changeset), CI green (4 of 4 check runs). The web client shows its sites section only when Platform lists the capability sites.manage (tasks 6.16 and 6.17). A client ships no systemd unit
     commits:
       - "b6201b6b6813d0fbd4fbe55dc8813722aed7982e docs(openspec): record the site administration views and the write stages"
       - "6d5c839e31a9a5960feabff4696c3962f56dc96b test(sites): the registry, the approval and the withdrawal of a manifest"
@@ -249,6 +251,10 @@ repositories:
       - "1b534ad72d67db00d151dbaf900997406450c536 test(sites): the release history and the explicit first release"
       - "e94136a29f55bf0b18f65f77280037f5a6fde086 feat(sites): show the release history and request a build"
       - "4972d4348d829f0cc9a32c4a606e53d31d4d80cd fix(sites): show the pending save and require a vault connection"
+      - "aaf9217e6f2b659e4d18ee514c1e77ff1359ba23 test(sites): the publication editor shows the state of a publication"
+      - "b8a9cd31123fea4c80d6cf3c7e4e2d8139d2796f feat(sites): show the state of a stored publication"
+      - "4d5e63d86e13801ab749ad3d87d643b6dd97d9ad test(sites): a site that is not approved cannot start a release"
+      - "c794d567f42fc7abce9cd1f9f63f9e30baf7b730 fix(sites): ask for the approval before a release of a site"
   - id: ratatoskr-workspace
     role: fleet-membership-pins-ports-deploy-enrolment-harness-and-documentation
     branch: main
@@ -264,6 +270,11 @@ repositories:
       - "32a65ae2bd2dd4b5f039fc5048ef0c5db607fd26 build: pin site-sdk at a3a9215 and record SITE-025 group 7"
       - "d34542519d20943aa99b2b42c44904fb6aa94793 docs(changesets): record the 2c72602 pins of OBS-024, SITE-025/026"
       - "842caa0f9c34b7c84e00e95893614e7903c08498 build: pin notes at 496e9c1 and record OBS-024 groups 8 and 9"
+      - "2f23c08ba96275535953bd1cf7e27af0696729af build: pin sites at f0066a2 and record SITE-025 5.44 to 5.94"
+      - "6ba5903c03d53b4520974841fe95e560e4bf62df build: pin notes at e16068a and record SITE-027 group 4"
+      - "d163f9f10dadbb53315dce00dbb3757fa17fe743 build: pin site-sdk at f29520d and record SITE-027 group 10, SITE-026 group 9"
+      - "48c5b2ead2b826a2b199228653ffba7e6db54ca0 build: pin web at 0f5f8c8 and record SITE-027 group 11"
+      - "392f58cbe9c6b6b9b3be0b53697700840f2a8a16 fix(integration): forbid framing of the web client pages"
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-notes

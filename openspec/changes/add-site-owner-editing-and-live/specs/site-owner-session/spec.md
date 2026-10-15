@@ -9,9 +9,11 @@ presents it, and how the owner sees and ends it.
 
 ### Requirement: A site sign-in code is single-use, short-lived and bound to one site
 
-`POST /v1/sites/{site}/sign-in-codes` is a management route. Platform SHALL issue a site sign-in code
-only to a live primary session that holds `platform.owner`, and only for a site that serves under an
-approved manifest (SITE-025 `site-manifest`). The code SHALL be bound to the site id, the owner, a
+`POST /v1/sites/{site}/sign-in-codes` is a management route. Only a live browser session that no
+paired device opened may approve a sign-in: Platform SHALL issue a site sign-in code only to such a
+session that holds `platform.owner`, and only for a site that serves under an approved manifest
+(SITE-025 `site-manifest`). When the code is redeemed, Platform SHALL check again that the session
+that approved it is live and holds `platform.owner`. The code SHALL be bound to the site id, the owner, a
 PKCE S256 challenge, the return path and the approved hostname. It SHALL expire 60 seconds after
 issue, SHALL be redeemable once, and Platform SHALL store only its digest.
 
@@ -36,7 +38,7 @@ issue, SHALL be redeemable once, and Platform SHALL store only its digest.
 #### Scenario: A device session asks for a code
 
 - **WHEN** a session opened by a paired device requests a site sign-in code
-- **THEN** Platform refuses the request, because only a primary session may approve a sign-in
+- **THEN** Platform refuses the request, because only a live browser session that no paired device opened may approve a sign-in
 - **Test:** `ratatoskr-platform` `crates/identity/tests/site_sign_in.rs::device_session_cannot_issue_code`
 
 #### Scenario: The site is not approved

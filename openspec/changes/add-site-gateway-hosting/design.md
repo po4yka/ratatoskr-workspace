@@ -260,3 +260,8 @@ rolls a site back.
   configuration and can be tuned after the first measurements, without changing the specs.
 - Whether the gateway later serves the web client's bundle. That stays an open decision in
   `DEPLOYMENT_TARGET.md` and does not change this design.
+- No repository binds a deploy bundle to a site (open decision of the owner). The site manifest
+  and its approval hold no repository, so Platform and the sites service cannot check that a bundle
+  of a `site_deployer` device comes from the repository of that site; the device is bound to the
+  site only. A field for it needs a contract change and a Platform change, and this change adds
+  none.

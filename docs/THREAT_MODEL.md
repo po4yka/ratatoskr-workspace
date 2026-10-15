@@ -1,7 +1,7 @@
 # Workspace threat model
 
 > Status: Proposed  
-> Last reviewed: 2026-10-14
+> Last reviewed: 2026-10-15
 
 ## Assets
 
@@ -9,7 +9,7 @@ Private repository access, Git history, worktrees, CI/release identities, change
 
 ## Trust boundaries
 
-Developer/agent to harness; harness to Git; harness to child commands; harness to GitHub; task environments to local services; CI to private repositories.
+Developer/agent to harness; harness to Git; harness to child commands; harness to GitHub; task environments to local services; CI to private repositories. For the product: the site origin (the code of a site that the owner deploys, served under its own hostname) to Edge, and the `site_owner` session of that origin to the owner's data (SITE-027, section below).
 
 ## Threats
 
@@ -20,6 +20,10 @@ Developer/agent to harness; harness to Git; harness to child commands; harness t
 - **Malicious child repository:** treat hooks, scripts, and build inputs as untrusted; isolate execution.
 - **Cross-task contamination:** namespace databases, streams, buckets, ports, volumes, and Compose projects.
 - **Inconsistent release:** require pin, lock, contract, and integration checks before advancing `main`.
+
+- **Malicious site code:** a site runs code that its repository ships. A `site_owner` session reaches only the site-origin routes of its own site, each bound to one capability of the approved manifest, never a management route; see the section below.
+- **Leaked sign-in code:** a code is single-use, expires after 60 seconds, needs the PKCE verifier that only the site page holds, and is bound to one site and its approved hostname.
+- **Cross-site request:** the site cookie is host-only and `SameSite=Strict`, a state change needs the header `X-Ratatoskr-Site-Request` and an `Origin` equal to the approved hostname, Edge answers no CORS preflight on the site routes, and no page of the web client may be framed.
 
 Residual risk includes compromised developer machines, zero-days in Git/build tools, and administrator misuse. Re-review when adding MCP writes, cloud agents, new credential paths, or automatic merge/deploy behavior.
 
@@ -75,3 +79,30 @@ password. A backup that holds both the database dump and the key file holds the 
 server reads the whole vault by design: end-to-end encryption protects the vault from Obsidian, not
 from this host. If the host is compromised, disconnect each `sync` connection and change the
 Obsidian account password and the end-to-end password.
+
+## The site origin and the `site_owner` session
+
+SITE-027 (openspec change `add-site-owner-editing-and-live`) lets the owner edit notes and read
+the library from a site that runs under its own hostname. The site page is code that the owner
+deploys, and it can be wrong or hostile, so it is a separate trust boundary.
+
+- **Sign-in.** The owner approves a sign-in on the consent page of the web client, in a live
+  browser session that no paired device opened and that holds `platform.owner`. Platform issues a
+  code bound to the site, the owner, a PKCE challenge, the return path and the approved hostname,
+  stores only its digest, and checks the approver again at the redeem. The web client and the site
+  SDK follow only the callback page `/.ratatoskr/sign-in/` of the approved hostname.
+- **Session.** A `site_owner` session has the audience `site:<site id>`, an idle limit of 1 hour and
+  an absolute limit of 12 hours, and its cookie is `__Host-ratatoskr-site` (`HttpOnly`, `Secure`,
+  `SameSite=Strict`). It is refused on every general and management route. Withdrawing the approval
+  of the site revokes every session of that site, and the owner can end the sessions of one site.
+- **Reach.** Each site-origin route needs a capability of the effective set of the site. An edit
+  goes to the notes write path with the origin `site:<site id>`, only for a note that a publication
+  of the site selects; notes serves the claim only on its upload routes and the conflict read.
+- **Live events.** An anonymous client sees only `release.published`, with no page list. An owner
+  stream ends with its session, and both kinds of stream have bounds per client and per site.
+
+Known limits are recorded in the design of SITE-027: the 16 MiB read of an edit upload in memory,
+the public rate bucket that the owner shares with the site, no check that `content_blob` is the
+blob of the same upload, no manifest cache, no live delivery of an event older than 24 hours, and
+an open stream that is not session activity. The web client host must send the frame headers that
+`DEPLOYMENT_TARGET.md` names.

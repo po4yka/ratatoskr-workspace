@@ -195,6 +195,17 @@ through `cloudflared`, systemd sandboxing, the Raspberry Pi's glibc and page-siz
 anything beyond single-machine loopback. The changeset records which flows ran, which hops were faked
 and which were not run.
 
+The composed profile `site-owner-editing` of SITE-027 (tasks 12.2 and 12.3) is planned and does not
+exist yet. It is to compose Platform, sites, notes, Knowledge, NATS and PostgreSQL with namespaced
+resources, sign in through the consent flow, edit a published note with a stale and then a current
+`base_hash` (`edit.conflicted`, then `edit.completed`), check that a `manual` publication still
+serves the old text until a release, check `release.published` on an anonymous stream, and check
+that the site library and knowledge search hold no item of a second user. Like the other composed
+profiles it needs Docker and is not part of this gate. Until it runs, the evidence for SITE-027 is
+the tests of each child repository and, from the step that pins Platform and sites together, the
+two harness checks of tasks 12.4 and 12.5: the SITES stanza allows `evt.sites.draft.changed.v1`, and Platform's table names `platform_site_events`
+with both filters, owned by EDGE.
+
 This gate does not rerun child CI, deploy the fleet, contact a provider, or establish runtime
 end-to-end health.
 
