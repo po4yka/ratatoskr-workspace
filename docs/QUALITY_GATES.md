@@ -23,8 +23,8 @@ The fleet is 22 repositories, and that number is measured rather than asserted. 
 `ratatoskr-`, all public and all with `main` as the default branch. The nineteenth is
 `ratatoskr-notes` and the twentieth is `ratatoskr-obsidian-plugin`, both pinned by the workspace with
 OBS-023. The twenty-first is `ratatoskr-sites` and the twenty-second is `ratatoskr-site-sdk`, both
-created for SITE-025. The workspace pins `ratatoskr-site-sdk`. It does not pin `ratatoskr-sites` yet,
-because that repository locks another contracts revision than the rest of the fleet.
+created for SITE-025, and the workspace pins both. So `repos/` holds 21 gitlinks, and the fleet is
+21 product repositories and the workspace.
 
 This paragraph was first written twice on 2026-08-19, and the reason is worth keeping. `ratatoskr-web`
 was created that afternoon, and a count taken between the two events read 16 and concluded the
@@ -61,34 +61,44 @@ stay red between a child merge and the pin advance, by design. `port_allocation.
 `## Ports` table of `docs/DEPLOYMENT_TARGET.md` lists a port twice or omits a documented listener, and
 when a repository's `deploy/**/*.example` or `.env.example` binds a port that is not in the table or
 that another listener already holds. `bus_acl.rs` fails when `ratatoskr-platform`'s
-`deploy/nats/ratatoskr.conf` does not hold exactly the thirteen identities, when a service-carried
+`deploy/nats/ratatoskr.conf` does not hold exactly the fifteen identities (SITES since SITE-025), when a service-carried
 copy of its stanza differs from the reviewed one (comments, whitespace and the nkey token ignored),
 when a non-Edge identity can create topology or read the bus wholesale, and, since XR-021 round 3,
 when any non-Edge stanza subscribes to anything but its own `_INBOX_<name>.>` prefix (Edge keeps
-`_INBOX.>`), when a non-Edge identity has no vendored copy (twelve are listed), or when the owning
+`_INBOX.>`), when a non-Edge identity has no vendored copy (fourteen are listed), or when the owning
 repository's non-test `.rs` files do not hand the prefix to `custom_inbox_prefix(` (the literal itself,
 or a `const` of that value used by a call in the same crate; a mutation test changes the literal and
 drops the call). That last check is a text scan: it proves the literal and the call exist together,
 not that the call sits on the connection the service really opens, which each service's real-broker
 test proves. Both fail loudly for a repository that is not checked out instead of skipping it. Neither
 contacts a broker: the real-broker permission matrix lives in `ratatoskr-platform`.
+`bus_acl.rs::sites_stanza_allows_its_durables_and_events` (SITE-025) fails when the SITES stanza
+lacks the info, next or ack permission of one of its four durables or one of its two event subjects,
+allows a `cmd.` subject, or when any stanza names `cmd.sites.release.build_requested.v1`, which only
+EDGE publishes, through `cmd.>`.
 `edge_upstreams.rs` fails when an address in `ratatoskr-platform`'s `edge.conf.example` for a route
 whose service exists (Knowledge 8091, GitHub 8092, ChatGPT 8096, Claude 8097) is not bound, outside
 the operator listener, by a deploy example of the owning repository, and when a route appears that is
 in neither the implemented group nor the allow-list of routes without a service (vault 8093, social
 8094, ai-archive 8095). It cannot see that the service really serves the route on that listener; the
 service's own tests do. `bus_durables.rs` fails when a fixed durable of `ratatoskr-platform`'s
-`crates/eventing/src/stream.rs` table (the twenty-three service-owned ones, the three social capture
-durables, the Telegram notification durable and the two AI-archive projections) lacks its name and
+`crates/eventing/src/stream.rs` table (the thirty service-owned ones: twenty-three after round 5, the
+two Knowledge durables of the notes events from OBS-023, the notes write durable from OBS-024 and the
+four sites durables from SITE-025; the three social capture durables, the Telegram notification durable and the two AI-archive projections) lacks its name and
 filter as a row there, or when the owning repository's tracked `.rs` files do not hold the name and
 the filter as string literals; a mutation test proves the scan reports a renamed durable. It is a
 text scan: it cannot see a literal assembled at run time, and says nothing about `max_deliver` or the
 stream. Its ack-wait test, `service_ack_wait_constants_agree_with_edges_durable_table` (XR-021 round
 4), reads the wait Edge's row gives each durable (a `.with_ack_wait_seconds(N)` call, else the standard
 30) and fails when it differs from the constant the service states (`INGEST_ACK_WAIT_SECONDS` and
-`CHANNEL_RECAP_ACK_WAIT_SECONDS` in Knowledge, `NOTIFICATION_ACK_WAIT_SECONDS` in Telegram) or from the
-value CONTRACTS S04 fixes (120 for the four Knowledge ingest durables, 30 for the recap and the
-notification durable). It cannot see a constant that is computed, a wait set through a differently
+`CHANNEL_RECAP_ACK_WAIT_SECONDS` in Knowledge, `NOTIFICATION_ACK_WAIT_SECONDS` in Telegram, and
+`WRITE_ACK_WAIT` in notes, which may be a `u64` or a `Duration::from_secs(N)`) or from the value
+CONTRACTS S04 fixes (120 for the four Knowledge ingest durables, 30 for the recap and the
+notification durable). `edge_provisions_the_sites_durables_with_their_contract_ack_waits` compares
+Edge's rows of the four sites durables with the waits that SITE-025 fixes (300, 120, 30 and 30
+seconds), because the sites service states no constant yet; `OWNER_PENDING` lets those four rows
+wait for their consumer in the sites service, and the owner test fails when the consumer names a row
+that is still listed. It cannot see a constant that is computed, a wait set through a differently
 named builder, or a service that ignores its own constant; a mutation test changes one literal on each
 side. It failed first for Telegram, which stated no constant before round 4.
 `schema_in_place.rs` (round 4) fails when a tracked `schema.sql` of any repository holds an
