@@ -231,8 +231,9 @@ const DOMAIN: [Durable; 30] = [
 ];
 
 /// `(durable, ack wait in seconds)` that the site-publications delta of `fleet-bus-topology` fixes
-/// for the sites durables. Edge's table is checked against it directly, because the sites service
-/// states the waits as arguments of one table, not as one constant for each durable.
+/// for the sites durables. Edge's table is checked against it directly. The sites service states
+/// the waits as the last argument of each `DurableSpec::of(` call in `Durables::production()`, not
+/// as one constant for each durable, so `sites_service_ack_wait` reads them from there.
 const SITES_ACK_WAITS: [(&str, u64); 4] = [
     ("ratatoskr_sites_release_builds", 300),
     ("ratatoskr_sites_note_changes", 120),
@@ -242,6 +243,9 @@ const SITES_ACK_WAITS: [(&str, u64); 4] = [
 
 /// The durables that existed before S04, listed separately with their owners: the three social
 /// capture consumers, the Telegram notification consumer and the two AI-archive projections.
+/// The file of the sites service whose `Durables::production()` states the ack wait of each durable.
+const SITES_DURABLE_TABLE: &str = "services/sites/src/consumer.rs";
+
 const OTHER: [Durable; 6] = [
     durable(
         "ratatoskr_x_browser_capture",
@@ -654,6 +658,76 @@ fn edge_provisions_the_sites_durables_with_their_contract_ack_waits() {
         }
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// The ack wait in seconds that the sites service passes for `durable`: the last argument of the
+/// first `DurableSpec::of(` call after `fn production()` that names the durable. A text scan: it
+/// cannot see a wait computed at run time.
+fn sites_service_ack_wait(source: &str, durable: &str) -> Option<u64> {
+    let body = source.get(source.find("fn production()")?..)?;
+    let call = body.get(body.find(&format!("\"{durable}\""))?..)?;
+    let arguments = call.get(..call.find(')')?)?;
+    arguments
+        .rsplit(',')
+        .map(str::trim)
+        .find(|argument| !argument.is_empty())?
+        .replace('_', "")
+        .parse()
+        .ok()
+}
+
+#[test]
+fn sites_service_ack_waits_agree_with_edges_durable_table() {
+    let table = platform_table_text();
+    let path = checkout_of("sites").join(SITES_DURABLE_TABLE);
+    let source = fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("cannot read {}: {error}", path.display()));
+    let mut problems = Vec::new();
+    for (durable, _) in SITES_ACK_WAITS {
+        match (
+            sites_service_ack_wait(&source, durable),
+            table_ack_wait(&table, durable),
+        ) {
+            (Some(stated), Some(edge)) if stated == edge => {}
+            (Some(stated), Some(edge)) => problems.push(format!(
+                "sites states {stated} seconds for `{durable}`, Edge provisions {edge}"
+            )),
+            (None, _) => problems.push(format!(
+                "sites {SITES_DURABLE_TABLE} passes no ack wait for `{durable}` in `fn production()`"
+            )),
+            (_, None) => problems.push(format!(
+                "Platform's {PLATFORM_TABLE} has no row for `{durable}`"
+            )),
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn the_sites_ack_wait_scan_reads_the_last_argument_of_the_named_call() {
+    let source = "fn production() -> Self {\n    approvals: DurableSpec::of(\n        EVENT_STREAM,\n        \"ratatoskr_sites_approvals\",\n        \"evt.platform.site_approval.changed.v1\",\n        30,\n    ),\n}\n";
+    assert_eq!(
+        sites_service_ack_wait(source, "ratatoskr_sites_approvals"),
+        Some(30)
+    );
+    assert_eq!(
+        sites_service_ack_wait(
+            &source.replace("30,", "1_200,"),
+            "ratatoskr_sites_approvals"
+        ),
+        Some(1200)
+    );
+    assert_eq!(
+        sites_service_ack_wait(source, "ratatoskr_sites_note_changes"),
+        None
+    );
+    assert_eq!(
+        sites_service_ack_wait(
+            &source.replace("fn production()", "fn other()"),
+            "ratatoskr_sites_approvals"
+        ),
+        None
+    );
 }
 
 fn checkout_of(id: &str) -> std::path::PathBuf {
