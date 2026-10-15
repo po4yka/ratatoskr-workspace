@@ -62,7 +62,7 @@ id = "export-agent"
 path = "repos/clients/export-agent"
 remote = "https://github.com/po4yka/ratatoskr-export-agent.git"
 default_branch = "main"
-commit = "009fd35b5db4e29c237f017f8d8b9da116ea8b92"
+commit = "73a2a037bcc182c3c94a9a7d6b2fff795d8fec7e"
 digests = [
   { path = "Package.swift", kind = "file", sha256 = "2a8a15eb9fc615a94b848417c11ab1ba32898af7b50b06668d6ea52b590b26d1" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "7e49ade6ca44cfcba854132d3083ec0c993ba78989b9c81af767f8b0fbfbd253" },
@@ -129,11 +129,11 @@ id = "notes"
 path = "repos/notes"
 remote = "https://github.com/po4yka/ratatoskr-notes.git"
 default_branch = "main"
-commit = "7fb421e6a55d50261caacc00d1c029cb87978a8a"
+commit = "faf35bdaf58ac151c4cf5054dd4287f30258ce82"
 digests = [
   { path = "Cargo.lock", kind = "file", sha256 = "36477f902694eb1df036580d4baf658811111d48b64df5a5d285fdff6cdc1a40" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "1393a3f18882941a3334e4a1111e88e9588f58fecc59922190ab0a857afcc9a9" },
-  { path = "schema.sql", kind = "file", sha256 = "172b2872bdd5c670ca9a4c6ab1d1f07ec63f9d6a89e9909a8709626693ac70dd" },
+  { path = "schema.sql", kind = "file", sha256 = "ef2105f8c4783f7f28ea49c203ca2284e12c2adf18ca6d93c7fd690edeed21b2" },
 ]
 
 [[repositories]]
@@ -153,7 +153,7 @@ id = "platform"
 path = "repos/platform"
 remote = "https://github.com/po4yka/ratatoskr-platform.git"
 default_branch = "main"
-commit = "352ed77c464834c5467a315045679d5a4485663a"
+commit = "20087096ea0966b40ec56cf12b296047aeec3a90"
 digests = [
   { path = "openapi/openapi.json", kind = "file", sha256 = "4aaea03cd94a52cad280b5af0537337f21ecc56d45fa7784b78703b94bc329f2" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "eb76e54cf5e2ba9fbfb17af3019cddd85d3354274d38a24dcf9c998473224b05" },
@@ -197,7 +197,7 @@ id = "web"
 path = "repos/clients/web"
 remote = "https://github.com/po4yka/ratatoskr-web.git"
 default_branch = "main"
-commit = "66122157bad414714501520b993eb747ce962edb"
+commit = "05764b18628d65ee1997d09aa6f703719958b755"
 digests = [
   { path = "openapi/openapi.lock.json", kind = "file", sha256 = "20ac286db7044cea31adfcd5f6fe39ff1ae2e5f8f8c684157a0315b28d3daebe" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "fb6ab0888f3cc431a9f8d573c6a2edc8a1aab1c3d27d6cec609151ba9ae3f8a3" },

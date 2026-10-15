@@ -39,7 +39,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "export-agent",
         "repos/clients/export-agent",
-        "009fd35b5db4e29c237f017f8d8b9da116ea8b92",
+        "73a2a037bcc182c3c94a9a7d6b2fff795d8fec7e",
     ),
     (
         "extractor",
@@ -69,7 +69,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "notes",
         "repos/notes",
-        "7fb421e6a55d50261caacc00d1c029cb87978a8a",
+        "faf35bdaf58ac151c4cf5054dd4287f30258ce82",
     ),
     (
         "obsidian-plugin",
@@ -79,7 +79,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "platform",
         "repos/platform",
-        "352ed77c464834c5467a315045679d5a4485663a",
+        "20087096ea0966b40ec56cf12b296047aeec3a90",
     ),
     (
         "telegram",
@@ -99,7 +99,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "web",
         "repos/clients/web",
-        "66122157bad414714501520b993eb747ce962edb",
+        "05764b18628d65ee1997d09aa6f703719958b755",
     ),
     (
         "x",

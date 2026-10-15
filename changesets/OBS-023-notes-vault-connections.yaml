@@ -6,7 +6,7 @@ openspec_change: add-notes-vault-connections
 # that tasks 14.6 and 14.7 extend. xr-021-fleet-round-5 must be archived before this change, because
 # the fleet-bus-topology delta is written against its text.
 depends_on: [DPL-022]
-authorization: The owner authorised direct commits on main for the workspace planning records. Each child repository works on its task branch and merges through a pull request.
+authorization: The owner authorised direct commits on main for the workspace planning records. For the child repositories the owner chose direct commits to main after an independent review instead of pull requests; each repository entry records its pushed commits, and the workspace pins a commit only after its CI is green.
 repositories:
   - id: ratatoskr-contracts
     role: notes-event-schemas
@@ -20,10 +20,10 @@ repositories:
       - "a9289e27bcf53f496b5917889580965d97ff2358 feat(notes-contracts): mark the notes events user_content and match the blob media type"
   - id: ratatoskr-notes
     role: new-service-connections-index-sync-supervisor
-    branch: main@7fb421e6a55d50261caacc00d1c029cb87978a8a
+    branch: main@faf35bdaf58ac151c4cf5054dd4287f30258ce82
     created: 2026-10-13, public, ruleset "protect main" as ratatoskr-vault (signatures, fleet / invariants, zizmor / audit, openspec / specs, gate, deny)
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/notes at 7fb421e6a55d50261caacc00d1c029cb87978a8a (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, to 301c53bfc1f6575b4cce68f22b09197b96b30583 after tasks 6.11 to 6.22 and a test-only fix, to ae01361cfba16a78aafb87bc74dab492321f3515 after group 7 (the index, the file events and the outbox relay, the read routes, the connect that answers 202 at once, and the device claims), and to 7fb421e after group 8 and its follow-ups 8.9 to 8.26 (the device channel routes for changes, the manifest and the chunked blob upload), which apply owner decisions A (the journal namespace ratatoskr-notes-sync) and B (the trees and clients roots) of 2026-10-14; the host role provisions both). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. From ae01361 on, the outbox relay of notes task 7.6 opens the NATS connection with the inbox prefix _INBOX_notes, so bus_acl.rs has no WIRING_PENDING exemption
+    pin: repos/notes at faf35bdaf58ac151c4cf5054dd4287f30258ce82 (first pinned at 1d09bc00761b3da491728f1c599a5edaf69c3dc3 by tasks 14.1 and 14.2, advanced to 10ed0cc9fc2096ab46efcc21e3e42060e84aa0b8 after tasks 5.6 to 5.19, to d4586b4d837ecfc3bbc5746484e2e7e7385d5add after group 6 by task 14.4, to 301c53bfc1f6575b4cce68f22b09197b96b30583 after tasks 6.11 to 6.22 and a test-only fix (owner decisions A, the journal namespace ratatoskr-notes-sync, and B, the trees and clients roots, of 2026-10-14; the host role provisions both), to ae01361cfba16a78aafb87bc74dab492321f3515 after group 7 (the index, the file events and the outbox relay, the read routes, the connect that answers 202 at once, and the device claims), to 7fb421e6a55d50261caacc00d1c029cb87978a8a after group 8 and its follow-ups 8.9 to 8.26 (the device channel routes for changes, the manifest and the chunked blob upload), and to faf35bd after the follow-ups 8.27 to 8.43). The cleanup, login and sync template units are listed in ratatoskr_template_units of services.json, installed and never started; ratatoskr_notes is in ratatoskr_database_roles (tasks 14.6, 14.7 and 14.4). The identity notes is in ratatoskr_nats_identities with group root, because no ratatoskr-notes.service ships at this pin. From ae01361 on, the outbox relay of notes task 7.6 opens the NATS connection with the inbox prefix _INBOX_notes, so bus_acl.rs has no WIRING_PENDING exemption
     commits:
       - "87ecc2390b14e352388f47105d7778c83937cd20 chore: scaffold ratatoskr-notes from the fleet template"
       - "589b38fc09ee272e47061b0c736ebcd80612e89e docs(openspec): open obs-023-notes-connections"
@@ -111,12 +111,30 @@ repositories:
       - "2d4b34cc98f7b89414fe5cd585fb9251bf34089a fix(notes-index): publish a waiting collision when PathTable frees its key"
       - "0b1bbb7f86b1d27624068e201a17cc00d2954897 test(notes): a removed connection is gone for its device"
       - "7fb421e6a55d50261caacc00d1c029cb87978a8a feat(notes): answer 410 notes.connection.removed to the device of a removed connection"
+      - "5b34db4eecf26d9f18299203d9a5f7aa623079da test(notes): upload sessions are bounded per connection"
+      - "a3ad33110477ea433e6bb690ca14e1b9639e9e21 fix(notes): bound upload sessions per connection in one step"
+      - "e7d90b6db0bce834e87dae445ca83747b612a12f test(notes): a second finalize of one upload is session_unknown"
+      - "ea78ed698a842f7718c48211d7b585f0dbcccf68 fix(notes): answer session_unknown to a step on an ended upload"
+      - "d3d6da77683c38c5f7d33aab50a25a14b295f690 test(notes): a failed device connect has its report when it fails"
+      - "72746c80b8cea1fcde3bc79097f944b3c5a21df2 fix(notes): fail a device connect and report it in one transaction"
+      - "875b1dcde6570a95059054510883e27ae435d84d test(notes): a removed connection keeps no uploads"
+      - "4668d89507d24a6fc214af54f972fc7e3cc4b39d fix(notes): delete the uploads of a connection when it is removed"
+      - "a9f22a0397483069abd3ead1da6dbd59a149f281 docs(notes): name the digest_mismatch outcome and the report code"
+      - "2df9e9ccda575cb3246b47613fb00f3d6869c153 test(notes): every connection end has its report when the process stops"
+      - "dce36eb8c8955a348fe58eac2072dd78f53bc046 fix(notes): write each terminal connect report with the state that ends it"
+      - "e4ce868cd8b113d8e147748cb4cee69dc57e33cd test(notes): an expired login before its record reports once"
+      - "02126624928f830d38387f2ed6c6ad01ac49bb1e fix(notes): keep one terminal report per connect operation"
+      - "3626a873c9d01283db693b881bd026dcadfbbb8b test(notes): an unreadable operation expires no login without its report"
+      - "736fdf34b57e56b2fb5f1e9b3915941f7b15819c fix(notes): retry an expiry whose operation cannot be read"
+      - "922e1c01032af9748ed1974d7d1752f83f54fe56 fix(notes): log a failed interrupted login only when it was failed"
+      - "4f847c58f05a3efcc5bff3ac249642d41b2ea3bd test(notes): the outbox skips a second end but refuses a repeated event id"
+      - "faf35bdaf58ac151c4cf5054dd4287f30258ce82 fix(notes): skip only a second terminal report in the outbox"
   - id: ratatoskr-platform
     role: edge-route-durables-identity-device-kind-authority
-    branch: main@352ed77c464834c5467a315045679d5a4485663a
+    branch: main@20087096ea0966b40ec56cf12b296047aeec3a90
     base: 47c7fe47147735c61cac61eb87cb0bf6079c772c
     pull_requests: none, pushed directly to main under the repository owner authorization
-    pin: repos/platform at 352ed77c464834c5467a315045679d5a4485663a (task 14.4, before Knowledge; first pinned at 6ccae27343d3ae24c86ceaa2e42a2aba489f76aa, advanced after the connect follow-ups 9.7 to 9.17). Platform provisions ratatoskr_knowledge_notes_files and ratatoskr_knowledge_notes_vaults and grants them in the KNOWLEDGE stanza before Knowledge reads them, so bus_durables.rs keeps both in OWNER_PENDING and bus_acl.rs keeps the Knowledge copy in FRAGMENT_PENDING until the Knowledge pin of task 14.4
+    pin: repos/platform at 20087096ea0966b40ec56cf12b296047aeec3a90 (task 14.4; first pinned at 6ccae27343d3ae24c86ceaa2e42a2aba489f76aa, advanced to 352ed77c464834c5467a315045679d5a4485663a after the connect follow-ups 9.7 to 9.17, and to 2008709 after 9.18 to 9.28). deploy/systemd/edge.conf.example changes only in a comment, and a full molecule test ran at this pin Platform provisions ratatoskr_knowledge_notes_files and ratatoskr_knowledge_notes_vaults and grants them in the KNOWLEDGE stanza before Knowledge reads them, so bus_durables.rs keeps both in OWNER_PENDING and bus_acl.rs keeps the Knowledge copy in FRAGMENT_PENDING until the Knowledge pin of task 14.4
     commits:
       - "3784a276aad64b19f2ee840ab82558cba857133e docs(openspec): open the notes vault connection change"
       - "f403d472d8c43cfd94305bb7bab35cee45f91c32 test(public-api): require the notes route, its device claim and a connect that keeps no body"
@@ -138,6 +156,17 @@ repositories:
       - "48111478119da5b25cbd95ae61aaa1b7c624b9d8 test(public-api): require a stalled connect answer to end in budget"
       - "1cf78eaff4370cdc62c1eb2836d40b34ffc8fcc8 fix(public-api): bound the connect task by the notes response budget"
       - "352ed77c464834c5467a315045679d5a4485663a ci: pin the shared fleet workflows at 75b3ed8"
+      - "e1e58bbd37f8894443b0f2a2325f4c7399154f6b test(public-api): require the notes body limits on the device routes"
+      - "2b2dc4e32ae6f3061ae3ce772a9e2e8113aba483 fix(public-api): give the notes device routes the limits of notes"
+      - "1b3482292d915febcc5f7627f2d92e6801456dff test(public-api): require a device credential on the notes device routes"
+      - "7a2e78497e7ed1d95a292d8825499433303ea8c1 fix(public-api): refuse a notes device route without a device"
+      - "d433f0c8bda72b6238de72f723365fccbfe57ca1 test(public-api): require Edge to keep a redirect of notes from clients"
+      - "9529604413aa1b16211bd925a76a1eee7009fd66 fix(public-api): answer a redirect of a domain service with 502"
+      - "e358ed67a70a5cf9b7f8c88a8ff7834fe03fbe64 test(public-api): require notes.vaults where Edge routes notes"
+      - "c303fa7ff6784b5d516088f14c79b4d8b805f1a6 feat(core): report notes.vaults where Edge routes notes"
+      - "bc99fc070b5804f3c9790b6a8f37c4382c90f999 test(public-api): pin the raw path and the streamed bytes of a notes read"
+      - "fcf7fd69092094076feb84d9a7b26b24476942f2 test(public-api): require Edge to keep a device off the notes owner routes"
+      - "20087096ea0966b40ec56cf12b296047aeec3a90 fix(public-api): keep a device to the connect and the notes device routes"
   - id: ratatoskr-knowledge
     role: notes-intake-consumer
     branch: main@b01c5377cfce68494ad794f25c6fc95fd888f421
@@ -220,10 +249,64 @@ repositories:
       - "dc494a1ad2cfd733813fae618a5495ffc9431784 docs(readme): a connection that the owner removed stops the plugin"
   - id: ratatoskr-export-agent
     role: cli-channel
-    branch: obs-023/notes-vault-connections
+    branch: main@73a2a037bcc182c3c94a9a7d6b2fff795d8fec7e
+    base: 009fd35b5db4e29c237f017f8d8b9da116ea8b92
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/export-agent at 73a2a037bcc182c3c94a9a7d6b2fff795d8fec7e (tasks 12.1 to 12.36). A client ships no systemd unit
+    commits:
+      - "85c26c88477a48265d5a45dab4b705c13e1b8d6b ci: pin the shared fleet workflows at 75b3ed8"
+      - "1d883892e6adc26ebcec775075299367c3a5608b test: encode length_bytes and the manifest of a vault scan"
+      - "72e8f68059494c1f44f1f07bb0a66be1c60fbe58 feat: encode length_bytes and make the manifest from the vault scan"
+      - "1aed775852babd6d89c5584de1fb8f39a2176139 test: a notes channel client connects, sends the manifest and its batches"
+      - "320f8c18f16802d76b13cd941ac946c646e6c875 feat: send the manifest and the change batches of a vault to notes"
+      - "84b37d5c5bf16c21825e00ef5a1d0921238d381e test: a watched vault sends its manifest after the connect and its batches after"
+      - "7b1c108f888945d14a77ad7805c37d2487f5c5ac feat: send a watched vault to notes, the manifest first and the batches after"
+      - "70e564fb12a74afc58e4555cf189a4dccaf0d7db chore: record the notes client gate run in the change tasks"
+      - "b704a83ebbf2582196a21e958d63e53d740e5376 test: a removed connection stops the channel and does not connect again"
+      - "be749868d7c9eaffe3e51aca1afdba4cfc527e43 feat: stop the notes channel when the owner removed the connection"
+      - "ca13a14a719cf7dbd01d6fc5c01115f8d9f2b3e5 test: a restart resumes the saved notes connection with the manifest first"
+      - "cab795337b1c2f57adb66f9c4de8743f59c19b99 feat: save the notes connection of a vault and resume it after a restart"
+      - "4ddb91dd687569264eb267b38a5496ca6b470d80 test: a failed notes send is tried again after a bounded backoff"
+      - "dad7e69ab8eb7d831f0d0c7a59ca1abbc66b9a2a feat: try a failed notes send or start again after a bounded backoff"
+      - "671dfcd8beb5c536d2a5b7a26d7ae357bec0f9bb chore: record the gate run after the removed, resume and retry pairs"
+      - "30536c82e9a7e63d22d012d7183e9ed4f60cb829 test: the vault key of the cli channel is the vault id of Obsidian"
+      - "a74a2c092cf7cba07a884ea51e48a6902d7f9537 feat: read the vault id of Obsidian as the vault key of the cli channel"
+      - "8925ca12212046b3a8cb3708f759147d373e307d test: the agent registers vault folders and the settings add and remove them"
+      - "58be799e4d1020972a5b1b264e2cbe7b8aafe913 feat: register Obsidian vaults and add and remove them in the settings"
+      - "ecc26ad8a20ea221640f1ba9216d0727798f0013 test: changes over the bound while a send waits become one manifest"
+      - "c97bf2e3d22c7709be79210f536231d9e52d41e3 feat: bound the waiting changes of a vault and send a manifest over the bound"
+      - "400e784b644a323bf6400e844664a38c9315060c test: the app runs one notes sync per watched vault through the paired origin"
+      - "7b6a8eb44cb66f86456937c2533d24f4c5f65e59 feat: run a notes sync for each watched vault in the app"
+      - "b4242aec3cda9c366d27ca1c7f5b1abc9f0bd4ed test: the menu shows each vault status and connects a removed vault again"
+      - "147a4273de842fd02c68ddea63a7bdded6adafeb feat: show each vault status in the menu and connect a removed vault again"
+      - "1945443b6a2964c2a1730d2a33213b8af628563a docs: describe the vault mode and record the gate run after 12.26"
+      - "ea54668d465b76fd978ac0d022cb81043fa3351c test: keep XCTest setUp and tearDown out of the main actor"
+      - "85948dda0c738dae7dd01a52087f4ff07a65f280 test: a vault sync that was stopped before its launch ran starts nothing"
+      - "69dd5cdc0b9bf49c57c9af5e6106b00f92c8b8ae fix: a stopped vault sync does not start from its launch task"
+      - "4f21a163ce72f09af9e4fafdd8512fb687e4fec3 test: a corrupt vault-channels.json is moved aside and the store starts empty"
+      - "dc67e07a61cfa30a1fcc2341ea1b7f57cabad57a fix: move a corrupt vault-channels.json aside and start the store empty"
+      - "43690832e147c3bf32911e87c531112dd6ecc551 test: answers that no retry can change stop the vault and name the cause"
+      - "c5dc61e933b1cc229c8bd0c9704b8a2a8498bcfd fix: stop the vault on answers that no retry can change"
+      - "e60bb11bf434b498e173c17c180d5fce59438505 test: a change without its length does not loop on bytes_missing"
+      - "095b2f3ff20610814dea71b0f4179d684c348b18 fix: read a missing hash or length from the file, or send a manifest"
+      - "9a86b9200c0f384a14cf31f1661ff063fdcdefae test: the owner grants obsidian.json once and vaults adopt the Obsidian key"
+      - "8d969de1ac21538b1e01463297272d1351bb60c4 feat: read the Obsidian vault key through a one-time grant of obsidian.json"
+      - "73a2a037bcc182c3c94a9a7d6b2fff795d8fec7e docs: describe the obsidian.json grant, the named stops and the state recovery"
   - id: ratatoskr-web
     role: connections-and-read-only-browse
-    branch: obs-023/notes-vault-connections
+    branch: main@05764b18628d65ee1997d09aa6f703719958b755
+    base: 66122157bad414714501520b993eb747ce962edb
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/web at 05764b18628d65ee1997d09aa6f703719958b755 (tasks 13.1 to 13.8). A client ships no systemd unit
+    commits:
+      - "190cf1bbf0fe702e3acb956a609439c0fc208d06 ci: pin the shared fleet workflows at 75b3ed8"
+      - "1e42a7588245661d8fe3fb31fc68d9c676976ed8 test(notes): follow the Edge connect answer and name each phase and code"
+      - "738e8cdbd85906ff8c59bac971b11f55c13e5ee1 feat(notes): follow the Edge connect answer and name each phase and code"
+      - "c4257e919d03f85e3bcda15ed677b936f5419f6e test(notes): browse a vault through the real file and index routes"
+      - "b40bac1d540cb089e2c16f42daef777f794aced6 feat(notes): browse a vault through the real file and index routes"
+      - "89b5f728d5d78777294e0a4a31fa4dd6f1e0b2ca docs(openspec): split the long notes requirements into one behavior each"
+      - "17e4bbf86d2dcff7d06b1efcc48623addf3f846f test(notes): a file path from the address cannot leave the vault routes"
+      - "05764b18628d65ee1997d09aa6f703719958b755 fix(notes): refuse a file path that can leave the vault routes"
   - id: ratatoskr-workspace
     role: fleet-membership-deploy-harness-integration-and-pins
     branch: main
