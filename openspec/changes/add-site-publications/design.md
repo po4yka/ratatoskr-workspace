@@ -209,7 +209,8 @@ Alternatives:
 ### D10. The SDK is generated, and the template has no framework
 
 `@ratatoskr/site-sdk` generates its types with `openapi-typescript` from the Content Delivery API
-description that `ratatoskr-contracts` publishes, as the web client does today. The starter template
+description that `ratatoskr-sites` publishes as `openapi/content-delivery.json`, and pins it with a
+digest lock, as the web client pins Platform's description (ADR-0012). The starter template
 is Vite and TypeScript with no UI framework, because the point of a site is that its owner picks the
 framework. A `generated-drift` check regenerates the client against the pinned contracts and fails
 on any difference.

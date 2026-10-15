@@ -2,13 +2,15 @@
 
 ## 1. Implementation by repository
 
-Dependency order. Each item closes only after its pull request merges, and carries the link. This
-change starts after SITE-025 and SITE-026 have merged, and after OBS-024 has merged its write path.
-Each child repository works on the task branch `site-027/<slug>` named in the changeset.
+Dependency order. The owner chose direct commits to `main` after an independent review instead of
+pull requests, so each item records the pushed commit that the workspace pins and the state of its
+CI there (the check runs of that commit, read with `gh api`). An item closes only when every task of
+its groups is ticked. This change starts after SITE-025 and SITE-026 have merged, and after OBS-024
+has merged its write path.
 
-- [ ] 1.1 `ratatoskr-contracts`: `sites/site-event.v1`, the `sites.draft.changed.v1` registration, and the request and response schemas of the session, draft, blob, edit, conflict, library and knowledge routes (group 3). It merges first, because every repository below builds against them. PR: _link_
+- [x] 1.1 `ratatoskr-contracts`: `sites/site-event.v1` and the `sites.draft.changed.v1` registration (group 3). It merges first, because every repository below builds against them. Direct to `main` after review; pinned at `2c72602`, CI green (8 of 8 check runs). Group 3 is complete.
 - [ ] 1.2 `ratatoskr-notes`: accept a blob upload whose minted claim names the session kind `site_owner` and the origin `site:<id>`, for blob registration only (group 4). It merges before Platform, because Platform starts forwarding site uploads in group 8. PR: _link_
-- [ ] 1.3 `ratatoskr-platform`: session kind `site_owner`, sign-in codes, the route-class rows, the release guard and the capability check, revocation on withdrawal, the event stream, and the blob, edit, conflict, release-guard, library and knowledge routes (groups 5–8). It merges before the sites service, because nothing reads `evt.sites.draft.changed.v1` until Edge does. PR: _link_
+- [ ] 1.3 `ratatoskr-platform`: session kind `site_owner`, sign-in codes, the route-class rows, the release guard and the capability check, revocation on withdrawal, the event stream, the blob, edit, conflict, release-guard, library and knowledge routes, and the request and response bodies of the site routes in `openapi/openapi.json` (groups 5–8). It merges before the sites service, because nothing reads `evt.sites.draft.changed.v1` until Edge does. PR: _link_
 - [ ] 1.4 `ratatoskr-sites`: the loopback scope query, the draft source read, the anonymous-claim refusal and `evt.sites.draft.changed.v1` (group 9). PR: _link_
 - [ ] 1.5 `ratatoskr-knowledge`: no change expected. The item closes when task 12.3 passes against its pinned commit. If 12.3 fails on the Knowledge side, the fix merges here first. PR: _link or "none: verified by 12.3"_
 - [ ] 1.6 `ratatoskr-site-sdk`: owner sign-in, the reserved callback page, the SSE client with resume, editing helpers and conflict types (group 10). PR: _link_
@@ -22,12 +24,11 @@ Each child repository works on the task branch `site-027/<slug>` named in the ch
 
 ## 3. Contracts (ratatoskr-contracts)
 
-- [ ] 3.1 RED: add `crates/sites-contracts/tests/site_event.rs` with `release_published_refuses_page_list`, which validates `fixtures/sites/site-event/invalid/release-published-with-slugs.json` and asserts that validation fails; `release_published_refuses_source_ref`, which does the same for `release-published-with-source-ref.json`; and `every_event_type_has_a_valid_fixture`, which asserts that `release.published`, `draft.changed`, `edit.completed`, `edit.conflicted` and `resync` each have one valid fixture. Confirm that all three fail because `schemas/json-schema/sites/site-event.v1.schema.json` does not exist.
-- [ ] 3.2 GREEN: write `site-event.v1.schema.json` with a closed `type` enum and a per-type payload that has `additionalProperties: false`; `release.published` holds only `release_id` and `published_at`. Add the fixtures. Verify that 3.1 passes and that the `invalid-expectations.toml` entries name the refused fields.
-- [ ] 3.3 RED: add to `tools/contractsc/tests/live_message_types.rs` the assertion `sites_draft_changed_is_registered`: `evt.sites.draft.changed.v1` is registered, produced by `ratatoskr-sites`, consumed by `ratatoskr-platform`, and its schema has no `content` or `path` field. Confirm that it fails because the type is not registered.
-- [ ] 3.4 GREEN: write `schemas/json-schema/sites/draft-changed.v1.schema.json` (site id, `source_ref`, revision hash, optional slug) and register `sites.draft.changed.v1` in `contracts.toml`. Verify that 3.3 passes and that `cargo test --workspace` passes in `ratatoskr-contracts`.
-- [ ] 3.5 RED: add `route_schemas_round_trip` in `crates/sites-contracts/tests/site_routes.rs` for the session, draft, blob, edit, conflict, library and knowledge request and response fixtures, and `edit_request_refuses_inline_content`, which asserts that an edit fixture with a `content` string fails validation. Confirm that both fail because the schemas do not exist.
-- [ ] 3.6 GREEN: write those schemas. The edit request requires `source_ref`, `base_hash` as 64 lower-case hex, `content_blob` as a `BlobRef`, `content_hash` and `idempotency_key`; the library and knowledge requests have no tenant field. Verify that 3.5 passes and that the generated Rust and TypeScript types build.
+- [x] 3.1 RED: add `crates/sites-contracts/tests/site_event.rs` with `release_published_refuses_page_list`, which validates `fixtures/sites/site-event/invalid/release-published-with-slugs.json` and asserts that validation fails; `release_published_refuses_source_ref`, which does the same for `release-published-with-source-ref.json`; and `every_event_type_has_a_valid_fixture`, which asserts that `release.published`, `draft.changed`, `edit.completed`, `edit.conflicted` and `resync` each have one valid fixture. Confirm that all three fail because `schemas/json-schema/sites/site-event.v1.schema.json` does not exist.
+- [x] 3.2 GREEN: add the `SiteEvent` type and generate `site-event.v1.schema.json` from it, with a closed `type` enum and a per-type payload that has `additionalProperties: false`; `release.published` holds only `release_id` and `published_at`. Add the fixtures. Verify that 3.1 passes and that the `invalid-expectations.toml` entries name the refused fields.
+- [x] 3.3 RED: add to `tools/contractsc/tests/live_message_types.rs` the assertion `sites_draft_changed_is_registered`: `evt.sites.draft.changed.v1` is registered, produced by `ratatoskr-sites`, consumed by `ratatoskr-platform`, and its schema has no `content` or `path` field. Confirm that it fails because the type is not registered.
+- [x] 3.4 GREEN: add the `DraftChanged` type (site id, `source_ref`, revision hash, optional slug), generate `schemas/events/sites.draft.changed.v1.schema.json` from it (rule R3), and register `sites.draft.changed.v1` in `contracts.toml`. Verify that 3.3 passes and that `cargo test --workspace` passes in `ratatoskr-contracts`.
+Tasks 3.5 and 3.6 moved to the Platform group as 8.6 and 8.7: the HTTP shapes of the site routes live in Platform's `openapi/openapi.json`, not in the contracts (decision of 2026-10-15).
 
 ## 4. Site uploads in the notes service (ratatoskr-notes)
 
@@ -71,6 +72,11 @@ Each child repository works on the task branch `site-027/<slug>` named in the ch
 - [ ] 8.3 RED: add `crates/public-api/tests/site_library.rs` with `site_library_equals_primary_library` (same fixture user, same query, same items and order), `tenant_selector_is_invalid_before_knowledge` and `knowledge_timeout_is_retryable_unavailable`. Confirm that each fails because the routes answer 404, because the routes are not in the route table.
 - [ ] 8.4 GREEN: route `/v1/sites/{site}/library` and `/v1/sites/{site}/knowledge/search` through the Knowledge client that `library.rs` uses, with the session user as tenant. Verify 8.3 and `crates/public-api/tests/library.rs` unchanged.
 - [ ] 8.5 Update Platform's `README.md` route list and `DEVELOPMENT.md` inventory. No test: documentation.
+
+Tasks 8.6 and 8.7 were 3.5 and 3.6 of the contracts group. They come before 8.1, because the routes of groups 5 to 8 use these shapes.
+
+- [ ] 8.6 RED: add `route_schemas_round_trip` in `crates/public-api/tests/site_routes.rs` for the session, draft, blob, edit, conflict, library and knowledge request and response bodies in `openapi/openapi.json`, and `edit_request_refuses_inline_content`, which asserts that an edit body with a `content` string fails validation. Confirm that both fail because the routes are not in the description.
+- [ ] 8.7 GREEN: add those routes to `openapi/openapi.json`. The edit request requires `source_ref`, `base_hash` as 64 lower-case hex, `content_blob` as the `BlobRef` of `ratatoskr-contracts`, `content_hash` and `idempotency_key`; the library and knowledge routes reuse the existing item schemas of `/v1/library/search` and have no tenant field. Verify that 3.5 passes and that the web client and the site SDK regenerate their types from it.
 
 ## 9. Sites service (ratatoskr-sites)
 

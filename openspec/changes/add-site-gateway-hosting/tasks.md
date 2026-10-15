@@ -2,16 +2,18 @@
 
 ## 1. Implementation by repository
 
-Dependency order. Each item closes only after its pull request merges, and carries the link.
-SITE-025 (`add-site-publications`) must be merged in `ratatoskr-contracts`, `ratatoskr-sites` and
-`ratatoskr-platform` before items 1.2 and 1.3 start, because this change uses its route classes, its
-approval routes and event, and the durable `ratatoskr_sites_approvals`.
+Dependency order. The owner chose direct commits to `main` after an independent review instead of
+pull requests, so each item records the pushed commit that the workspace pins and the state of its
+CI there (the check runs of that commit, read with `gh api`). An item closes only when every task of
+its groups is ticked. SITE-025 (`add-site-publications`) must be merged in `ratatoskr-contracts`,
+`ratatoskr-sites` and `ratatoskr-platform` before items 1.2 and 1.3 start, because this change uses
+its route classes, its approval routes and event, and the durable `ratatoskr_sites_approvals`.
 
 Groups 10 and 11 wait until DPL-022 (`add-deployment-automation`) is merged and archived. They
 extend what DPL-022 creates: the Ansible playbook and its `host` role, `services.json`, the
 Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inventory.rs`.
 
-- [ ] 1.1 `ratatoskr-contracts`, branch `site-026/bundle-manifest`: `sites/bundle-manifest.v1` and the deploy request and response shapes (group 3). It merges first, because every repository below reads them. PR: _link_
+- [x] 1.1 `ratatoskr-contracts`: `sites/bundle-manifest.v1` and the deploy request and response shapes (group 3). It merges first, because every repository below reads them. Direct to `main` after review; pinned at `2c72602`, CI green (8 of 8 check runs). Group 3 is complete.
 - [ ] 1.2 `ratatoskr-sites`, branch `site-026/gateway-and-deploys`: the deploy receipt, the deploy store and activation (group 4), the gateway projection rewrite (group 5), then the `ratatoskr-sites-gateway` binary and its unit (groups 6 and 7). PR: _link_
 - [ ] 1.3 `ratatoskr-platform`, branch `site-026/site-deployer-and-deploy-routes`: the `site_deployer` device kind and its pairing, the `deploy` route class and its rows for the deploy and activate routes, and the `X-Ratatoskr-Client-IP` trust rule (group 8). It merges before 1.4. PR: _link_
 - [ ] 1.4 `ratatoskr-site-sdk`, branch `site-026/bundle-workflow-and-deploy`: `reusable-site-bundle.yml`, `ratatoskr-site login` and `ratatoskr-site deploy` (group 9). PR: _link_
@@ -24,10 +26,12 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 
 ## 3. The bundle manifest contract (ratatoskr-contracts)
 
-- [ ] 3.1 RED: add `crates/sites-contracts/tests/bundle_manifest.rs` with `a_manifest_without_a_file_digest_is_refused`, `a_path_with_a_parent_segment_is_refused` and `a_path_under_the_forwarding_prefix_is_refused`. Each loads a fixture from `fixtures/sites/bundle-manifest/invalid/` and asserts `validate(&schema, &fixture).is_err()` against `schemas/json-schema/sites/bundle-manifest.v1.schema.json`. Confirm that the tests fail because the schema file does not exist.
-- [ ] 3.2 GREEN: write the schema (site id, repository, 40-hex commit, entry document, entry fallback, files with path, size, 64-hex SHA-256 and `hashed`; a path pattern that refuses `..`, a leading `/` and a leading `_r/`, and accepts `.ratatoskr/`), the valid and invalid fixtures, and the entries in `fixtures/invalid-expectations.toml`. Verify that 3.1 passes and that `compat_fixtures.rs` still passes.
-- [ ] 3.3 RED: in the same file, add `a_valid_manifest_round_trips` and `a_manifest_with_the_reserved_sdk_path_is_valid`. The first deserialises the valid fixture into the Rust type, serialises it again and asserts byte equality; the second asserts `validate(...).is_ok()` for a manifest that lists `.ratatoskr/sign-in/index.html`. Confirm that the first fails because the type does not exist.
-- [ ] 3.4 GREEN: add the `BundleManifest` type and the deploy request and response types. Verify that 3.3 passes. Document the schema in the contracts `README.md`. No separate test: documentation.
+- [x] 3.1 RED: add `crates/sites-contracts/tests/bundle_manifest.rs` with `a_manifest_without_a_file_digest_is_refused`, `a_path_with_a_parent_segment_is_refused` and `a_path_under_the_forwarding_prefix_is_refused`. Each loads a fixture from `fixtures/sites/bundle-manifest/invalid/` and asserts `validate(&schema, &fixture).is_err()` against `schemas/json-schema/sites/bundle-manifest.v1.schema.json`. Confirm that the tests fail because the schema file does not exist.
+- [x] 3.2 GREEN: add the `BundleManifest` type and generate `sites/bundle-manifest.v1` from it (site id, repository, 40-hex commit, entry document, entry fallback, files with path, size, 64-hex SHA-256 and `hashed`; a path pattern that refuses `..`, a leading `/` and a leading `_r/`, and accepts `.ratatoskr/`), the valid and invalid fixtures, and the entries in `fixtures/invalid-expectations.toml`. Verify that 3.1 passes and that `tools/contractsc/tests/fixtures.rs` still passes.
+- [x] 3.3 In the same file, add `a_valid_manifest_round_trips` and `a_manifest_with_the_reserved_sdk_path_is_valid`. The first deserialises the valid fixture into the Rust type, serialises it again and asserts byte equality; the second asserts `validate(...).is_ok()` for a manifest that lists `.ratatoskr/sign-in/index.html`. No failing test first: the type and the path rule land in 3.2. A field-order mutation and a path-pattern mutation each make one of them fail.
+- [x] 3.4 GREEN: add the deploy response types. The commit is the deploy id, because a deploy is idempotent on site and commit (owner decision), so no deploy id type is added. `DeployStored` answers `POST /v1/sites/{site}/deploys` (`site_id`, `commit`, `file_count`, `size_bytes`, `created`, false when an earlier deploy of the commit is returned). `DeployActivated` answers `POST /v1/sites/{site}/deploys/{commit}/activate` (`site_id`, `current_commit`, `previous_commit` when one exists). The upload body is the bundle archive (`application/x-tar`), and the activate request has no body. Add valid and invalid fixtures and `tools/contractsc/tests/sites_fixtures.rs::deploy_responses_round_trip`, which must first fail because the schemas do not exist. Document the bundle manifest schema and the two routes in the contracts `README.md`.
+- [x] 3.5 Add the invalid bundle-manifest fixtures `backslash`, `control-character`, `dot-segment`, `bare-forwarding-segment` (a root file `_r`), `trailing-slash` and `duplicate-path`, and the valid fixture `underscore-names` with `_redirects` and `a/_r/b`, each with its row in `invalid-expectations.toml`. No failing test first: the rules exist since 3.2. Mutations of the path pattern make the path fixtures fail, and ignoring the order rule makes `duplicate-path` fail.
+- [x] 3.6 State one length unit for `BundlePath`: 1024 UTF-8 bytes, checked by the Rust type. The rustdoc that becomes the schema description states that the schema's `maxLength` counts characters and therefore accepts some longer paths, which the Rust type refuses. Add `valid/path-at-byte-limit.json` (1024 bytes) and `invalid/path-over-byte-limit.json` (1026 bytes, refused by serde only). JSON Schema cannot state uniqueness by one member, so `README.md` states that a repeated path is refused by the Rust type only. No failing test first: the rules exist. Changing the byte bound to 1023 or 1026 makes a fixture fail.
 
 ## 4. Deploy receipt, store and activation (ratatoskr-sites)
 

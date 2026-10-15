@@ -21,6 +21,7 @@ Each ADR contains context, decision drivers, considered options, decision, conse
 
 - [ADR-0008](0008-openspec-and-test-first.md): OpenSpec as the planning layer, and a test-first task shape.
 - [ADR-0009](0009-ansible-for-the-single-host.md): Ansible provisions the single host from pinned, attested artifacts.
+- [ADR-0012](0012-content-delivery-api-description-in-sites.md): The Content Delivery API description lives in `ratatoskr-sites`, and the site SDK pins it with a digest lock.
 
 ## Proposed
 

@@ -150,9 +150,10 @@ Search SHALL accept `q` of 1 to 256 Unicode scalar values, `limit` from 1 to 50 
 ### Requirement: The site SDK is generated from the contract
 
 `@ratatoskr/site-sdk` SHALL expose a typed client for every route of the Content Delivery API, with
-types generated from `sites/release.v1`, `sites/page.v1` and the published API description. Its
+types generated from `sites/release.v1`, `sites/page.v1` and the API description
+`openapi/content-delivery.json` of `ratatoskr-sites`, which the SDK pins with a digest lock. Its
 check SHALL fail when the committed generated code differs from a fresh generation against the
-pinned contracts.
+pinned contracts and the pinned description.
 
 #### Scenario: The generated client drifts from the contract
 
@@ -167,7 +168,8 @@ that the delivery API serves.
 
 #### Scenario: The starter template reads a fixture release
 
-- **WHEN** the starter template is built and run against a stub delivery API that serves
-  `fixtures/release/minimal/`
+- **WHEN** the starter template is built and run against a stub delivery API that serves the
+  contract fixtures `fixtures/sites/release/valid/minimal.json` and
+  `fixtures/sites/page/valid/*.json`
 - **THEN** the home page shows the fixture page titles, verified by
   `template/tests/fixture-release.test.ts` in `ratatoskr-site-sdk`

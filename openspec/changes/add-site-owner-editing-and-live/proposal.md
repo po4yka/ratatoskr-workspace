@@ -59,8 +59,9 @@ editing in this change only has to reach it.
   conflict types, and the template ships the reserved `.ratatoskr/sign-in/index.html`.
   `ratatoskr-web` gains the sign-in consent page and `site_owner` sessions in the session list. The
   manifest approval view is SITE-025's.
-- New contracts: `sites/site-event.v1`, the registered message type `sites.draft.changed.v1`, and the
-  request and response schemas of the routes above.
+- New contracts: `sites/site-event.v1` and the registered message type `sites.draft.changed.v1`.
+  The request and response bodies of the routes above are described in Platform's
+  `openapi/openapi.json`.
 
 No item is **BREAKING**. Nothing in this change has shipped, and every route is new.
 
@@ -99,14 +100,15 @@ as it is: an edit is an ordinary operation, and the notes service reports it as 
 
 ## Repositories, in merge order
 
-1. `ratatoskr-contracts`: `sites/site-event.v1`, the `sites.draft.changed.v1` registration and the
-   route schemas. It merges first, because every
+1. `ratatoskr-contracts`: `sites/site-event.v1` and the `sites.draft.changed.v1` registration. It
+   merges first, because every
    other repository below builds against them.
 2. `ratatoskr-notes`: accepts a blob upload with a `site_owner` claim for registration only. It
    merges before Platform, because Platform starts forwarding site uploads to it.
 3. `ratatoskr-platform`: the `site_owner` session kind, the sign-in code, the route classes and the
    capability check, the session revocation on withdrawal, the site event stream, and the blob,
-   edit, conflict, release-guard, library and knowledge routes. It
+   edit, conflict, release-guard, library and knowledge routes, with their request and response
+   bodies in `openapi/openapi.json`. It
    merges before the sites service, because the sites service only answers loopback questions from
    Edge and publishes `evt.sites.draft.changed.v1`, which nothing reads until Edge does.
 4. `ratatoskr-sites`: the loopback scope query (returns the connection id and the path of a
