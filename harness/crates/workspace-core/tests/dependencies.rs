@@ -54,6 +54,7 @@ fn valid_graph_has_stable_order() {
             "platform".to_owned(),
             "instagram".to_owned(),
             "knowledge".to_owned(),
+            "site-sdk".to_owned(),
             "telegram".to_owned(),
             "threads".to_owned(),
             "vault".to_owned(),

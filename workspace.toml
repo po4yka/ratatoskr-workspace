@@ -241,6 +241,22 @@ dependencies = [
 ]
 
 [[repositories]]
+id = "site-sdk"
+path = "repos/clients/site-sdk"
+remote = "https://github.com/po4yka/ratatoskr-site-sdk.git"
+default_branch = "main"
+kind = "client"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["lint", "test", "build"]
+contracts = ["sites.site_manifest", "sites.release", "sites.page"]
+profiles = ["clients"]
+digest_inputs = ["contracts/contracts.lock.json", "openspec/config.yaml", "package-lock.json"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "the generated site manifest, release and page types and their fixtures" },
+]
+
+[[repositories]]
 id = "telegram"
 path = "repos/integrations/telegram"
 remote = "https://github.com/po4yka/ratatoskr-telegram.git"

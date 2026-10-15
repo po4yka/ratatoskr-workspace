@@ -74,3 +74,7 @@
 	path = repos/clients/obsidian-plugin
 	url = https://github.com/po4yka/ratatoskr-obsidian-plugin.git
 	branch = main
+[submodule "site-sdk"]
+	path = repos/clients/site-sdk
+	url = https://github.com/po4yka/ratatoskr-site-sdk.git
+	branch = main

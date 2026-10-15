@@ -10,7 +10,7 @@ use workspace_core::{
     validate_manifest,
 };
 
-const EXPECTED_PINS: [(&str, &str, &str); 19] = [
+const EXPECTED_PINS: [(&str, &str, &str); 20] = [
     (
         "browser-extension",
         "repos/clients/browser-extension",
@@ -34,7 +34,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "contracts",
         "repos/contracts",
-        "75e954fb1af6b9d0f7b30383c7a993c64d01e2c9",
+        "2c726027da79e0e899ad482afead0a2000b03e61",
     ),
     (
         "export-agent",
@@ -82,6 +82,11 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
         "6df97172f2feae9866fc7fe1d09400b9952bc2b4",
     ),
     (
+        "site-sdk",
+        "repos/clients/site-sdk",
+        "89c683a872c2ca01c33efa1a969fd566fcef98ad",
+    ),
+    (
         "telegram",
         "repos/integrations/telegram",
         "cd78de402b5b1935482ded5a4512f2760959b661",
@@ -99,7 +104,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 19] = [
     (
         "web",
         "repos/clients/web",
-        "05764b18628d65ee1997d09aa6f703719958b755",
+        "f3c7320b6b255ae6481a75e82cf2e8e8d592be96",
     ),
     (
         "x",

@@ -2,7 +2,7 @@ id: SITE-025
 state: planned
 goal: Select public content from a connected vault, build an immutable and privacy-filtered release from it, and serve the current release of an approved site through an anonymous, cacheable Content Delivery API that a site with any UI reads through @ratatoskr/site-sdk.
 openspec_change: add-site-publications
-authorization: Planning only. Implementation starts after the owner accepts ADR-0011 and Platform's ADR-0017, and after the read path of OBS-023 has merged. The owner creates the two new GitHub repositories. Child repositories work on task branches; the workspace planning records use main, which the owner authorised for them.
+authorization: Implementation started under the owner's instruction to complete the work; ADR-0011 and Platform's ADR-0017 stay Proposed until the owner accepts them. The owner authorised direct commits on main for the workspace planning records. For the child repositories the owner chose direct commits to main after an independent review instead of pull requests; each repository entry records its pushed commits, and the workspace pins a commit only after its CI is green.
 depends_on:
   - OBS-023  # add-notes-vault-connections: file index, resolved links, the read group ratatoskr-notes-blobs
   - DPL-022  # add-deployment-automation: task 9.6 enrols ratatoskr-sites in the Ansible inventory, which needs the playbook, Molecule and the freeze guard merged and archived
@@ -11,19 +11,75 @@ archive_after:
 repositories:
   - id: ratatoskr-contracts
     role: sites-contracts-crate-approval-event-schema-and-message-registration
-    branch: site-025/sites-contracts
+    branch: main@a126e613118ba2f5b96f993ce60cb34ff360fdbb
+    base: 75e954fb1af6b9d0f7b30383c7a993c64d01e2c9
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/contracts at 2c726027da79e0e899ad482afead0a2000b03e61 (tasks 3.1 to 3.23; the same pin carries SITE-026 tasks 3.1 to 3.6 and SITE-027 tasks 3.1 to 3.4, which follow a126e61). A contracts repository ships no systemd unit
+    commits:
+      - "72f5acd0f330226f9625b97d222fd349a70e8278 test(contractsc): state the site manifest fixtures before the type exists"
+      - "6f8fcfb1da454640e216ef0e02fc14d604b52a5f feat(sites-contracts): add the site manifest with its closed capability set"
+      - "7be70e95004c8676dc67dc4b3009889d44ff5d9e test(contractsc): state the release and page fixtures before the types exist"
+      - "822a94541a7a049c70ddb36d08baefdceeb65907 feat(sites-contracts): add the release and page documents"
+      - "edd4751d90e9b8f1b7728e0f89d641386ed0ad49 test(contractsc): state the producers and consumers of the site messages"
+      - "7335dd6a7f3671b62babbed642471d6a9f3e6794 feat(sites-contracts): register the release build, release and approval messages"
+      - "0408139fd40ff352a02523892cfc9fc413e60433 chore: bless the public API baseline of ratatoskr-sites-contracts"
+      - "2f3f831b6b33bf8a6adf4bb84969c3c4841f7936 test(contractsc): expect notes and sites among the operation report producers"
+      - "957de4467d2bf13a4270b09bc597c420c3b6fb39 fix(contracts): list notes and sites among the operation report producers"
+      - "eac8cb721607557063c79c14f8cc0a47e3cb0908 test(contractsc): pin the page digests of the minimal release fixture"
+      - "d825965becd74344a484cf0570ded531161fd0eb docs(openspec): record the operation report and page digest follow-ups"
+      - "bf2f9985b222e3ecf2574b85dd6ff8e30590689d test(fixtures): refuse an unknown member on a thematicBreak or break node"
+      - "a1c7f9c3d316fbab9782d668e40d426068a64768 fix(sites-contracts): refuse unknown members on thematicBreak and break"
+      - "1a9561889cad805230bd8f7ef9630ef30d96efd4 test(fixtures): pin the release, page, manifest and node rules"
+      - "ba1a95e1be2e368dc05faa0dbbc7e1897a3b9fb6 test(fixtures): refuse quotes, angle brackets and line separators in page URLs"
+      - "89517e7420af88758b4135dd648d2ee5410b3ea7 fix(sites-contracts): refuse quotes, angle brackets and line separators in page URLs"
+      - "fb454e88de2e38b236a3533949743ce1bad281e6 test(fixtures): refuse an asset size above 2^53 - 1"
+      - "71be414da08144e302a4a16c7017b34cfd3fb7b1 fix(sites-contracts): bound an asset size to 2^53 - 1"
+      - "6c9f045a5ea0615b3144f1f2305940da204ea70b docs(sites-contracts): state who sanitises the page html and how to insert it"
+      - "e843e5951a7510287d4537558d25854be5aa9a36 test(contractsc): state the readers of the release and page documents"
+      - "329023e7aef8057cd4df1cd7ed8f37d77c121621 fix(contracts): name the sites service and the site SDK as release and page readers"
+      - "df646b0b08ab9f63bee92d1067d39427114b8727 chore: bless the sites-contracts API baseline after the review corrections"
+      - "e07a107b0728ff506c7a6c51aa065a7222c3b8c1 test(fixtures): pin normal page URLs and the wire form of the break nodes"
+      - "a126e613118ba2f5b96f993ce60cb34ff360fdbb fix(fixtures): drop the stray article from the six URL expectation reasons"
   - id: ratatoskr-notes
     role: loopback-internal-index-route
     branch: site-025/notes-internal-index
   - id: ratatoskr-sites
     role: new-service-registry-publications-release-builder-approval-projection-delivery-api
-    branch: site-025/sites-service
+    branch: main@a4598abb93fc1298c994e30979c83f82127f4b64
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: not pinned and not yet in the fleet. Sites at a4598ab locks the contracts at df646b0b08ab9f63bee92d1067d39427114b8727, the rest of the fleet at a9289e27bcf53f496b5917889580965d97ff2358, and harness contracts_pin.rs requires one revision in every Rust repository. Its enrolment in services.json waits for DPL-022 (task 9.6)
+    commits:
+      - "5b6b0c20a764c792f414ef794c37ced732e1b77f chore: scaffold ratatoskr-sites from the fleet template"
+      - "92c2c030359ae3e38dba510dae91fbc54cbe7401 docs(openspec): open site-025-sites-service"
+      - "a106ed3e32a8cd45ade026d6e19e6e5b6dd70cc8 test(sites): the shipped example enables the deployment profile"
+      - "c2165a22b36b1368e01159068d704ef5e05c0e92 deploy(sites): set the domain listener and the SITES identity in the example"
+      - "7a88bfb1ee42571cdf10d698513b77967b6ae9b9 test(sites): the role file creates an unprivileged sites role"
+      - "07ae6fbdb7e1a6045502e10d864bd622e6c8871c deploy(sites): create the sites role without privileges and without public"
+      - "01128415fe5e0e94a0b37a79c946a62caa3a1e2e test(sites): the sysusers file adds sites to the notes blob group"
+      - "4d2494fb07897a90d2f91a0c89cd38c79dd41c18 deploy(sites): add the sites user to the notes blob group"
+      - "f4ba7cf317771f7120cf1a5d3cde1b02043152e0 test(sites): a note blob is verified before it is used"
+      - "70d58c99ffd8bc544798d0cad425dab45d611aa0 feat(sites): verify every note blob before its bytes are used"
+      - "5c469003a18c83004e814f00ae720c8b8debd63b test(sites): the unit names the notes blob group"
+      - "c6bbe7b804a98abec880ddde69cf265d39e7070e deploy(sites): name the notes blob group in the unit"
+      - "a4598abb93fc1298c994e30979c83f82127f4b64 test(sites): pin the missing and length classes of the note blob reader"
   - id: ratatoskr-platform
     role: public-and-site-route-classes-adr-0017-site-approvals-build-route-sites-identity-and-durables
     branch: site-025/site-routes-and-approvals
   - id: ratatoskr-site-sdk
     role: new-generated-client-and-starter-template
-    branch: site-025/site-sdk
+    branch: main@89c683a872c2ca01c33efa1a969fd566fcef98ad
+    created: 2026-10-15, public
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/site-sdk at 89c683a872c2ca01c33efa1a969fd566fcef98ad (tasks 7.1 and 7.4 to 7.10; first pinned here, which adds site-sdk to the fleet). Tasks 7.2 and 7.3 wait for openapi/content-delivery.json in ratatoskr-sites (ADR-0012). A client ships no systemd unit
+    commits:
+      - "215d9ae4df5873d4f422db974b62cd8b24647a73 chore: create the repository for the site SDK and the template"
+      - "f54627a867de8f34787370ceecbb85a613c80f9d test(template): home page lists the fixture pages"
+      - "1f249f6edd15568c8ce8b5af0c635cb7b7f22ed6 feat(template): add the starter template that lists the release pages"
+      - "6594cd4e8484e92c4c78c1fde9c1af99c78f3dcc test(template): a page renders from its ast"
+      - "e6f38c3891f2d816bfb5f616c72bc3d64ee58404 feat(template): render a page view from the ast of the page"
+      - "da8bf952dcbb9e4fac66a5185af068f669366d07 docs(readme): start a site, write the manifest, the public capabilities"
+      - "2731504356840cdb021111d30f82cea40eb5cb47 test(template): refuse a disallowed URL scheme and a dot route slug"
+      - "89c683a872c2ca01c33efa1a969fd566fcef98ad fix(template): allow only safe URL schemes and contract slugs"
   - id: ratatoskr-web
     role: site-registry-manifest-approval-publication-editor-release-history
     branch: site-025/site-management

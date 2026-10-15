@@ -6,16 +6,25 @@ depends_on:
   - OBS-024   # add-notes-write-back: cmd.notes.file.write_requested.v1 with origin, BlobRef content, conflicts, platform_notes_conflict_projection
   - SITE-025  # add-site-publications: manifest, identity.site_approvals, effective set, release route and modes
   - SITE-026  # add-site-gateway-hosting: the gateway, /_r/, /.ratatoskr/ and X-Ratatoskr-Client-IP
-authorization: Planning only. The workspace planning records go on main, because the owner authorised direct commits for them. No child repository is changed until the owner starts the implementation; each child repository item then records its pull request and merged commit.
+authorization: The owner authorised direct commits on main for the workspace planning records. For the child repositories the owner chose direct commits to main after an independent review instead of pull requests; each repository entry records its pushed commits, and the workspace pins a commit only after its CI is green.
 repositories:
   - id: ratatoskr-contracts
-    role: site-event-draft-changed-registration-and-route-schemas
-    branch: site-027/site-owner-contracts
+    role: site-event-and-draft-changed-registration
+    branch: main@81be23a391b08640d40caa5c8809c5ff7beb9a43
+    base: eca431317cf79e169fc1c02192eecaabbd8daf58
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/contracts at 2c726027da79e0e899ad482afead0a2000b03e61 (tasks 3.1 to 3.4, shared with SITE-025 and SITE-026). Tasks 3.5 and 3.6 moved to ratatoskr-platform as 8.6 and 8.7, because the request and response bodies of the site routes live in Platform's openapi/openapi.json. A contracts repository ships no systemd unit
+    commits:
+      - "9a7e98f6344008bf36bae282acb15ae1d1003cbe test(sites-contracts): refuse a page list in the public site event"
+      - "0da1fb874f9a1e29555829b6c0b3e20b532aa72c feat(sites-contracts): add the site event of the live stream"
+      - "d3aa5a7cb3f5e5ba0f74361edf60d29d4d4fc7b7 test(contractsc): state the producer and consumer of the draft change message"
+      - "6d843800d0dfab476b43d1aef1de1cd8d8ac866d feat(sites-contracts): register the draft change message"
+      - "81be23a391b08640d40caa5c8809c5ff7beb9a43 chore: bless the sites-contracts API baseline for the deploy responses and site events"
   - id: ratatoskr-notes
     role: site-owner-blob-upload-registration-only
     branch: site-027/site-owner-uploads
   - id: ratatoskr-platform
-    role: site-owner-session-route-classes-capability-check-event-stream-and-routes
+    role: site-owner-session-route-classes-capability-check-event-stream-routes-and-route-bodies
     branch: site-027/site-owner-edge
   - id: ratatoskr-sites
     role: scope-query-draft-read-anonymous-claim-refusal-and-draft-changed-producer
@@ -44,7 +53,7 @@ contracts:
   shared_documents:
     - sites/site-event.v1
     - sites.draft.changed.v1 (registered message type, schema sites/draft-changed.v1)
-    - sites route schemas for sessions, drafts, blobs, edits, conflicts, library and knowledge search
+    - the request and response bodies of the session, draft, blob, edit, conflict, library and knowledge search routes, in Platform's openapi/openapi.json (not a contracts document)
   change: additive; every schema is new and v1
 compatibility:
   strategy: Additive. Every route, durable and session kind is new. /v1/library/search and the operation stream do not change.
@@ -86,7 +95,8 @@ rollback:
   - Revert each repository's commit with git revert.
   - On a running host, revoke every site_owner session; owner editing, drafts and system data stop at once, and public content from SITE-025 is unchanged.
 verification:
-  - contracts crates/sites-contracts/tests/site_event.rs and site_routes.rs; tools/contractsc/tests/live_message_types.rs
+  - contracts crates/sites-contracts/tests/site_event.rs; tools/contractsc/tests/live_message_types.rs
+  - platform crates/public-api/tests/site_routes.rs (route_schemas_round_trip, edit_request_refuses_inline_content)
   - notes services/notes/tests/device_channel.rs (site_owner_upload_registers_blob_only, site_owner_cannot_send_change_batches)
   - platform crates/http/tests/site_route_classes.rs; crates/public-api/tests/sites_build_command.rs; site_edits.rs::site_upload_claim_is_not_relabelled_as_primary
   - platform crates/identity/tests/site_sign_in.rs and site_owner_session.rs; crates/eventing/tests/stream_table.rs and nats_permissions.rs

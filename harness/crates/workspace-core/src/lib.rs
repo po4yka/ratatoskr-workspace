@@ -18,7 +18,7 @@ pub use fleet::{FleetClass, FleetInitReport, fleet_init};
 
 static NEXT_LOCK_WRITE: AtomicU64 = AtomicU64::new(1);
 
-const REQUIRED_REPOSITORIES: [&str; 19] = [
+const REQUIRED_REPOSITORIES: [&str; 20] = [
     "browser-extension",
     "channel-digests",
     "chatgpt",
@@ -33,6 +33,7 @@ const REQUIRED_REPOSITORIES: [&str; 19] = [
     "notes",
     "obsidian-plugin",
     "platform",
+    "site-sdk",
     "telegram",
     "threads",
     "vault",

@@ -31,10 +31,67 @@ repositories:
       - "75e954fb1af6b9d0f7b30383c7a993c64d01e2c9 fix(fixtures): state that the schema refuses a merge proposal on a binary file"
   - id: ratatoskr-notes
     role: write-consumer-pending-writes-conflicts-delivery-and-link-rewrite
-    branch: obs-024/notes-write-back
+    branch: main@96a63fda85d8184d69fd3b049867fc27df429e6a
+    base: 810edd8ca76376eb4df9555bfed2a637052c55dd
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: not pinned; the workspace stays at 810edd8 (OBS-023). Notes at 96a63fd locks the contracts at 76a0c35a53bb4432878d451bcb7b5f08275edbc6, the rest of the fleet at a9289e27bcf53f496b5917889580965d97ff2358, and harness contracts_pin.rs requires one revision in every Rust repository. 6d6d697 copies the NOTES stanza of Platform f76005e into deploy/nats/identity.conf, so Molecule runs when the pin lands
+    commits:
+      - "a49745a731131df791831b66c524b6c232570173 build(notes): pin the contracts at 76a0c35"
+      - "b75d957b8ed8e0045df102f01e4933894c2e2474 test(notes): the write consumer verifies the durable of Edge"
+      - "8aeff4ee2bef8deef95eec2f948b579cebf6ed47 feat(notes): verify the durable of the write commands for readiness"
+      - "f18490b214a98fcd83589012c46565a62f2c13e7 test(notes): two quick edits of one note apply in order"
+      - "c47791e465e224d83f1f2a7c6b5752977c27f435 feat(notes): queue the writes of each file and deliver only the head"
+      - "f6cc5374f5f2e760b02bcf755735fe723c29cfc0 test(notes): a stale base and a case-folded create make a conflict"
+      - "529935af418593f478a0fb142cdf7a29a2d4b89f feat(notes): check the base of a write at the head of its queue"
+      - "d3833ed98ee2b2cf025a8323a2aea5c2ad09e514 test(notes): a write is current and published only on its acknowledgement"
+      - "89a1f4c8f54b3ef664d5c1fceb6f787a359909b0 feat(notes): make a write current only on the acknowledgement"
+      - "3264bbb5501b7610b830ca62d63a19dc0e87baa4 test(notes): the owner's session uploads write content and nothing else"
+      - "1b7379c857c0a09e57eb799b41e15aeb7a1a3acf feat(notes): take write content from the owner's session and check it"
+      - "0f6db43765ee3579ffa7393f0bb2c3ee8bd979d8 test(notes): a retried write repeats its outcome and a reused key fails"
+      - "645527d462cbebeefa65919a10b0bb5458dc442d feat(notes): keep one idempotency record per connection and key"
+      - "2a4dbfc60a0e493b1302b802a5ee1e7a51b955e8 test(notes): a foreign connection and write mode off refuse a write"
+      - "54119bb635a1b889fbd6a0b7f385e07be2a02d0f feat(notes): check the tenant and the write mode when a write arrives"
+      - "d6b927a6ff2e59fa7dfc66e1f7592c4c585f4a2b test(notes): a write reports its stages, its revision and its conflict"
+      - "86126e0c2d05100a62378aeac70920c794cd3295 feat(notes): report each write and serve the conflict it raises"
+      - "ca35f1a9c02c419d42a30d7b275799cfa8c69461 test(notes): the write consumer hands each command to the write path"
+      - "f4e0f37e8e06216056c049568ad4ca3bd14467a9 feat(notes): consume the write commands and acknowledge each one"
+      - "83e313647672d4e86ff020b9150077944b406755 test(notes): a conflict event names three hashes and a text merge"
+      - "dd6a596d0206f2dcd56190cdf8e69c39d68bf311 feat(notes): raise each conflict with its hashes and a text merge"
+      - "ba4f1d77a9057b369c1447417a9d4a8ff3b9a14f test(notes): a resolution that races a vault change raises a new conflict"
+      - "db369efb4892b704f524e1274fee172a7f430164 feat(notes): resolve a conflict as a queued write on its current revision"
+      - "6d6d6975b24f6439dc7949ce32fd75f2bfd70250 deploy(notes): copy the NOTES stanza with the write durable and conflicts"
+      - "5c968f0b7a604ac4b7664915b0f3470527d4e74b test(notes): a merge has a size cap and runs outside the connection lock"
+      - "c6ced1e8995598085ae340ceca540ff7c3a45e36 fix(notes): cap the merge input and merge outside the connection lock"
+      - "ef2e71434748d5c62e219aaa559c4b8ecc681b29 test(notes): the conflict route leaves out a text over the merge cap"
+      - "7b31b75d83dda53e6bf6e44b1446c7af53a2718a fix(notes): read no conflict text over the cap of a merge"
+      - "9cff7e6bc2465c00f38ba80962940c8948f6f36b test(notes): a write command that fails is delivered again after its nak"
+      - "42174a13a5ddebcf82502077a451f2ea50e64356 test(notes): a conflict resolved before its announcement is not announced"
+      - "070c7b957b53261a14ee97a1e36897abb43377a3 fix(notes): announce only open conflicts and drain every pending one"
+      - "2989e7904f6dc94942dd17d497afccba98af9d77 test(notes): restore the table before any assertion of the nak test"
+      - "96a63fda85d8184d69fd3b049867fc27df429e6a test(notes): give the test write commands a fixed issue time"
   - id: ratatoskr-platform
     role: edge-write-routes-operation-kinds-durables-and-bus-acl
-    branch: obs-024/notes-write-back
+    branch: main@f76005e4297142bb2a4ebb114b4140704cd5384f
+    base: 6df97172f2feae9866fc7fe1d09400b9952bc2b4
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: not pinned; the workspace stays at 6df9717 (OBS-023). Platform at f76005e locks the contracts at 75e954fb1af6b9d0f7b30383c7a993c64d01e2c9, and harness contracts_pin.rs requires one revision in every Rust repository. The pin needs the harness change of bus_durables.rs (26 service rows with ratatoskr_notes_write_requests, platform_notes_conflict_projection among the Platform-only consumers, the notes ack wait of 30 s) and bus_acl.rs (the NOTES owner of ratatoskr_notes_write_requests); deploy/nats/ratatoskr.conf changes, so Molecule runs when the pin lands
+    commits:
+      - "a6be0b265b5c7cb345379357b15a340f08d6f7d6 chore(deps): move the contracts pin to 75e954f"
+      - "e835758c3fbf0938b93f77bfe5c304b19aa6801e test(public-api): require the notes write routes at Edge"
+      - "c38cb493faf436f2dd05b561e29b9c2e28de6a90 feat(public-api): accept notes writes, resolutions and the write mode at Edge"
+      - "6497ca9bffdf1f38e157a76cbde3ad8bfe1d03f4 test(public-api): require a session upload on the notes blob route"
+      - "067587ce9c5e33dbf99fe24e8378ff4a9296d8a4 feat(public-api): forward an owner upload on the notes blob route"
+      - "5991f5900647773dbb8b31469cb655e8995c4715 test(operations): require the notes write kinds to take only notes reports"
+      - "21bad581d50587c6e31fbbcbf647d957b2021a11 feat(operations): mint the notes write kinds for the notes lane only"
+      - "03ccf26d4c632abfef4207d7ac8c6136132a6e61 test(eventing): require the two durables of the notes write path"
+      - "f85b18d206edb90ce9b0edce4b4df6c5d2696295 feat(eventing): provision the notes write durable and project note conflicts"
+      - "d30b02d22143c0423b23e825f6beaf325408721b test(eventing): require NOTES to publish the conflict events and no command"
+      - "935fab6f5af6191710f85abc1aa749e42b42227b feat(deploy): let NOTES publish the two conflict events"
+      - "e014bef640b55b139ea5439c1e8be9fcbbc6bbff refactor(public-api): move the gateway header rules into their own module"
+      - "9b090c23d92d17b188fdffe6ffb4554d21a1dc60 test(public-api): require a device to read its notes write queue through Edge"
+      - "14e3c83ac625f401d70740011a94b498a4c0ace7 fix(public-api): let a notes device read its write queue through Edge"
+      - "ec40ad5cb8c431717bf33e0909fb188b36ac96a2 test(public-api): require one notes write per key across both write routes"
+      - "f76005e4297142bb2a4ebb114b4140704cd5384f fix(public-api): refuse a notes write key reused on the other write route"
   - id: ratatoskr-obsidian-plugin
     role: plugin-channel-apply-and-report
     branch: obs-024/notes-write-back
@@ -43,7 +100,18 @@ repositories:
     branch: obs-024/notes-write-back
   - id: ratatoskr-web
     role: editor-write-mode-and-conflict-view
-    branch: obs-024/notes-write-back
+    branch: main@f3c7320b6b255ae6481a75e82cf2e8e8d592be96
+    base: 05764b18628d65ee1997d09aa6f703719958b755
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/web at f3c7320b6b255ae6481a75e82cf2e8e8d592be96 (tasks 13.1 to 13.6; advanced from 05764b1, the OBS-023 pin). A client ships no systemd unit
+    commits:
+      - "4ca9c18108207cb86ec0f4879ac6ffb0a4c54f73 test(notes): edit a note, switch write mode, resolve a conflict"
+      - "5e194941a7f0a91feefd9da0c5f2cc95e32bb764 feat(notes): edit a note, switch write mode, resolve a conflict"
+      - "03a119845b4e1d9e50cc033fe8ac83c4224c85f8 test(notes): a write sent again keeps its key, and the base waits for success"
+      - "4940fc82ddc9e307517d414aa5d7080276acd8d0 fix(notes): send a write again with its key, and move the base on success"
+      - "d8d86fbdb2005baf2abee6b5b3d1122672034d20 docs(openspec): record the note editor and stop calling the browse read-only"
+      - "9ff059acf8b6422ec506d97f12c89f90afb27ae6 test(notes): one save at a time, and onSucceeded once per operation"
+      - "f3c7320b6b255ae6481a75e82cf2e8e8d592be96 fix(notes): keep Save disabled while a write runs, and report its end once"
   - id: ratatoskr-workspace
     role: harness-checks-pins-integration-profile-and-documentation
     branch: main

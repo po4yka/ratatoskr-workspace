@@ -5,11 +5,23 @@ openspec_change: add-site-gateway-hosting
 depends_on:
   - SITE-025  # route classes, the Edge-owned approval routes, evt.platform.site_approval.changed.v1, the durable ratatoskr_sites_approvals, the sites schema and the /v1/sites prefix
   - DPL-022   # tasks groups 10 and 11 extend its Ansible playbook, host role, services.json, Molecule scenario with freeze_guard, and the harness test deploy_inventory.rs; they wait until DPL-022 is merged and archived
-authorization: The repository owner authorised direct commits on main for the workspace planning records. Every child repository change goes through its task branch below and a pull request. No branch, worktree, pull request or host change exists for this changeset yet.
+authorization: The owner authorised direct commits on main for the workspace planning records. For the child repositories the owner chose direct commits to main after an independent review instead of pull requests; each repository entry records its pushed commits, and the workspace pins a commit only after its CI is green.
 repositories:
   - id: ratatoskr-contracts
     role: bundle-manifest-schema-and-deploy-shapes
-    branch: site-026/bundle-manifest
+    branch: main@2c726027da79e0e899ad482afead0a2000b03e61
+    base: a126e613118ba2f5b96f993ce60cb34ff360fdbb
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/contracts at 2c726027da79e0e899ad482afead0a2000b03e61 (tasks 3.1 to 3.6, shared with SITE-025 and SITE-027). 81be23a, recorded under SITE-027, also blesses the API baseline of the deploy responses. A contracts repository ships no systemd unit
+    commits:
+      - "005e545e0f422b8401d8b819a327a6f072d82483 test(sites-contracts): refuse unsafe bundle manifests before the schema exists"
+      - "4ed8c0d3b0972aa6cf9f8e6435d9e06fe10c2689 feat(sites-contracts): add the bundle manifest of a site bundle"
+      - "e107fedb9907c97f80bb44a2efd198bdacbf8108 test(sites-contracts): pin the bundle manifest round trip and the SDK path"
+      - "61b9a628306dc8c140f0c3a6ae7084f2a41d42f7 chore: bless the sites-contracts API baseline for the bundle manifest"
+      - "1721e5c514102008fda4ad0e6ef04b469b46ca29 test(contractsc): state the deploy responses before the types exist"
+      - "eca431317cf79e169fc1c02192eecaabbd8daf58 feat(sites-contracts): add the responses of the deploy routes"
+      - "8a94164428a5207f5d6605299d571c470da4f245 test(fixtures): pin the bundle path rules and the underscore names it accepts"
+      - "2c726027da79e0e899ad482afead0a2000b03e61 docs(sites-contracts): state the byte length bound of a bundle path"
   - id: ratatoskr-sites
     role: deploy-receipt-store-projection-rewrite-and-gateway-binary
     branch: site-026/gateway-and-deploys
