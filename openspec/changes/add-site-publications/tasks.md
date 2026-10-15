@@ -80,16 +80,24 @@ service in that inventory. This change starts after the read path of OBS-023
 - [x] 5.19 GREEN: implement the canonical release document and the release id of design D4 with a full rebuild, and report the operation through `evt.platform.operation.reported.v1`. Verify that 5.18 passes. Result: the release id is the SHA-256 of the RFC 8785 bytes (`serde_jcs`), and the build reports through `evt.platform.operation.reported.v1`.
 - [x] 5.20 RED: add `services/sites/tests/release_switch.rs` with `readers_see_one_release_or_the_other` and `published_event_carries_no_content`. Confirm that the release-id assertion of the first fails because pages are switched one at a time. Result: the release-id assertion fails.
 - [x] 5.21 GREEN: make the current-release switch and the outbox row one transaction, and relay `evt.sites.release.published.v1`. Verify that 5.20 passes. Result: the switch and the outbox row are one transaction, and the relay publishes `evt.sites.release.published.v1`.
-- [x] 5.21a RED/GREEN: the release builder applies the 64 MiB note bound itself (`sites.blob_length` for an over-bound attachment through `ReleaseBuilder`).
-- [x] 5.21b RED/GREEN: folder selection matches by the notes path key (NFC, then Unicode default case folding).
-- [x] 5.21c RED/GREEN: a failure report is cut to 1024 UTF-8 bytes rather than dropped, and a failed report write does not replace the build's class.
-- [x] 5.21d RED/GREEN: asset media type and size come from the attachment the page uses.
-- [x] 5.21e pin tests: `outbox_relay.rs::relay_publishes_each_row_once` (JetStream in CI) and `release_switch.rs::failed_switch_changes_nothing`; mutation proofs.
-- [x] 5.21f RED/GREEN: every non-void start tag is opened and closed whatever its self-closing flag; `embed` is void; a removed element skips its content even when self-closed.
-- [x] 5.21g RED/GREEN: nesting depth bound 256; a rendered page over 1 MiB fails with `sites.page_too_large` before tokenising.
-- [x] 5.21h RED/GREEN: renderer and allowlist match the contract fixtures' markup (`ul`, `data-callout-fold`, `data-wikilink`, `data-embed`, link titles, block newlines).
-- [x] 5.21i RED/GREEN: classes only from the renderer's set; one shared `[a-z0-9-]` heading id rule; `img src` only `assets/<64 hex>` or `https:`; an idempotence property test.
-- [x] 5.21j docs: CSP `img-src 'self' https:` and `Referrer-Policy` for sites; hiding attributes are removed.
+- [x] 5.21a1 RED: add a test that asserts that the release builder applies the 64 MiB note bound itself: an attachment over the bound fails the build through `ReleaseBuilder` with `sites.blob_length`. Confirm that it fails by assertion.
+- [x] 5.21a2 GREEN: apply the 64 MiB note bound in the release builder. Verify 5.21a1.
+- [x] 5.21b1 RED: add a test that asserts that folder selection matches by the notes path key (NFC, then Unicode default case folding). Confirm that it fails by assertion.
+- [x] 5.21b2 GREEN: match folder selection by the notes path key. Verify 5.21b1.
+- [x] 5.21c1 RED: add a test that asserts that a failure report is cut to 1024 UTF-8 bytes rather than dropped, and that a failed report write does not replace the class of the build. Confirm that it fails by assertion.
+- [x] 5.21c2 GREEN: cut a failure report to 1024 UTF-8 bytes, and keep the class of the build when the report write fails. Verify 5.21c1.
+- [x] 5.21d1 RED: add a test that asserts that the media type and the size of an asset come from the attachment that the page uses. Confirm that it fails by assertion.
+- [x] 5.21d2 GREEN: take the media type and the size of an asset from the attachment that the page uses. Verify 5.21d1.
+- [x] 5.21e Pin tests (no failing test first; the behaviour exists): `outbox_relay.rs::relay_publishes_each_row_once` (JetStream in CI) and `release_switch.rs::failed_switch_changes_nothing`; mutation proofs.
+- [x] 5.21f1 RED: add a test that asserts that every non-void start tag is opened and closed whatever its self-closing flag, that `embed` is void, and that a removed element skips its content even when it is self-closed. Confirm that it fails by assertion.
+- [x] 5.21f2 GREEN: open and close every non-void start tag whatever its self-closing flag, treat `embed` as void, and skip the content of a removed element even when it is self-closed. Verify 5.21f1.
+- [x] 5.21g1 RED: add a test that asserts a nesting depth bound of 256, and that a rendered page over 1 MiB fails with `sites.page_too_large` before it is tokenised. Confirm that it fails by assertion.
+- [x] 5.21g2 GREEN: bound the nesting depth at 256, and fail a rendered page over 1 MiB with `sites.page_too_large` before tokenising. Verify 5.21g1.
+- [x] 5.21h1 RED: add a test that asserts that the renderer and the allowlist match the markup of the contract fixtures (`ul`, `data-callout-fold`, `data-wikilink`, `data-embed`, link titles, block newlines). Confirm that it fails by assertion.
+- [x] 5.21h2 GREEN: make the renderer and the allowlist match the markup of the contract fixtures. Verify 5.21h1.
+- [x] 5.21i1 RED: add a test that asserts that classes come only from the renderer's set, that one shared `[a-z0-9-]` rule makes heading ids, and that `img src` is only `assets/<64 hex>` or `https:`, with an idempotence property test. Confirm that it fails by assertion.
+- [x] 5.21i2 GREEN: take classes only from the renderer's set, use one shared `[a-z0-9-]` heading id rule, and allow `img src` only as `assets/<64 hex>` or `https:`. Verify 5.21i1.
+- [x] 5.21j Documentation (no test): CSP `img-src 'self' https:` and `Referrer-Policy` for sites; hiding attributes are removed.
 - [ ] 5.22 RED: add `services/sites/tests/build_triggers.rs` with `unrelated_change_starts_no_build`, `changes_during_a_build_coalesce_into_one`, `manual_publication_ignores_file_changes` and `first_release_needs_an_explicit_request`, against a real JetStream from the integration profile. Confirm that the build-count assertion of the last fails because a file change builds a publication that has no release.
 - [ ] 5.23 GREEN: consume `ratatoskr_sites_note_changes` and `ratatoskr_sites_release_builds`, and implement the coalescing worker of design D6 with the first-release rule. Verify that 5.22 passes.
 - [ ] 5.24 RED: add `services/sites/tests/disconnect.rs` with `suspended_publication_does_not_build` and `withdrawn_site_is_indistinguishable_from_unknown`. Confirm that the class assertion of the first fails because the build runs.
