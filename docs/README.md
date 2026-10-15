@@ -14,7 +14,7 @@
 - `DEPLOYMENT_TARGET.md` — **the one machine everything runs on**, and the storage, supervision, port
   and database contracts that follow from it. `Accepted`, and the first document to change when the
   host does.
-- `QUALITY_GATES.md` — the static analysis, linters, CI and Git hooks that the 20 repositories have,
+- `QUALITY_GATES.md` — the static analysis, linters, CI and Git hooks that the 22 repositories have,
   the checks that were measured and rejected, why there is no continuous deployment yet, and what
   arrives with the first code. `Implemented`.
 - `NOTES_AND_SITES.md` — the target architecture for Obsidian vault connections and independent

@@ -8,7 +8,7 @@
 ## Scope
 
 This document records the static analysis, the linters, the continuous integration and the Git hooks
-that the 20 Ratatoskr repositories have today. It also records the checks that were measured and
+that the 22 Ratatoskr repositories have today. It also records the checks that were measured and
 then rejected, and it gives the reason for each rejection.
 
 Workspace CI does not replace repository CI. Each repository owns its own gate. This document
@@ -1362,7 +1362,7 @@ that Git creates locally. Both subjects are in the real history.
 The controls in the table at the top of this document are repository settings. They are not files,
 so a checkout does not show them, and a settings change removes them without a commit.
 
-Write these settings with the GitHub API, in a loop over the 20 repositories:
+Write these settings with the GitHub API, in a loop over the 22 repositories:
 
 ```bash
 gh api -X PUT   "repos/po4yka/<repo>/vulnerability-alerts"

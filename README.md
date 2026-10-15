@@ -256,10 +256,10 @@ Planned profiles:
 | `ratatoskr-obsidian-plugin` | Obsidian plugin that sends the changes of a vault without Obsidian Sync to Notes through Edge |
 | `ratatoskr-site-sdk` | The site SDK and the starter template of a site that reads its releases through the Content Delivery API |
 
-This repository is the twenty-first. Besides the responsibilities above it is the OpenSpec store,
-under the id `ratatoskr-workspace`: `openspec/specs/` holds the behaviour more than one repository
-can see, and `openspec/changes/` holds the cross-repository work in motion. Each of the twenty
-above references it by name from its own `openspec/config.yaml`. See
+This repository joins the twenty product repositories above. Besides the responsibilities above it
+is the OpenSpec store, under the id `ratatoskr-workspace`: `openspec/specs/` holds the behaviour
+more than one repository can see, and `openspec/changes/` holds the cross-repository work in motion.
+Each of the twenty above references it by name from its own `openspec/config.yaml`. See
 `docs/adr/0008-openspec-and-test-first.md`.
 
 ## Non-negotiable invariants
