@@ -141,7 +141,7 @@ id = "obsidian-plugin"
 path = "repos/clients/obsidian-plugin"
 remote = "https://github.com/po4yka/ratatoskr-obsidian-plugin.git"
 default_branch = "main"
-commit = "5ed98a96387f0c47a8ce5dbe6847950c1b756896"
+commit = "36bdb20404dca9a49b804e6245248c1ba194821c"
 digests = [
   { path = "openapi/openapi.lock.json", kind = "file", sha256 = "f5d8724a24d7dee679f44edb7f5425b87a30c0c9d09acaa49c2ab3eeb9678d1b" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "037d9a3c8acf0dcc0b87bf8de4362fdb9f5f619eddb9a4140269d9821a24f7ab" },

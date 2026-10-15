@@ -74,7 +74,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "obsidian-plugin",
         "repos/clients/obsidian-plugin",
-        "5ed98a96387f0c47a8ce5dbe6847950c1b756896",
+        "36bdb20404dca9a49b804e6245248c1ba194821c",
     ),
     (
         "platform",
