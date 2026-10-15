@@ -881,7 +881,10 @@
         that:
           - (before.results | map(attribute='stdout') | list) == (after.results | map(attribute='stdout') | list)
           - lookup('ansible.builtin.file', scratch ~ '/rerun.log') is search('changed=0\s')
-        fail_msg: "{{ lookup('ansible.builtin.file', scratch ~ '/rerun.log') | regex_search('PLAY RECAP[\\s\\S]*') }}"
+        fail_msg: >-
+          {{ lookup('ansible.builtin.file', scratch ~ '/rerun.log') | regex_search('PLAY RECAP[\\s\\S]*') }}
+          Start times (unit, before, after):
+          {{ services | map(attribute='unit') | zip(before.results | map(attribute='stdout'), after.results | map(attribute='stdout')) | list }}
 
     # --- freeze_guard -------------------------------------------------------------------------------
     - name: "freeze_guard: the same target, not marked as a test target"
