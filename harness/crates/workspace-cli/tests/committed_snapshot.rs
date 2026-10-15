@@ -84,7 +84,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "site-sdk",
         "repos/clients/site-sdk",
-        "89c683a872c2ca01c33efa1a969fd566fcef98ad",
+        "a3a9215f6cb33163c15840f4c1b75a6e32b3f24f",
     ),
     (
         "sites",

@@ -164,11 +164,11 @@ id = "site-sdk"
 path = "repos/clients/site-sdk"
 remote = "https://github.com/po4yka/ratatoskr-site-sdk.git"
 default_branch = "main"
-commit = "89c683a872c2ca01c33efa1a969fd566fcef98ad"
+commit = "a3a9215f6cb33163c15840f4c1b75a6e32b3f24f"
 digests = [
-  { path = "contracts/contracts.lock.json", kind = "file", sha256 = "93954c45004ddfbd6caad9ef5d28947e2d3ea54cb3f0f8a0328970ba1269df80" },
+  { path = "contracts/contracts.lock.json", kind = "file", sha256 = "11454ac6cb753d9617868f2cfe537a8722641616f47282560447fb4584e77af2" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "d20554a8f04d4e48a08febca981a8504ead09e38dacbc5807597898c5e34af9d" },
-  { path = "package-lock.json", kind = "file", sha256 = "0a52799fcd1d51e7599243a0db66e32ff671779584f6e4f702a21acc1f085721" },
+  { path = "package-lock.json", kind = "file", sha256 = "ba6caecf85c09c14621a016940036a67b8fc0bdcb1ab9edf1b4a985d88701c1c" },
 ]
 
 [[repositories]]
