@@ -79,7 +79,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "platform",
         "repos/platform",
-        "3a47f0f8a70203f74e432f20ade4c8bcd2fba034",
+        "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2",
     ),
     (
         "site-sdk",

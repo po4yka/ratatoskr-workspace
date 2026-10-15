@@ -373,7 +373,7 @@ bind to `0.0.0.0`.
 | 8097 | `ratatoskr-claude` archive receipt (`/v1/ai-archives/receipt`, `/v1/capabilities`), a dedicated listener (`RATATOSKR__RECEIPT__LISTEN_ADDRESS`) next to the operator listener `9086` | loopback; reached only through Platform archive acceptance |
 | 8098 | `ratatoskr-channel-digests` API (`/v1/manifests`, `/v1/subscriptions`, `/v1/results`, `/ready`) | loopback; Platform and Knowledge only |
 | 8099 | `ratatoskr-notes` domain API (`/v1/notes`), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9471` | loopback; reached only through Edge |
-| 8100 | `ratatoskr-sites` domain API (`/v1/sites`, and the Content Delivery API), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9472` | loopback; reached only through Edge |
+| 8100 | `ratatoskr-sites` domain API (`/v1/sites`, and the Content Delivery API), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9472` | loopback; reached only through Edge. Edge trusts `X-Ratatoskr-Client-IP` on the content routes only from `127.0.0.83`, the source address of the sites gateway (`RATATOSKR__SITES__GATEWAY_PEER`, SITE-026) |
 | 9081 | `ratatoskr-knowledge` operator listener | host only |
 | 9082 | `ratatoskr-instagram` operator listener | host only |
 | 9083 | `ratatoskr-instagram` product API (`POST /v1/captures`, data exports) | host only |

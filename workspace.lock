@@ -153,9 +153,9 @@ id = "platform"
 path = "repos/platform"
 remote = "https://github.com/po4yka/ratatoskr-platform.git"
 default_branch = "main"
-commit = "3a47f0f8a70203f74e432f20ade4c8bcd2fba034"
+commit = "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2"
 digests = [
-  { path = "openapi/openapi.json", kind = "file", sha256 = "f8282b52d6cfb2ebbd74049d9e7c061600504298bad13c795fbbe982da7b0c3e" },
+  { path = "openapi/openapi.json", kind = "file", sha256 = "4a44eef775979065453953cf9b205537343e40cee4c34c074bb0bdce4d80331d" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "eb76e54cf5e2ba9fbfb17af3019cddd85d3354274d38a24dcf9c998473224b05" },
 ]
 

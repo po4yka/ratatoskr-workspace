@@ -13,7 +13,8 @@
       "operator_port": 9464,
       "settings": {
         "RATATOSKR__IDENTITY__ASSERTION_KEY": "{file:/etc/ratatoskr/secrets/telegram-platform-signing-key.pub}",
-        "RATATOSKR__CHANNEL_DIGESTS__SERVICE_SECRET": "{file:/etc/ratatoskr/secrets/channel-digests-service-secret}"
+        "RATATOSKR__CHANNEL_DIGESTS__SERVICE_SECRET": "{file:/etc/ratatoskr/secrets/channel-digests-service-secret}",
+        "RATATOSKR__SITES__GATEWAY_PEER": "127.0.0.83"
       }
     },
     {

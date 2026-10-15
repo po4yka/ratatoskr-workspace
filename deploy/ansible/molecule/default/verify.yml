@@ -807,6 +807,19 @@
       loop_control:
         label: "{{ item.item.identity }}"
 
+    # --- edge_sites_gateway_peer ---------------------------------------------------------------------
+    # SITE-026: Edge trusts X-Ratatoskr-Client-IP only on a connection from the loopback source address
+    # of the sites gateway. The rendered configuration names it, as services.json sets it.
+    - name: "edge_sites_gateway_peer: the rendered Edge configuration"
+      ansible.builtin.slurp:
+        src: /etc/ratatoskr/edge.conf
+      register: edge_conf
+
+    - name: "edge_sites_gateway_peer: Edge names 127.0.0.83 as the peer of the sites gateway, once"
+      ansible.builtin.assert:
+        that: (edge_conf.content | b64decode | regex_findall('(?m)^RATATOSKR__SITES__GATEWAY_PEER=.*$')) == ['RATATOSKR__SITES__GATEWAY_PEER=127.0.0.83']
+        fail_msg: "{{ edge_conf.content | b64decode | regex_findall('(?m)^RATATOSKR__SITES__GATEWAY_PEER=.*$') }}"
+
     # --- services_ready -----------------------------------------------------------------------------
     - name: "services_ready: every enrolled operator listener answers its readiness path with 200"
       ansible.builtin.uri:
