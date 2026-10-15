@@ -331,9 +331,11 @@
       register: notes_sync_user
       changed_when: false
 
-    - name: "notes_sync_unit: ratatoskr-notes-sync shares no group with another user"
+    # OBS-024, decision 7.11: the user that runs ob shares the tree group with the notes service,
+    # and no other group.
+    - name: "notes_sync_unit: ratatoskr-notes-sync is in its own group and the tree group only"
       ansible.builtin.assert:
-        that: notes_sync_user.stdout.split() == ['ratatoskr-notes-sync']
+        that: notes_sync_user.stdout.split() == ['ratatoskr-notes-sync', 'ratatoskr-notes-trees']
         fail_msg: "id -nG ratatoskr-notes-sync: {{ notes_sync_user.stdout }}"
 
     # The units run /usr/bin/ob as ratatoskr-notes-sync, with the PATH that systemd gives a unit and
@@ -503,11 +505,13 @@
     # --- notes_trees_and_clients ---------------------------------------------------------------------
     # Owner decision B of 2026-10-14 (add-notes-vault-connections). The notes units run ob as
     # ratatoskr-notes-sync, which creates trees/<id> and clients/<id>. The trees root is setgid with
-    # the group ratatoskr-notes-trees, whose only member is ratatoskr-notes, so the notes service
-    # reads each tree and no other user can. The clients root holds the Sync token and the
+    # the group ratatoskr-notes-trees, whose members are ratatoskr-notes and ratatoskr-notes-sync
+    # (OBS-024, decision 7.11), so the notes service reads each tree and writes into it, ob changes
+    # what notes wrote, and no other user reads a tree. The clients root holds the Sync token and the
     # end-to-end key in plain text, so only ratatoskr-notes-sync may enter it. The login and cleanup
     # units have both roots in ReadWritePaths= with no `-`, so systemd fails them when one does not
-    # exist. The fixture tree is written as the units write, with umask 0027.
+    # exist. The fixture tree is written as the units and the notes writer write, with umask 0007.
+    # prepare.yml leaves a tree with the modes of umask 0027, which the converge must change.
     - name: "notes_trees_and_clients: the group of the trees"
       ansible.builtin.command: getent group ratatoskr-notes-trees
       register: notes_trees_group
@@ -518,10 +522,10 @@
       register: notes_user_groups
       changed_when: false
 
-    - name: "notes_trees_and_clients: ratatoskr-notes is the only member; it is in its own group, ratatoskr and the tree group"
+    - name: "notes_trees_and_clients: ratatoskr-notes and ratatoskr-notes-sync are the only members; ratatoskr-notes is in its own group, ratatoskr and the tree group"
       ansible.builtin.assert:
         that:
-          - notes_trees_group.stdout.split(':')[3] | trim == 'ratatoskr-notes'
+          - notes_trees_group.stdout.split(':')[3] | trim | split(',') | sort == ['ratatoskr-notes', 'ratatoskr-notes-sync']
           - (notes_user_groups.stdout.split() | first) == 'ratatoskr-notes'
           - notes_user_groups.stdout.split() | sort == ['ratatoskr', 'ratatoskr-notes', 'ratatoskr-notes-trees']
         fail_msg: "{{ notes_trees_group.stdout }}; id -nG ratatoskr-notes: {{ notes_user_groups.stdout }}"
@@ -536,7 +540,7 @@
         - /mnt/nvme/ratatoskr/notes/connections
       register: notes_roots
 
-    - name: "notes_trees_and_clients: parent root 0755; trees ratatoskr-notes-sync:ratatoskr-notes-trees 2750; clients ratatoskr-notes-sync 0700; no connections root"
+    - name: "notes_trees_and_clients: parent root 0755; trees ratatoskr-notes-sync:ratatoskr-notes-trees 2770; clients ratatoskr-notes-sync 0700; no connections root"
       ansible.builtin.assert:
         that:
           - notes_roots.results[0].stat.isdir | default(false)
@@ -545,7 +549,7 @@
           - notes_roots.results[1].stat.isdir | default(false)
           - notes_roots.results[1].stat.pw_name == 'ratatoskr-notes-sync'
           - notes_roots.results[1].stat.gr_name == 'ratatoskr-notes-trees'
-          - notes_roots.results[1].stat.mode == '2750'
+          - notes_roots.results[1].stat.mode == '2770'
           - notes_roots.results[2].stat.isdir | default(false)
           - notes_roots.results[2].stat.pw_name == 'ratatoskr-notes-sync'
           - notes_roots.results[2].stat.gr_name == 'ratatoskr-notes-sync'
@@ -556,7 +560,7 @@
           {{ result.stat.pw_name | default('') }}:{{ result.stat.gr_name | default('') }}
           {{ result.stat.mode | default('missing') }}; {% endfor %}
 
-    - name: "notes_trees_and_clients: a tree, written by ratatoskr-notes-sync with umask 0027"
+    - name: "notes_trees_and_clients: a tree, written by ratatoskr-notes-sync with umask 0007"
       ansible.builtin.command:
         argv:
           - setpriv
@@ -566,9 +570,24 @@
           - /bin/sh
           - -c
           - >-
-            umask 0027
+            umask 0007
             && mkdir -p /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder
             && printf fixture > /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder/note.md
+      changed_when: true
+
+    - name: "notes_trees_and_clients: a folder and a note, written into the tree by ratatoskr-notes with umask 0007"
+      ansible.builtin.command:
+        argv:
+          - setpriv
+          - --reuid=ratatoskr-notes
+          - --regid=ratatoskr-notes
+          - --init-groups
+          - /bin/sh
+          - -c
+          - >-
+            umask 0007
+            && mkdir /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/written
+            && printf written > /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/written/note.md
       changed_when: true
 
     - name: "notes_trees_and_clients: the tree, its folder and its note"
@@ -579,13 +598,21 @@
         - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b
         - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder
         - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/folder/note.md
+        - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/written
+        - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/written/note.md
+        - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f
+        - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder
+        - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder/note.md
 
-    - name: "notes_trees_and_clients: each inherits the tree group; directories 2750, the note 0640"
+    # prepare.yml made its tree as root before the users and the tree group existed, so the tree
+    # keeps the owner and group root; its modes show that the converge changed 2750 and 0640 to
+    # 2770 and 0660.
+    - name: "notes_trees_and_clients: each inherits the tree group; directories 2770, the notes 0660"
       ansible.builtin.assert:
         that:
-          - item.stat.pw_name == 'ratatoskr-notes-sync'
-          - item.stat.gr_name == 'ratatoskr-notes-trees'
-          - item.stat.mode == ('2750' if item.stat.isdir else '0640')
+          - item.stat.pw_name == ('ratatoskr-notes' if '/written' in item.item else 'root' if '0b9e2f4a' in item.item else 'ratatoskr-notes-sync')
+          - item.stat.gr_name == ('root' if '0b9e2f4a' in item.item else 'ratatoskr-notes-trees')
+          - item.stat.mode == ('2770' if item.stat.isdir else '0660')
         fail_msg: "{{ item.item }}: {{ item.stat.pw_name }}:{{ item.stat.gr_name }} {{ item.stat.mode }}"
         quiet: true
       loop: "{{ notes_tree_fixture.results }}"
@@ -601,7 +628,10 @@
           clients=/mnt/nvme/ratatoskr/notes/clients
           wrong=""
           as() { user="$1"; shift; setpriv --reuid="$user" --regid="$user" --init-groups "$@" >/dev/null 2>&1; }
+          written=/mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b/written/note.md
           as ratatoskr-notes cat "$note" || wrong="${wrong}ratatoskr-notes cannot read the tree"$'\n'
+          as ratatoskr-notes sh -c "printf changed >> $note" || wrong="${wrong}ratatoskr-notes cannot change a note of ob"$'\n'
+          as ratatoskr-notes-sync sh -c "printf changed >> $written" || wrong="${wrong}ratatoskr-notes-sync cannot change a note that notes wrote"$'\n'
           as ratatoskr-notes-sync ls "$clients" || wrong="${wrong}ratatoskr-notes-sync cannot enter the clients root"$'\n'
           others=0
           for user in $(getent passwd | cut -d: -f1 | grep '^ratatoskr-'); do
@@ -616,10 +646,13 @@
           [ -z "$wrong" ]
       changed_when: false
 
-    - name: "notes_trees_and_clients: remove the fixture tree"
+    - name: "notes_trees_and_clients: remove the fixture trees"
       ansible.builtin.file:
-        path: /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b
+        path: "{{ item }}"
         state: absent
+      loop:
+        - /mnt/nvme/ratatoskr/notes/trees/3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b
+        - /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f
 
     # --- notes_journal_namespace ---------------------------------------------------------------------
     # Owner decision A of 2026-10-14. The sync unit logs to the journal namespace

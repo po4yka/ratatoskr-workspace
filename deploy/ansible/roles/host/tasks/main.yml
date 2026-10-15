@@ -39,6 +39,47 @@
   loop_control:
     label: "{{ item.path }}"
 
+# OBS-024, decision 7.11: the notes service writes into the working trees, and ob changes what it
+# wrote, so the tree group may write both. A tree made before the trees root became 2770 keeps the
+# modes of UMask=0027 (folders 2750, files 0640) until this task changes them. It prints each path
+# it changes, so a second run changes nothing.
+- name: The folders and files of an existing working tree, writable by the tree group
+  ansible.builtin.command:
+    argv:
+      - find
+      - /mnt/nvme/ratatoskr/notes/trees
+      - -mindepth
+      - "1"
+      - (
+      - -type
+      - d
+      - "!"
+      - -perm
+      - "2770"
+      - -exec
+      - chmod
+      - "2770"
+      - "{}"
+      - ;
+      - -print
+      - )
+      - -o
+      - (
+      - -type
+      - f
+      - "!"
+      - -perm
+      - "0660"
+      - -exec
+      - chmod
+      - "0660"
+      - "{}"
+      - ;
+      - -print
+      - )
+  register: ratatoskr_notes_tree_modes
+  changed_when: ratatoskr_notes_tree_modes.stdout | length > 0
+
 - name: The playbook's own host state
   ansible.builtin.file:
     path: "{{ ratatoskr_state_dir }}/{{ item }}"

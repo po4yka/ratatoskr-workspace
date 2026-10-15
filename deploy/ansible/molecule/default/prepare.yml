@@ -130,3 +130,16 @@
                   - targets: ["node-exporter:9100"]
       loop_control:
         label: "{{ item.name }}"
+
+    # A working tree as the host holds it from before OBS-024 (decision 7.11): made with
+    # UMask=0027, so a folder is 2750 and a file 0640. The converge must give the tree group write
+    # access to both; verify.yml (notes_trees_and_clients) checks the modes after the run.
+    - name: A working tree from before OBS-024, with the modes of UMask=0027
+      ansible.builtin.shell:
+        cmd: >-
+          umask 0027
+          && mkdir -p /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder
+          && printf legacy > /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder/note.md
+          && chmod 2750 /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f
+          /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder
+        creates: /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f

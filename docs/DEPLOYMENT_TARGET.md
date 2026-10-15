@@ -59,7 +59,7 @@ keeps durable state off it either way.
 | Telegram blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-telegram` | NVMe |
 | Notes blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, owner `ratatoskr-notes:ratatoskr-notes-blobs`, mode 2750 (setgid) | NVMe |
 | Sites blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-sites`, owner `ratatoskr-sites:ratatoskr-sites`, mode 0700 | NVMe |
-| Notes working trees | `/mnt/nvme/ratatoskr/notes/trees`, owner `ratatoskr-notes-sync:ratatoskr-notes-trees`, mode 2750 (setgid); one `<id>` for each `sync` connection, mode 2750, files 0640 | NVMe |
+| Notes working trees | `/mnt/nvme/ratatoskr/notes/trees`, owner `ratatoskr-notes-sync:ratatoskr-notes-trees`, mode 2770 (setgid); one `<id>` for each `sync` connection, folders 2770, files 0660 | NVMe |
 | Notes `ob` client state | `/mnt/nvme/ratatoskr/notes/clients`, owner `ratatoskr-notes-sync:ratatoskr-notes-sync`, mode 0700; one `<id>` for each `sync` connection, mode 0700 | NVMe |
 | Notes sync journal | `/var/log/journal/<machine id>.ratatoskr-notes-sync` (`LogNamespace=ratatoskr-notes-sync` of the sync unit), owner `root:systemd-journal`, mode 2755, with an ACL and a default ACL that name the group `ratatoskr-notes` (`r-x`) and no other group; at most 8 MiB (`journald@ratatoskr-notes-sync.conf`) | `/var/log` (log2ram tmpfs) |
 | Notes login credentials | `/run/ratatoskr-notes` (`RuntimeDirectory=` of the notes service unit, owner `ratatoskr-notes`), with `credentials/<id>/` (directory 0700, files 0600) only while a login runs | tmpfs (`/run`); never written to a disk |
@@ -90,10 +90,13 @@ Two rules follow, and both are contracts rather than advice:
 
 The notes units run `ob` as `ratatoskr-notes-sync`, which creates the working tree `trees/<id>` and
 the client state `clients/<id>` of each `sync` connection (owner decision B of 2026-10-14). The
-trees root is setgid with the group `ratatoskr-notes-trees`, and the sync and login units have
-`UMask=0027`. So each tree gets that group, directories get mode 2750 and files mode 0640.
-`ratatoskr-notes` is the only member of the group and reads the trees through it.
-`ratatoskr-notes-sync` is not a member, because the setgid bit gives the group. Each client state
+trees root is setgid with the group `ratatoskr-notes-trees`, mode 2770, and the sync and login
+units have `UMask=0007` (OBS-024, decision 7.11). So each tree gets that
+group, folders get mode 2770 and files mode 0660. `ratatoskr-notes` and `ratatoskr-notes-sync` are
+the members of the group: the notes service reads the trees through it and writes the delivered
+writes of the `sync` channel into them, and `ob` changes what the notes service wrote. The deploy
+role changes the folders and files of a tree made before OBS-024 (2750 and 0640) to 2770 and 0660.
+Each client state
 holds the Obsidian Sync token and the derived end-to-end key in plain text, so only
 `ratatoskr-notes-sync` may enter the clients root, and no other user is a member of its group. The
 login and cleanup units have both roots in `ReadWritePaths=` with no `-` prefix, so systemd fails
@@ -165,7 +168,10 @@ client state `/mnt/nvme/ratatoskr/notes/clients/<id>` of the connection, and the
 
 Each write mode has its own fixed sync unit, with the mode as a literal argument and no
 `EnvironmentFile=` (OBS-024, design D5). The notes service stops the unit of the other mode before
-it starts one, so at most one sync unit of a connection runs.
+it starts one, so at most one sync unit of a connection runs. The sync and login units run with
+`UMask=0007`: the notes service and `ratatoskr-notes-sync` share the group `ratatoskr-notes-trees`,
+the trees root is `2770`, and each folder of a tree is `2770` and each file `0660`, so the notes
+service can write a delivered write into a tree and `ob` can change it (OBS-024, decision 7.11).
 
 The playbook installs each unit that `ratatoskr_template_units` in `services.json` lists,
 byte-identical to its pin, and reloads systemd. It does not enable or start a template unit. At the
