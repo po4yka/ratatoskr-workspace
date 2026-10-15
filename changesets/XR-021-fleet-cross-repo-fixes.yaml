@@ -2033,3 +2033,36 @@ round_6:
     profile_contract_tests_run: "web_operational_profile_test.sh, export_agent_product_profile_test.sh, telegram_library_profile_test.sh, telegram_notification_profile_test.sh, nats_conf_test.sh, no_unauthenticated_broker_test.sh and native_smoke_contract_test.sh PASS; telegram_deployment_profile_test.sh PASS against telegram a8a337ad504e2a7f89a218fa972edcfa6078193e (RATATOSKR_TELEGRAM_CONTEXT and RATATOSKR_TELEGRAM_REVISION set)"
     could_not_run: "the composed Docker profiles (no Docker on the machine); no composed claim is made"
     baseline_submodules: "git submodule status shows no dirty submodule after the F2 run; the only changes against HEAD are the five moved gitlinks"
+contracts_2c72602:
+  goal: "Move the whole fleet to the contracts 2c726027da79e0e899ad482afead0a2000b03e61 in one step (contracts_pin.rs requires one revision), so that the notes and Platform pins of OBS-024 and the new repository ratatoskr-sites (SITE-025) join the snapshot. The contracts change is additive: the notes write request and conflict events, and the sites contracts crate."
+  contracts_pin: repos/contracts stays at 2c726027da79e0e899ad482afead0a2000b03e61, which SITE-025 pinned first.
+  hosted_ci_of_pinned_heads: "read through the GitHub API on 2026-10-15: every check run concluded success on every pinned head below; each Rust head locks the contracts at 2c72602"
+  pins:
+    knowledge: 9ce88f423889b005341f1a472012d4034f40896d  # CI 7 of 7
+    extractor: d1b7b012cbc9906509ad0a1fd22d3d735a43717e  # CI 8 of 8
+    github: 59bdddd8cb1a1f238c0b72765f76ce7adc1f8c8a  # CI 5 of 5
+    vault: 469ffef9616864b808766df8d0168f04acbb84ca  # CI 5 of 5
+    claude: a71701a45bd7db842926f41be23274adf429dd0e  # CI 5 of 5
+    chatgpt: 1101452f2f4137d6c8805b0db5cca575e7834bc1  # CI 5 of 5
+    telegram: 0c424cc5c5858f1b212722923039c7f393b296a6  # CI 7 of 7
+    channel-digests: 08cf71e6677d120c9887286272ee352a9243006e  # CI 5 of 5
+    threads: 20c3a9a276e97e1ce6bc9a1cc9ecbfa6b84b037b  # CI 5 of 5
+    instagram: 3f32997b954a952e420963e7f8e8067dccaa1ef3  # CI 5 of 5
+    x: 7de8f43a45edb75c4a7a13928983e857874ca400  # CI 5 of 5
+    notes: f39434654eedf3fe4371ceb1b077bf3ea18bc10d  # CI 5 of 5
+    platform: 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2  # CI 7 of 7
+    sites: a4587f72cdc52db127520afe802660af8963366f  # CI 7 of 7
+    web: 4972d4348d829f0cc9a32c4a606e53d31d4d80cd  # CI 4 of 4
+    obsidian-plugin: 5ed98a96387f0c47a8ce5dbe6847950c1b756896  # CI 4 of 4
+    export-agent: 0ddda7164d72b7c100ff6334e14809e2d2ebda8c  # CI 4 of 4
+    site-sdk: a3a9215f6cb33163c15840f4c1b75a6e32b3f24f  # CI 4 of 4
+  fleet: "sites joins as product repository 21 (repos/sites); repos/ holds 21 gitlinks, and the fleet is 21 product repositories and the workspace."
+  workspace_commits:
+    - "40efed544aef5f5c9cca51283c5423eb4200ed0c build: pin the fleet at contracts 2c72602 and add ratatoskr-sites"
+    - "5e368fcd718682e68844b5c36f2785bb6df71463 deploy(ansible): let the notes service and ob both write the trees"
+    - "eb1a6ea94a4c777c1dd379ce50f6e4484bf43bc3 docs(openspec): record OBS-024 groups 11 and 12 and the notes pin"
+    - "d79b2d5b7d621914f419ff9930bdf08c926c1e10 docs(openspec): record the sites pin, web group 8 and sites.manage"
+    - "faee3e4813f0bf80f2d0c7c39ffa34ce92ad6db0 docs: count 21 pinned product repositories"
+    - "9b725aa6a83296e2f2e0b0ca81f72b4b43c8db3a build: pin Platform at 943bc91 and record SITE-026 group 8"
+    - "fdc76f56f0d7be9cd3c89b3b48772fe8669f974a build: pin sites at a4587f7 and record SITE-025 group 5"
+    - "32a65ae2bd2dd4b5f039fc5048ef0c5db607fd26 build: pin site-sdk at a3a9215 and record SITE-025 group 7"

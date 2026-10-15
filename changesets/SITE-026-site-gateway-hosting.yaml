@@ -1,5 +1,5 @@
 id: SITE-026
-state: planned
+state: implementing
 goal: Serve each approved site's static bundle by hostname from the single host behind cloudflared, forward the site's own API calls to Edge on the same origin, and deploy and roll back bundles that CI built and attested and that the controller and the host both verified.
 openspec_change: add-site-gateway-hosting
 depends_on:
@@ -27,7 +27,23 @@ repositories:
     branch: site-026/gateway-and-deploys
   - id: ratatoskr-platform
     role: site-deployer-device-deploy-route-class-and-client-ip-trust
-    branch: site-026/site-deployer-and-deploy-routes
+    branch: main@943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2
+    base: 3a47f0f8a70203f74e432f20ade4c8bcd2fba034
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/platform at 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 (tasks 8.1 to 8.8 with 8.2a and 8.2b; the last two commits are SITE-025 tasks 6.16 and 6.17), CI green (7 of 7 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. The workspace sets RATATOSKR__SITES__GATEWAY_PEER=127.0.0.83 in the rendered edge.conf (services.json, Molecule edge_sites_gateway_peer), and edge_upstreams.rs binds the SITES route to sites
+    commits:
+      - "dce004475c3b0846cf853c0fe03980655d717291 test(identity): require one site for a site_deployer pairing"
+      - "d14a96fbdb71c3b08091e555f77af44118574a53 feat(identity): pair a site_deployer device for one site"
+      - "a5c1ac30622a4f1dc52312d1066c44eae593ec48 test(public-api): require the owner and one site for a site_deployer code"
+      - "140904f02981a24411f33bd9f30c08187eb45b9a feat(public-api): mint a site_deployer pairing code for the owner only"
+      - "b2aa781fabaa4ea6c8fbaf7236e8347fb88d2350 test(public-api): require the deploy class for the deploy routes"
+      - "42a697141d90ec19891650ae324c169feb949227 feat(public-api): add the deploy class and the two deploy routes"
+      - "80e86b2862ba49b662810b6b32e6e0792e87a411 test(public-api): require the deploy guard and the deployer claims"
+      - "a766004182e28ebe2b1daf89f9bc258098a30d95 feat(public-api): name the site in the deployer claims and fence the kind"
+      - "0872f5ab97642953fec3535793129ee65ca23439 test(public-api): require the client address rule of the public class"
+      - "dd76a107d98cefd6cf60146161c41c796c2b2e25 feat(public-api): trust the client address header from the sites gateway only"
+      - "302279d48d644d95b3dce30d14b2670a4188d818 test(public-api): require sites.manage where Edge routes sites"
+      - "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 feat(core): report sites.manage where Edge routes sites"
   - id: ratatoskr-site-sdk
     role: reusable-bundle-workflow-login-and-deploy-commands
     branch: site-026/bundle-workflow-and-deploy
@@ -78,7 +94,7 @@ rollback:
 verification:
   - ratatoskr-contracts crates/sites-contracts/tests/bundle_manifest.rs
   - ratatoskr-sites crates/deploys/tests/{receipt,activation}.rs, services/sites/tests/gateway_projection.rs and services/sites-gateway/tests/{host_routing,static_serving,headers,forwarding,limits}.rs, tests/unit_structure.rs
-  - ratatoskr-platform crates/identity/tests/site_deployer_pairing.rs, crates/public-api/tests/sites_deploy_routes.rs and crates/http/tests/client_ip_trust.rs
+  - ratatoskr-platform crates/identity/tests/site_deployer_pairing.rs, crates/public-api/tests/site_deployer_codes.rs, site_route_classes.rs, sites_deploy_routes.rs and client_ip_trust.rs
   - ratatoskr-site-sdk packages/site-sdk/test/{bundle-manifest,bundle-workflow,deploy}.test.ts
   - ratatoskr-workspace harness tests port_allocation.rs, deploy_inventory.rs and sites_ingress.rs
   - the Molecule cases sites_tree_and_ingress and freeze_guard on a native arm64 runner

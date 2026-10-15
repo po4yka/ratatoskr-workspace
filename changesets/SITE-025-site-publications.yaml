@@ -1,5 +1,5 @@
 id: SITE-025
-state: planned
+state: implementing
 goal: Select public content from a connected vault, build an immutable and privacy-filtered release from it, and serve the current release of an approved site through an anonymous, cacheable Content Delivery API that a site with any UI reads through @ratatoskr/site-sdk.
 openspec_change: add-site-publications
 authorization: Implementation started under the owner's instruction to complete the work; ADR-0011 and Platform's ADR-0017 stay Proposed until the owner accepts them. The owner authorised direct commits on main for the workspace planning records. For the child repositories the owner chose direct commits to main after an independent review instead of pull requests; each repository entry records its pushed commits, and the workspace pins a commit only after its CI is green.
@@ -45,9 +45,9 @@ repositories:
     branch: site-025/notes-internal-index
   - id: ratatoskr-sites
     role: new-service-registry-publications-release-builder-approval-projection-delivery-api
-    branch: main@24feefdb58102e027638e8e213553389f64cc6f5
+    branch: main@a4587f72cdc52db127520afe802660af8963366f
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: not pinned and not yet in the fleet. Sites at 24feefd locks the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 like the rest of the fleet, but three harness checks refuse it. release_artifact_callers.rs refuses it because it ships deploy/systemd/ratatoskr-sites.service and no workflow calls the reusable release-artifact workflow. deploy_inventory.rs refuses it because the unit and the role ratatoskr_sites are not enrolled in services.json (DPL-022, which task 9.6 waits for, is archived since 2026-10-13). bus_acl.rs::the_owner_repository_uses_the_prefix_literal refuses it because custom_inbox_prefix( takes self.bus.inbox_prefix(), not the _INBOX_sites literal or a const
+    pin: repos/sites at a4587f72cdc52db127520afe802660af8963366f (tasks 5.1 to 5.43, group 5 complete; first pinned here, which adds sites to the fleet as repository 21), CI green (7 of 7 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. 5.21m passes the _INBOX_sites literal to custom_inbox_prefix (bus_acl.rs::the_owner_repository_uses_the_prefix_literal), 5.21n calls the reusable release-artifact workflow (release_artifact_callers.rs), and task 9.6 enrols the service in services.json with its user, role, NATS identity and blob root (deploy_inventory.rs, Molecule). The service consumes its four durables, so bus_durables.rs checks their names and filters in it. A known limit is that it serves a single owner and does not scope sites by owner
     commits:
       - "5b6b0c20a764c792f414ef794c37ced732e1b77f chore: scaffold ratatoskr-sites from the fleet template"
       - "92c2c030359ae3e38dba510dae91fbc54cbe7401 docs(openspec): open site-025-sites-service"
@@ -97,12 +97,41 @@ repositories:
       - "52314924eba5e2081b372b14caf72f058ded1b33 test(sites): classes, heading ids and image sources follow one rule"
       - "0f48973bc31ee1e5fa043b5a5ec999bd179a2d45 fix(sites): keep only the classes, ids and image sources of the renderer"
       - "24feefdb58102e027638e8e213553389f64cc6f5 docs(sites): state the headers a site sets and what the allowlist does"
+      - "5bb84480b91d14e2f0e3467878d59077e8793a9b test(sites): a self-closed svg or math element is empty"
+      - "cd090817f5efbf1faa8793798679f74112ab7eb9 fix(sites): treat a self-closed svg or math element as empty"
+      - "3ebf7e88dd84cfbfaa0d2399fb70f010e0d74871 docs(openspec): open site-025-delivery"
+      - "2e816e7e1b31cf8a7c2356ced0d99b4abc28b1da fix(sites): pass the inbox prefix literal to custom_inbox_prefix"
+      - "d6aeab28d0f85c8617f77c2bc816b6fdc1e4b772 ci(sites): publish the arm64 artifact through the reusable workflow"
+      - "0f5eac13c0491b015d0f3ced958b0015f5b1d30f test(sites): a build starts only from a command or a selected change"
+      - "bae55b15656456617422a517a37f574647947416 feat(sites): coalesce builds and apply the first-release rule"
+      - "9f8b2b5ed3ea8d5b5838b54615782e16d1592173 test(sites): a disconnected vault suspends its publications"
+      - "2da17b9ec85df956a8e2de03119c82434861b246 feat(sites): suspend the publications of a disconnected vault"
+      - "78c9ee4b08bf4eaddc6d7593d074f45dc45b3a15 test(sites): a manifest grants nothing until Platform approves it"
+      - "7b81c3499aceda2cda8923455f700200851ea993 feat(sites): store the manifest by digest and project the approvals"
+      - "2237e8073a8a5b3bc5c8fcbfe3700a58e0ad5473 test(sites): the owner writes, reads and removes a publication"
+      - "46abd3551823e920ffa103053000da8a86924ff7 feat(sites): serve the publication routes of the owner"
+      - "11ca42aa8cfe76c28efff5923e93fa408020e49a test(sites): the effective set is the approved and the active manifest"
+      - "e613bcf491c4c555ec03689b8213a78a92b9d9eb feat(sites): compute the effective set of a site and build only it"
+      - "8ec13e19239f5e61d88b89a2f2946bc0bb54583c test(sites): the anonymous claim is refused outside content"
+      - "5fd1d104ae3964aaba2e5f7faf03abc29f64dc96 feat(sites): refuse the anonymous claim on every route outside content"
+      - "c6acc59970609122d77a0d02f29d1d770aeead5c test(sites): the four delivery routes, their cache and every absence"
+      - "074fcf356465aaabf18b310c4990b1bf8f6d3716 feat(sites): serve the four routes of the Content Delivery API"
+      - "adc8e03bc312e92f6a1f7869adc999826171d600 test(sites): search covers only the current release and is bounded"
+      - "bfde99395932d18c67f630bcb1c23436cbfdcd93 feat(sites): index each release and search the current one only"
+      - "ab26eb15daf4a7538adbd6a1a4813d9862db64b7 docs(sites): write the owner guide and the routes of the service"
+      - "585286cc91c95c0dc104b3a0f43ee1d4a86e9d55 test(sites): a stale refresh does not bring back a withdrawn site"
+      - "baf0e425dccd011d759fbc6fc2706be2bbe733af fix(sites): refresh the servable sites one at a time"
+      - "019b9d6fc5768080807b1dfb55d9528af9479297 test(sites): a removed publication leaves the delivery at once"
+      - "f39770bce683b36ba54ecbbd867081860e8348a2 fix(sites): stop serving a removed publication at once"
+      - "a5a1d2e1cbac3ce7a345fa22a82b12a66cbfc0ad test(sites): retries, redeliveries, sniffing and stored refusals"
+      - "8badf2f7706f3f6c712a65f1d2c0f585b32f094a fix(sites): retry transient builds, apply a command once, harden delivery"
+      - "a4587f72cdc52db127520afe802660af8963366f docs(sites): document HEAD, 503 and the single owner"
   - id: ratatoskr-platform
     role: public-and-site-route-classes-adr-0017-site-approvals-build-route-sites-identity-and-durables
     branch: main@3a47f0f8a70203f74e432f20ade4c8bcd2fba034
     base: f76005e4297142bb2a4ebb114b4140704cd5384f
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: not pinned; the workspace stays at 6df9717. Platform at 3a47f0f locks the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 and moves with the fleet in one step, which waits for the notes pin (OBS-024). Its pin needs the SITES identity, the four sites durables (ack waits 300, 120, 30 and 30 s, OWNER_PENDING until sites names them), EDGE's grant of evt.platform.site_approval.changed.v1 and the sites route (8100) in the harness, and the ports 8100 and 9472 in docs/DEPLOYMENT_TARGET.md
+    pin: repos/platform at 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 (tasks 6.1 to 6.15 at 3a47f0f, 6.16 and 6.17 at 302279d and 943bc91; advanced from 6df9717 with the whole fleet to the contracts 2c72602; the range also holds SITE-026 group 8), CI green (7 of 7 check runs). The harness holds the SITES identity, the four sites durables with the ack waits 300, 120, 30 and 30 s (the sites consumer names each one), EDGE's grant of evt.platform.site_approval.changed.v1, the sites route (8100) and bus_acl.rs::sites_stanza_allows_its_durables_and_events; docs/DEPLOYMENT_TARGET.md allocates 8100 and 9472. Still open is the Platform half of 4.3
     commits:
       - "07105d644ae694ba834dd63db80702c736c88b54 chore(deps): move the contracts pin to df646b0"
       - "0a249bce54b5b738bc012881af37e7f9b79a0b58 docs(adr): record the public route class and the site route classes"
@@ -123,12 +152,14 @@ repositories:
       - "988554abd48e68dc9d130defc2d1012197a97467 fix(core): give the site approval refusals three-segment codes"
       - "b2f1021b37937c2e98ddf723508207cef3fcdca5 test(public-api): require the site list and the manifest read as management routes"
       - "3a47f0f8a70203f74e432f20ade4c8bcd2fba034 feat(public-api): forward the site list and the manifest read as management routes"
+      - "302279d48d644d95b3dce30d14b2670a4188d818 test(public-api): require sites.manage where Edge routes sites"
+      - "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 feat(core): report sites.manage where Edge routes sites"
   - id: ratatoskr-site-sdk
     role: new-generated-client-and-starter-template
-    branch: main@89c683a872c2ca01c33efa1a969fd566fcef98ad
+    branch: main@a3a9215f6cb33163c15840f4c1b75a6e32b3f24f
     created: 2026-10-15, public
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/clients/site-sdk at 89c683a872c2ca01c33efa1a969fd566fcef98ad (tasks 7.1 and 7.4 to 7.10; first pinned here, which adds site-sdk to the fleet). Tasks 7.2 and 7.3 wait for openapi/content-delivery.json in ratatoskr-sites (ADR-0012). A client ships no systemd unit
+    pin: repos/clients/site-sdk at a3a9215f6cb33163c15840f4c1b75a6e32b3f24f (tasks 7.1 to 7.12, group 7 complete; first pinned at 89c683a, which added site-sdk to the fleet), CI green (4 of 4 check runs). 7.2 and 7.3 vendor openapi/content-delivery.json byte-exact from ratatoskr-sites at a4587f7 (ADR-0012) and generate the delivery client from it. A client ships no systemd unit
     commits:
       - "215d9ae4df5873d4f422db974b62cd8b24647a73 chore: create the repository for the site SDK and the template"
       - "f54627a867de8f34787370ceecbb85a613c80f9d test(template): home page lists the fixture pages"
@@ -138,12 +169,38 @@ repositories:
       - "da8bf952dcbb9e4fac66a5185af068f669366d07 docs(readme): start a site, write the manifest, the public capabilities"
       - "2731504356840cdb021111d30f82cea40eb5cb47 test(template): refuse a disallowed URL scheme and a dot route slug"
       - "89c683a872c2ca01c33efa1a969fd566fcef98ad fix(template): allow only safe URL schemes and contract slugs"
+      - "567b5182055316e8377396d91d00a21e1beeccb0 test(client): the generated client matches the pinned contracts"
+      - "bf21060db8d66c991524ef2140972bfa188e25a0 feat(client): generate the delivery client and check it for drift"
+      - "1472f6995111a8b10c62480e646cc8c36d304c8e test(client): pin the content client and ask for HEAD and search limits"
+      - "a3a9215f6cb33163c15840f4c1b75a6e32b3f24f feat(client): add HEAD, check the search query, read the template through it"
   - id: ratatoskr-web
     role: site-registry-manifest-approval-publication-editor-release-history
-    branch: site-025/site-management
+    branch: main@4972d4348d829f0cc9a32c4a606e53d31d4d80cd
+    base: f3c7320b6b255ae6481a75e82cf2e8e8d592be96
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/web at 4972d4348d829f0cc9a32c4a606e53d31d4d80cd (tasks 8.1 to 8.6; the range also holds OBS-024 tasks 13.7 and 13.8, recorded in that changeset), CI green (4 of 4 check runs). The web client shows its sites section only when Platform lists the capability sites.manage (tasks 6.16 and 6.17). A client ships no systemd unit
+    commits:
+      - "b6201b6b6813d0fbd4fbe55dc8813722aed7982e docs(openspec): record the site administration views and the write stages"
+      - "6d5c839e31a9a5960feabff4696c3962f56dc96b test(sites): the registry, the approval and the withdrawal of a manifest"
+      - "afc4c14d0d0ea256fdc8d2d38a79bfd301edee7e feat(sites): list the sites, and approve or withdraw a manifest"
+      - "7f78e0fc5e13f2402c10f3e2f6196797666eb844 test(sites): the publication editor saves the whole selection"
+      - "5c584072a9434b9d59deb7a4383bc35a3d86ebfc feat(sites): edit the publications that a manifest names"
+      - "1b534ad72d67db00d151dbaf900997406450c536 test(sites): the release history and the explicit first release"
+      - "e94136a29f55bf0b18f65f77280037f5a6fde086 feat(sites): show the release history and request a build"
+      - "4972d4348d829f0cc9a32c4a606e53d31d4d80cd fix(sites): show the pending save and require a vault connection"
   - id: ratatoskr-workspace
     role: fleet-membership-pins-ports-deploy-enrolment-harness-and-documentation
     branch: main
+    pull_requests: none, local commits on main, not pushed by the writer
+    commits:
+      - "40efed544aef5f5c9cca51283c5423eb4200ed0c build: pin the fleet at contracts 2c72602 and add ratatoskr-sites"
+      - "5e368fcd718682e68844b5c36f2785bb6df71463 deploy(ansible): let the notes service and ob both write the trees"
+      - "eb1a6ea94a4c777c1dd379ce50f6e4484bf43bc3 docs(openspec): record OBS-024 groups 11 and 12 and the notes pin"
+      - "d79b2d5b7d621914f419ff9930bdf08c926c1e10 docs(openspec): record the sites pin, web group 8 and sites.manage"
+      - "faee3e4813f0bf80f2d0c7c39ffa34ce92ad6db0 docs: count 21 pinned product repositories"
+      - "9b725aa6a83296e2f2e0b0ca81f72b4b43c8db3a build: pin Platform at 943bc91 and record SITE-026 group 8"
+      - "fdc76f56f0d7be9cd3c89b3b48772fe8669f974a build: pin sites at a4587f7 and record SITE-025 group 5"
+      - "32a65ae2bd2dd4b5f039fc5048ef0c5db607fd26 build: pin site-sdk at a3a9215 and record SITE-025 group 7"
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-notes

@@ -1,5 +1,5 @@
 id: OBS-024
-state: planned
+state: implementing
 goal: Let Ratatoskr create, edit, rename, move and delete files in a connected Obsidian vault through the connection's one channel, with pending writes that become current only on the channel's acknowledgement, a required base revision, conflicts that the owner resolves, echo suppression and Obsidian-compatible link rewriting.
 openspec_change: add-notes-write-back
 depends_on:
@@ -31,10 +31,10 @@ repositories:
       - "75e954fb1af6b9d0f7b30383c7a993c64d01e2c9 fix(fixtures): state that the schema refuses a merge proposal on a binary file"
   - id: ratatoskr-notes
     role: write-consumer-pending-writes-conflicts-delivery-and-link-rewrite
-    branch: main@9a264fc627e1d60fa222f469a33a8c9985044303
+    branch: main@f39434654eedf3fe4371ceb1b077bf3ea18bc10d
     base: 810edd8ca76376eb4df9555bfed2a637052c55dd
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: not pinned; the workspace stays at 810edd8 (OBS-023). Notes at 9a264fc locks the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 like the rest of the fleet (XR-021 contracts_sha moves with the pin). Its ratatoskr-notes-sync@.service reads EnvironmentFile=-/run/ratatoskr-notes/sync-modes/%i, which the notes service writes, and expands ${RATATOSKR_SYNC_MODE} in ExecStartPre=; harness release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program refuses both, because such a file can set NODE_OPTIONS or LD_PRELOAD for ob. The pin also brings the host change of task 7.11 (ratatoskr-notes-sync in ratatoskr-notes-trees, the trees root 2770) and a full Molecule run, because deploy/nats/identity.conf and the two template units change
+    pin: repos/notes at f39434654eedf3fe4371ceb1b077bf3ea18bc10d (tasks 4.1 to 7.33; advanced from 810edd8, the OBS-023 pin), CI green (5 of 5 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 like the rest of the fleet (XR-021 contracts_sha). 7.32 and 7.33 replace the one sync unit, which read its mode from a file that the notes service wrote, with two fixed units, ratatoskr-notes-sync-pull@.service and ratatoskr-notes-sync-bidi@.service, so release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program passes and services.json lists four template units. The pin brings the host change of decision 7.11, in which ratatoskr-notes-sync joins ratatoskr-notes-trees, the trees root is 2770 and the deploy role changes the folders and files of an existing tree to 2770 and 0660; the full Molecule scenario passes. Still open are groups 8 and 9, 6.7 (spike 3.3), and 7.34 and 7.35 (one lock per connection for the sync units)
     commits:
       - "a49745a731131df791831b66c524b6c232570173 build(notes): pin the contracts at 76a0c35"
       - "b75d957b8ed8e0045df102f01e4933894c2e2474 test(notes): the write consumer verifies the durable of Edge"
@@ -104,12 +104,14 @@ repositories:
       - "a18947341a9025885773bafdd389c5e2c3ce0765 test(notes): a frontmatter value continues over its blank lines"
       - "2acdca4072cabd1dabacb6e126f046e0a57be6d3 fix(notes): keep the blank lines of a frontmatter value inside it"
       - "9a264fc627e1d60fa222f469a33a8c9985044303 refactor(notes): keep the path form of the atomic write test-only"
+      - "39e164ec021c052e951cc758515ff7829eeff09c test(notes): each write mode starts a fixed sync unit and no file sets its mode"
+      - "f39434654eedf3fe4371ceb1b077bf3ea18bc10d fix(notes): run a fixed sync unit for each write mode, with no mode file"
   - id: ratatoskr-platform
     role: edge-write-routes-operation-kinds-durables-and-bus-acl
     branch: main@f76005e4297142bb2a4ebb114b4140704cd5384f
     base: 6df97172f2feae9866fc7fe1d09400b9952bc2b4
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: not pinned; the workspace stays at 6df9717 (OBS-023). The OBS-024 work of Platform ends at f76005e; main at 3a47f0f (SITE-025, recorded in that changeset) locks the contracts at 2c726027da79e0e899ad482afead0a2000b03e61 and is the commit to pin, in one step with notes and the rest of the fleet (contracts_pin.rs). The pin needs the harness change of bus_durables.rs (26 service rows with ratatoskr_notes_write_requests, platform_notes_conflict_projection among the Platform-only consumers, the notes ack wait of 30 s) and bus_acl.rs (the NOTES owner of ratatoskr_notes_write_requests); deploy/nats/ratatoskr.conf changes, so Molecule runs when the pin lands
+    pin: repos/platform at 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 (tasks 10.1 to 10.14; the OBS-024 work ends at f76005e, and the later commits to 943bc91 carry SITE-025 group 6 and SITE-026 group 8, recorded in those changesets), CI green (7 of 7 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. bus_durables.rs holds ratatoskr_notes_write_requests among the thirty service rows, platform_notes_conflict_projection among the Platform-only consumers and the notes ack wait of 30 s (WRITE_ACK_WAIT, a Duration); bus_acl.rs names the NOTES owner of the write durable
     commits:
       - "a6be0b265b5c7cb345379357b15a340f08d6f7d6 chore(deps): move the contracts pin to 75e954f"
       - "e835758c3fbf0938b93f77bfe5c304b19aa6801e test(public-api): require the notes write routes at Edge"
@@ -129,16 +131,55 @@ repositories:
       - "f76005e4297142bb2a4ebb114b4140704cd5384f fix(public-api): refuse a notes write key reused on the other write route"
   - id: ratatoskr-obsidian-plugin
     role: plugin-channel-apply-and-report
-    branch: obs-024/notes-write-back
+    branch: main@5ed98a96387f0c47a8ce5dbe6847950c1b756896
+    base: dc494a1ad2cfd733813fae618a5495ffc9431784
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/obsidian-plugin at 5ed98a96387f0c47a8ce5dbe6847950c1b756896 (tasks 11.1 to 11.17; advanced from dc494a1, the OBS-023 pin), CI green (4 of 4 check runs). A client ships no systemd unit. The plugin refuses a segment that ends in a dot or a space and a colon, which the contract does not refuse yet (tasks 3.13 and 3.14, open)
+    commits:
+      - "310c56fa5aa8556576abe76d556d27f0425ea56d test(apply): the plugin applies the device queue of notes"
+      - "cd35bdb3f92b41933d262e024ae45b28075c0f3d feat(apply): apply the device queue of notes through the vault API"
+      - "a8763ef2be95da7a686a5fca884bbfed00b913ec test(apply): each kind, the upload after bytes_missing, the failed codes"
+      - "d07fad6c992ab66ebe1775c81fa3fb11eab6689f fix(apply): fail a write whose bytes do not have the hash of its content"
+      - "b0fc22641960645164747d408aba3aabf30266d3 test(apply): an unsafe path is refused before the vault is touched"
+      - "0ab8bc92eefe9c738787e663d7e3ad20ba7c56ba fix(apply): refuse an unsafe path before the vault is touched"
+      - "2052d543a6bc4d9b1f8beed869037e64e8595827 test(apply): an NFC path finds the file that the device stores in NFD"
+      - "eb21041b7e02418e3f046785df295cc3db9fceb9 fix(apply): look up the NFD form of a path that the vault does not find"
+      - "6a5ec7be8a52d03b0c8552cb0436c44df7629dd2 docs: write access of Ratatoskr through the plugin"
+      - "1c7040248aa6f9c2b457f4f18fdc575107336f7b test(apply): a backslash, a control character or a Windows name is unsafe"
+      - "fa566caf0d8d03b7417a0cc67e3821f565273335 fix(apply): refuse a backslash, a control character and a Windows name"
+      - "c0d67f4f92e4846910e14fc99ebe82fc475887f6 test(apply): length, prototype keys, NFD upload, a re-delivery, mobile limit"
+      - "17819b6e87363a8ec571e097ae0a334649abcb87 fix(apply): length, prototype keys, NFD upload, re-delivery, mobile limit"
+      - "28898551cadf4de25834aeab28e19645151ee1fe test(apply): a Windows name in any segment, a colon, the vault configDir"
+      - "a08b941f29ae63f10449a47c8efac0cdb8403165 fix(apply): refuse a Windows name in any segment, a colon, the configDir"
+      - "72ee64c57db827305bd5fffc639d04274bee66e9 test(apply): the re-delivery rule by kind, and a rename that already ran"
+      - "5ed98a96387f0c47a8ce5dbe6847950c1b756896 fix(apply): the re-delivery rule by kind, and a rename that already ran"
   - id: ratatoskr-export-agent
     role: cli-channel-apply-and-report
-    branch: obs-024/notes-write-back
+    branch: main@0ddda7164d72b7c100ff6334e14809e2d2ebda8c
+    base: 73a2a037bcc182c3c94a9a7d6b2fff795d8fec7e
+    pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
+    pin: repos/clients/export-agent at 0ddda7164d72b7c100ff6334e14809e2d2ebda8c (tasks 12.1 to 12.14; advanced from 73a2a03), CI green (4 of 4 check runs). A client ships no systemd unit
+    commits:
+      - "f701a8a5fe3596a4b5e9940cccb15f70a2c745bb test: the cli channel applies queued writes through the Obsidian CLI"
+      - "024021cf75c033f9c79856213111b8d64871674f feat: apply the queued writes of a cli connection through the Obsidian CLI"
+      - "c477b8b8cb8fc6c63149b25f282d1f1ff960ca29 test: unsafe paths, the hash after property:set, the CLI thread, pins"
+      - "147e8f241b22eac19e8f78a389f7a70ff257b7fc fix: refuse unsafe paths with notes.write.unsafe_path, settle property:set, own CLI thread"
+      - "0483945eb1585bd59465870fd859a4a8c0f3be8c test: the menu shows a vault whose writes wait for Obsidian"
+      - "972c7ef629d8a3733faf411e984fe015023e680e feat: show a vault whose writes wait for Obsidian in the menu"
+      - "2d70eaa3a182df848e2751d3075b10561ec50037 test: refuse backslashes, colons, control characters and trailing dots"
+      - "27b5afd2f092c2ea93788a18a9dc8709b41cc186 fix: refuse backslashes, colons, control characters and trailing dots"
+      - "978bef7e70c7b6a5c060249b26cec837b4c53ccf test: a local error fails the operation and the pass goes on"
+      - "5318c2cbe1ffcc0329b98ff3115faad921fdeb40 fix: a local error fails the operation with notes.channel.refused"
+      - "cc45085f32a3a44f4b38274db88232fbd5641b7e test: base mismatch, atomic update and set_property argv and digest"
+      - "8c98868f7ae210053cada06c1d590026eb4c61f1 fix: check the content of set_property against its digest"
+      - "803474f496ccd833273481ff9ea9dacc4a7126f2 test: finish an unfinished create and bound the content read"
+      - "0ddda7164d72b7c100ff6334e14809e2d2ebda8c fix: finish an unfinished create and bound the content read"
   - id: ratatoskr-web
     role: editor-write-mode-and-conflict-view
-    branch: main@f3c7320b6b255ae6481a75e82cf2e8e8d592be96
+    branch: main@4972d4348d829f0cc9a32c4a606e53d31d4d80cd
     base: 05764b18628d65ee1997d09aa6f703719958b755
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/clients/web at f3c7320b6b255ae6481a75e82cf2e8e8d592be96 (tasks 13.1 to 13.6; advanced from 05764b1, the OBS-023 pin). A client ships no systemd unit
+    pin: repos/clients/web at 4972d4348d829f0cc9a32c4a606e53d31d4d80cd (tasks 13.1 to 13.6 at f3c7320, and 13.7 and 13.8 at 6cffab0 and 0b0ee6f; the range f3c7320..4972d43 also holds SITE-025 group 8, recorded in that changeset), CI green (4 of 4 check runs). A client ships no systemd unit
     commits:
       - "4ca9c18108207cb86ec0f4879ac6ffb0a4c54f73 test(notes): edit a note, switch write mode, resolve a conflict"
       - "5e194941a7f0a91feefd9da0c5f2cc95e32bb764 feat(notes): edit a note, switch write mode, resolve a conflict"
@@ -147,9 +188,21 @@ repositories:
       - "d8d86fbdb2005baf2abee6b5b3d1122672034d20 docs(openspec): record the note editor and stop calling the browse read-only"
       - "9ff059acf8b6422ec506d97f12c89f90afb27ae6 test(notes): one save at a time, and onSucceeded once per operation"
       - "f3c7320b6b255ae6481a75e82cf2e8e8d592be96 fix(notes): keep Save disabled while a write runs, and report its end once"
+      - "6cffab0da1e21f4873936e0fed52c22991ab9e17 test(notes): the write progress names the delivery stages and codes"
+      - "0b0ee6f1d8f2b9ecc269cdd964855a7c1f3449c7 fix(notes): name the delivery stages, the new codes and the warning"
   - id: ratatoskr-workspace
     role: harness-checks-pins-integration-profile-and-documentation
     branch: main
+    pull_requests: none, local commits on main, not pushed by the writer
+    commits:
+      - "40efed544aef5f5c9cca51283c5423eb4200ed0c build: pin the fleet at contracts 2c72602 and add ratatoskr-sites"
+      - "5e368fcd718682e68844b5c36f2785bb6df71463 deploy(ansible): let the notes service and ob both write the trees"
+      - "eb1a6ea94a4c777c1dd379ce50f6e4484bf43bc3 docs(openspec): record OBS-024 groups 11 and 12 and the notes pin"
+      - "d79b2d5b7d621914f419ff9930bdf08c926c1e10 docs(openspec): record the sites pin, web group 8 and sites.manage"
+      - "faee3e4813f0bf80f2d0c7c39ffa34ce92ad6db0 docs: count 21 pinned product repositories"
+      - "9b725aa6a83296e2f2e0b0ca81f72b4b43c8db3a build: pin Platform at 943bc91 and record SITE-026 group 8"
+      - "fdc76f56f0d7be9cd3c89b3b48772fe8669f974a build: pin sites at a4587f7 and record SITE-025 group 5"
+      - "32a65ae2bd2dd4b5f039fc5048ef0c5db607fd26 build: pin site-sdk at a3a9215 and record SITE-025 group 7"
 dependency_order:
   - ratatoskr-contracts
   - ratatoskr-notes      # ships with write mode off; its consumer waits for the durable Edge creates
@@ -182,7 +235,8 @@ api:
   negotiation: none
   breaking_change: none
 runtime:
-  supervision: unchanged; the Headless client unit of each sync connection changes only its sync mode and conflict strategy.
+  supervision: each sync connection runs one of two fixed template units, ratatoskr-notes-sync-pull@<id>.service while the write mode is off and ratatoskr-notes-sync-bidi@<id>.service while it is on; the supervisor stops the unit of the other mode before it starts one. The polkit rule of the deploy role allows the four notes template units.
+  host: ratatoskr-notes-sync joins ratatoskr-notes-trees; the trees root is 2770, the folders and files of a tree 2770 and 0660; the sync and login units run with UMask=0007, and the notes service keeps UMask=0027 for its blob store (decision 7.11).
 security:
   secrets: none new. The write path reuses the Obsidian credentials that OBS-023 holds.
   authority: Edge authenticates the session and is the only producer of the write command; notes checks that the tenant owns the connection and answers a foreign connection like a missing one.
@@ -201,8 +255,8 @@ verification:
   - crates/notes-contracts/tests/write_request.rs and conflict.rs, and tools/contractsc/tests/live_message_types.rs in ratatoskr-contracts
   - services/notes/tests/bus_durables.rs, write_queue.rs, write_base_hash.rs, write_pending.rs, write_content.rs, write_idempotency.rs, write_authority.rs, write_operation.rs, write_mode.rs, conflict_merge.rs, echo.rs, delivery_plugin.rs, sync_mode.rs, sync_write.rs, link_rewrite_golden.rs and link_rewrite_atomic.rs in ratatoskr-notes
   - crates/public-api/tests/notes_writes.rs, crates/operations/tests/report_authority.rs, crates/eventing/tests/stream_table.rs and nats_permissions.rs in ratatoskr-platform
-  - test/apply-operation.test.ts in ratatoskr-obsidian-plugin
-  - Tests/AgentCoreTests/ObsidianCliApplyTests.swift in ratatoskr-export-agent
+  - tests/apply-operation.test.ts, apply-kinds.test.ts, apply-paths.test.ts, apply-hardening.test.ts, transport-limits.test.ts and request-url.test.ts in ratatoskr-obsidian-plugin
+  - Tests/AgentCoreTests/ObsidianCliApplyTests.swift, ObsidianCliApplyPathTests.swift, ObsidianCliApplyResultTests.swift, ObsidianCliApplyLocalTests.swift, ObsidianCliPropertyTests.swift, VaultSyncObsidianStatusTests.swift and NotesChannelHTTPTests.swift in ratatoskr-export-agent
   - src/features/notes/conflict-view.test.tsx and editor.test.tsx in ratatoskr-web
   - harness bus_acl.rs and the durable-name scan, and the notes-write-back integration profile in ratatoskr-workspace
 evidence: {}
