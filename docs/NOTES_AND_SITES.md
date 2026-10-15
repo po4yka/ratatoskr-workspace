@@ -156,7 +156,9 @@ Rules:
   through that channel is recorded as an acknowledgement, not as a new change.
 - **Rename.** A rename through Ratatoskr rewrites the links in every file that points to the old
   path, with the same rules as Obsidian's "Automatically update internal links". Golden fixtures
-  that the real Obsidian app produces are the test oracle for this.
+  that the real Obsidian app produces are the test oracle for this. Two cases differ: a link nested
+  in another link is rewritten inside the new outer link, where Obsidian 1.14.4 loses it, and a link
+  in the frontmatter is not rewritten.
 
 ## 6. Sites
 
@@ -305,6 +307,7 @@ SITE-027 adds `platform_site_events`.
 - Error codes named so far: `notes.channel_mismatch`, `notes.write.conflict` (not retryable; its
   extension `conflict_id` names the conflict), `notes.write.disabled` (the write mode of the
   connection is off), `notes.write.transformed` (a warning), `notes.write.partially_applied`,
+  `notes.write.internal` (not retryable: a panic in notes stopped the write command),
   `notes.conflict.not_found` (`404` of `GET /v1/notes/conflicts/{id}`, and the failure of a
   resolution of an unknown or closed conflict), `notes.write.unsafe_path` (a `sync` write whose
   path leads out of the working tree through a link), `notes.write.unsupported` (a `set_property`

@@ -12,8 +12,10 @@ that decide what "match" means.
 
 When notes delivers a `rename` or a `move`, it SHALL rewrite, in the same write group, every wikilink
 (`[[name]]`, `[[name|alias]]`, `[[name#heading]]`, `[[name#^block]]`), embed (`![[name]]`) and
-Markdown link that resolved to the old path, so that each one resolves to the new path. A link that
-did not resolve to the old path SHALL NOT change.
+Markdown link that resolved to the old path, so that each one resolves to the new path. Every link
+whose resolution the rename changes SHALL be written again for the file it named before the rename;
+this includes a link to another file whose name the rename made ambiguous. A link whose resolution
+does not change SHALL NOT change. Known limit: notes does not rewrite a link in the frontmatter.
 
 #### Scenario: A shortest-path link becomes ambiguous
 
@@ -31,9 +33,9 @@ did not resolve to the old path SHALL NOT change.
 
 ### Requirement: A rewrite keeps everything except the target
 
-A rewritten link SHALL keep its alias, heading, block reference, display text and link form
-(shortest path, relative path or absolute path, as the vault setting says). No byte outside the
-rewritten link targets SHALL change.
+A rewritten link SHALL keep its alias, heading, block reference, display text and link form, in
+Obsidian's default link form `shortest`; the fixtures also cover `relative` and `absolute`. No byte
+outside the rewritten link targets SHALL change.
 
 #### Scenario: An alias and a heading survive
 
@@ -46,8 +48,9 @@ rewritten link targets SHALL change.
 
 The rename and every rewrite SHALL form one write group. The group SHALL wait until it is at the head
 of the queue of every file it changes. When the base check fails for any file, notes SHALL deliver
-nothing and SHALL raise one conflict that names every stale file. The result SHALL list each changed
-path and its new revision hash.
+nothing and SHALL raise one conflict. The event `notes/conflict.v1` SHALL name the first stale file
+in `path`, and `GET /v1/notes/conflicts/{id}` SHALL list every stale file in `stale_paths`. The
+result SHALL list each changed path and its new revision hash.
 
 #### Scenario: A linked file changed meanwhile
 
@@ -76,6 +79,19 @@ name the files that were not applied.
 and the vault after it as the real Obsidian app produced it through `fileManager.renameFile` (the
 call behind `obsidian move` and `obsidian rename`), plus the Obsidian version and vault settings. The notes rewrite SHALL produce the
 "after" vault of every fixture byte for byte.
+
+One case differs from Obsidian on purpose: a link nested in another link (a wikilink in the text of
+a Markdown link, or a Markdown link in the alias of a wikilink). Notes SHALL rewrite the inner link
+inside the new text of the outer link, where Obsidian 1.14.4 loses the inner rewrite. No fixture
+records this case, because Obsidian corrupts these notes.
+
+#### Scenario: A link nested in a Markdown link is rewritten inside it
+
+- **WHEN** `A.md` is renamed, and a note holds a Markdown link to `A.md` whose text holds `[[A]]`
+- **THEN** the note links the new name both in the outer link and in the inner wikilink, and every
+  other byte is unchanged, verified by
+  `crates/notes-index/tests/rewrite.rs::a_wikilink_in_the_text_of_a_markdown_link_is_rewritten_inside_it`
+  in `ratatoskr-notes`
 
 #### Scenario: The rewrite disagrees with Obsidian
 
