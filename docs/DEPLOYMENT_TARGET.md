@@ -492,6 +492,12 @@ repository serves that bundle**: Platform has no static route, and the port tabl
 for it. Where the bundle is served is an open decision for the owner. Whatever is chosen gets a row
 in the port table, or a route on Edge, before it is deployed.
 
+Whatever serves the bundle must send `Content-Security-Policy: frame-ancestors 'none'` and
+`X-Frame-Options: DENY` with every page. The web client holds the consent page of a site sign-in
+(SITE-027), and a page that another site can frame lets that site make the owner click "Sign in"
+without seeing it. `integration/nginx/web-operational.conf` sends both headers in the
+`web-operational` profile; no Ansible role serves the bundle yet.
+
 ## Provisioning
 
 `deploy/ansible/` in this repository provisions this host from a clean Debian 12 install (ADR-0009,
