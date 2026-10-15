@@ -78,9 +78,10 @@ const fn durable(name: &'static str, filter: &'static str, owner: &'static str) 
     }
 }
 
-/// The 25 service-owned entries of CONTRACTS S04 (`DOMAIN_CONSUMERS`), as amended by R5-11 and by
-/// OBS-023, which added the two Knowledge durables of the notes events.
-const DOMAIN: [Durable; 25] = [
+/// The 30 service-owned entries of CONTRACTS S04 (`DOMAIN_CONSUMERS`), as amended by R5-11, by
+/// OBS-023, which added the two Knowledge durables of the notes events, by OBS-024, which added
+/// the notes durable of the write command, and by SITE-025, which added the four sites durables.
+const DOMAIN: [Durable; 30] = [
     durable(
         "ratatoskr_extractor_capture",
         "cmd.content.capture.requested.v1",
@@ -202,6 +203,52 @@ const DOMAIN: [Durable; 25] = [
         "evt.notes.vault.>",
         "knowledge",
     ),
+    durable(
+        "ratatoskr_notes_write_requests",
+        "cmd.notes.file.write_requested.v1",
+        "notes",
+    ),
+    durable(
+        "ratatoskr_sites_release_builds",
+        "cmd.sites.release.build_requested.v1",
+        "sites",
+    ),
+    durable(
+        "ratatoskr_sites_note_changes",
+        "evt.notes.file.changed.v1",
+        "sites",
+    ),
+    durable(
+        "ratatoskr_sites_vault_disconnections",
+        "evt.notes.vault.disconnected.v1",
+        "sites",
+    ),
+    durable(
+        "ratatoskr_sites_approvals",
+        "evt.platform.site_approval.changed.v1",
+        "sites",
+    ),
+];
+
+/// Durables that Platform provisions before their owner reads them. SITE-025 pins Platform with
+/// the four sites durables while the sites service has no consumer yet (its groups 5 and 6 of the
+/// sites change add them). The owner test skips a row here and reports it as stale when the owner
+/// names both its name and its filter.
+const OWNER_PENDING: [&str; 4] = [
+    "ratatoskr_sites_release_builds",
+    "ratatoskr_sites_note_changes",
+    "ratatoskr_sites_vault_disconnections",
+    "ratatoskr_sites_approvals",
+];
+
+/// `(durable, ack wait in seconds)` that the site-publications delta of `fleet-bus-topology` fixes
+/// for the sites durables. Edge's table is checked against it directly while the sites service
+/// states no constant of its own.
+const SITES_ACK_WAITS: [(&str, u64); 4] = [
+    ("ratatoskr_sites_release_builds", 300),
+    ("ratatoskr_sites_note_changes", 120),
+    ("ratatoskr_sites_vault_disconnections", 30),
+    ("ratatoskr_sites_approvals", 30),
 ];
 
 /// The durables that existed before S04, listed separately with their owners: the three social
@@ -247,12 +294,14 @@ const OTHER: [Durable; 6] = [
 ];
 
 /// Consumers that only Platform creates, outside the table: Edge's own projection, the schedule
-/// registration consumer and the stream erasure consumer (R5-12) that `consumer::run` creates. They are scanned in Platform's sources by
+/// registration consumer, the stream erasure consumer (R5-12) and the projection of the notes
+/// conflict events (OBS-024) that `consumer::run` creates. They are scanned in Platform's sources by
 /// name only.
-const PLATFORM_ONLY: [&str; 3] = [
+const PLATFORM_ONLY: [&str; 4] = [
     "platform_edge_projection",
     "platform_schedule_registration",
     "platform_stream_erasure",
+    "platform_notes_conflict_projection",
 ];
 
 const PLATFORM_TABLE: &str = "crates/eventing/src/stream.rs";
@@ -379,7 +428,8 @@ fn owner_problems(sources: &BTreeMap<&str, String>, durables: &[Durable]) -> Vec
 struct AckWaitRule {
     /// The repository whose tracked `.rs` files declare the constant.
     owner: &'static str,
-    /// The `pub const NAME: u64` the service states.
+    /// The `const NAME: u64 = <seconds>` or `const NAME: Duration = Duration::from_secs(<seconds>)`
+    /// the service states.
     constant: &'static str,
     /// The durable whose row in Edge's table must carry the same wait, and where the row starts.
     durable: &'static str,
@@ -404,7 +454,7 @@ const fn ack_rule(
     }
 }
 
-const ACK_WAIT_RULES: [AckWaitRule; 8] = [
+const ACK_WAIT_RULES: [AckWaitRule; 9] = [
     ack_rule(
         "knowledge",
         "INGEST_ACK_WAIT_SECONDS",
@@ -445,6 +495,12 @@ const ACK_WAIT_RULES: [AckWaitRule; 8] = [
         "knowledge",
         "CHANNEL_RECAP_ACK_WAIT_SECONDS",
         "ratatoskr_knowledge_channel_recap",
+        30,
+    ),
+    ack_rule(
+        "notes",
+        "WRITE_ACK_WAIT",
+        "ratatoskr_notes_write_requests",
         30,
     ),
     AckWaitRule {
@@ -492,10 +548,17 @@ fn ack_wait_problems(table: &str, sources: &BTreeMap<&str, String>) -> Vec<Strin
     let mut problems = Vec::new();
     for rule in ACK_WAIT_RULES {
         let source = sources.get(rule.owner).map_or("", String::as_str);
-        let Some(stated) = number_after(source, &format!("const {}: u64 =", rule.constant)) else {
+        let Some(stated) = number_after(source, &format!("const {}: u64 =", rule.constant))
+            .or_else(|| {
+                number_after(
+                    source,
+                    &format!("const {}: Duration = Duration::from_secs(", rule.constant),
+                )
+            })
+        else {
             problems.push(format!(
-                "`{}` has no `const {}: u64 = <seconds>` in a tracked .rs file",
-                rule.owner, rule.constant
+                "`{}` has no `const {}: u64 = <seconds>` and no `const {}: Duration = Duration::from_secs(<seconds>)` in a tracked .rs file",
+                rule.owner, rule.constant, rule.constant
             ));
             continue;
         };
@@ -582,7 +645,36 @@ fn every_owner_hard_codes_its_durable_name_and_filter() {
             )
         })
         .collect::<BTreeMap<_, _>>();
-    let problems = owner_problems(&sources, &all_durables());
+    let (pending, checked): (Vec<Durable>, Vec<Durable>) = all_durables()
+        .into_iter()
+        .partition(|durable| OWNER_PENDING.contains(&durable.name));
+    let mut problems = owner_problems(&sources, &checked);
+    for durable in pending {
+        if owner_problems(&sources, &[durable]).is_empty() {
+            problems.push(format!(
+                "`{}` names `{}` and its filter now; remove it from OWNER_PENDING",
+                durable.owner, durable.name
+            ));
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[test]
+fn edge_provisions_the_sites_durables_with_their_contract_ack_waits() {
+    let table = platform_table_text();
+    let mut problems = Vec::new();
+    for (durable, seconds) in SITES_ACK_WAITS {
+        match table_ack_wait(&table, durable) {
+            Some(edge) if edge == seconds => {}
+            Some(edge) => problems.push(format!(
+                "Edge provisions `{durable}` with {edge} seconds, the contract fixes {seconds}"
+            )),
+            None => problems.push(format!(
+                "Platform's {PLATFORM_TABLE} has no row for `{durable}`"
+            )),
+        }
+    }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 

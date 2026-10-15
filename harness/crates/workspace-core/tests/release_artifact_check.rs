@@ -193,8 +193,8 @@ fn a_template_unit_is_not_read() {
     let a = good();
     case.unit("svc-a.service", "/usr/local/bin/svc-a")
         .unit(
-            "ratatoskr-notes-sync@.service",
-            "/usr/bin/ob sync --path /var/lib/ratatoskr-notes/vaults/%i --continuous",
+            "ratatoskr-notes-sync-pull@.service",
+            "/usr/bin/ob sync --continuous --path /mnt/nvme/ratatoskr/notes/trees/%i",
         )
         .binary("svc-a", &a);
     let (success, output) = case.run();

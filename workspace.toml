@@ -241,6 +241,25 @@ dependencies = [
 ]
 
 [[repositories]]
+id = "sites"
+path = "repos/sites"
+remote = "https://github.com/po4yka/ratatoskr-sites.git"
+default_branch = "main"
+kind = "service"
+owner = "po4yka"
+security = "private-user-data"
+commands = ["fmt", "lint", "test", "serve"]
+contracts = ["sites.release_build_requested", "sites.release_published", "platform.site_approval_changed", "sites.site_manifest", "sites.release", "sites.page", "notes.file_changed", "notes.vault_disconnected"]
+profiles = ["core"]
+digest_inputs = ["Cargo.lock", "openspec/config.yaml", "schema.sql"]
+dependencies = [
+  { repository = "contracts", kind = "contract", purpose = "site manifest, release, page and site message contracts" },
+  { repository = "notes", kind = "event", purpose = "note file changes and vault disconnections that select release content" },
+  { repository = "platform", kind = "event", purpose = "release build commands and site approvals through the bus" },
+  { repository = "platform", kind = "api", purpose = "Edge routes the sites domain API and the Content Delivery API" },
+]
+
+[[repositories]]
 id = "site-sdk"
 path = "repos/clients/site-sdk"
 remote = "https://github.com/po4yka/ratatoskr-site-sdk.git"

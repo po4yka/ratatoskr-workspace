@@ -42,12 +42,13 @@ const ROUTE_PREFIX: &str = "RATATOSKR__GATEWAY__ROUTES__";
 const ROUTE_SUFFIX: &str = "__LISTENER";
 
 /// Routes with an implementing service: `(route name, owning repository)`.
-const IMPLEMENTED: [(&str, &str); 5] = [
+const IMPLEMENTED: [(&str, &str); 6] = [
     ("KNOWLEDGE", "knowledge"),
     ("GITHUB", "github"),
     ("CHATGPT", "chatgpt"),
     ("CLAUDE", "claude"),
     ("NOTES", "notes"),
+    ("SITES", "sites"),
 ];
 
 /// Routes that have no implementing service, with the port Edge keeps for them.

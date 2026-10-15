@@ -102,12 +102,31 @@
         "RATATOSKR__CHANNEL_RECAP__DIGEST_SOURCE_SERVICE_SECRET": "{file:/etc/ratatoskr/secrets/channel-digests-source-secret}",
         "RATATOSKR__CHANNEL_RECAP__RESULT_READER_SERVICE_SECRET": "{file:/etc/ratatoskr/secrets/channel-digests-result-reader-secret}"
       }
+    },
+    {
+      "name": "sites",
+      "repository": "sites",
+      "unit": "ratatoskr-sites.service",
+      "binary": "ratatoskr-sites",
+      "user": "ratatoskr-sites",
+      "config_example": "deploy/systemd/sites.conf.example",
+      "config": "/etc/ratatoskr/sites.conf",
+      "database_role": "ratatoskr_sites",
+      "role_file": true,
+      "operator_port": 9472,
+      "ready_path": "/health/ready",
+      "settings": {
+        "RATATOSKR__DATABASE__URL": "postgres://ratatoskr_sites:{file:/etc/ratatoskr/secrets/postgres/ratatoskr_sites.password}@127.0.0.1:5432/ratatoskr",
+        "RATATOSKR__BUS__URL": "nats://127.0.0.1:4222",
+        "RATATOSKR__BUS__NKEY_SEED_PATH": "/etc/ratatoskr/sites.nkey"
+      }
     }
   ],
   "ratatoskr_template_units": [
     {"repository": "notes", "unit": "ratatoskr-notes-cleanup@.service", "manager": "ratatoskr-notes"},
     {"repository": "notes", "unit": "ratatoskr-notes-login@.service", "manager": "ratatoskr-notes"},
-    {"repository": "notes", "unit": "ratatoskr-notes-sync@.service", "manager": "ratatoskr-notes"}
+    {"repository": "notes", "unit": "ratatoskr-notes-sync-bidi@.service", "manager": "ratatoskr-notes"},
+    {"repository": "notes", "unit": "ratatoskr-notes-sync-pull@.service", "manager": "ratatoskr-notes"}
   ],
   "ratatoskr_database_roles": [
     {"repository": "extractor", "role": "ratatoskr_extractor"},
@@ -121,7 +140,8 @@
     {"repository": "x", "role": "ratatoskr_x"},
     {"repository": "instagram", "role": "ratatoskr_instagram"},
     {"repository": "threads", "role": "ratatoskr_threads"},
-    {"repository": "notes", "role": "ratatoskr_notes"}
+    {"repository": "notes", "role": "ratatoskr_notes"},
+    {"repository": "sites", "role": "ratatoskr_sites"}
   ],
   "ratatoskr_nats_identities": [
     {"identity": "edge", "group": "ratatoskr-edge"},
@@ -137,6 +157,7 @@
     {"identity": "github", "group": "root"},
     {"identity": "vault", "group": "root"},
     {"identity": "channel-digests", "group": "root"},
-    {"identity": "notes", "group": "root"}
+    {"identity": "notes", "group": "root"},
+    {"identity": "sites", "group": "ratatoskr-sites"}
   ]
 }

@@ -39,7 +39,7 @@ use inbox_wiring::{Sources, inbox_wiring_problem, sources_of};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 
-const IDENTITIES: [&str; 14] = [
+const IDENTITIES: [&str; 15] = [
     "EDGE",
     "TELEGRAM",
     "CHATGPT",
@@ -54,10 +54,11 @@ const IDENTITIES: [&str; 14] = [
     "VAULT",
     "CHANNEL_DIGESTS",
     "NOTES",
+    "SITES",
 ];
 
 /// The repository that owns each identity: it publishes or consumes with it.
-const OWNERS: [(&str, &str); 14] = [
+const OWNERS: [(&str, &str); 15] = [
     ("EDGE", "platform"),
     ("TELEGRAM", "telegram"),
     ("CHATGPT", "chatgpt"),
@@ -72,11 +73,12 @@ const OWNERS: [(&str, &str); 14] = [
     ("VAULT", "vault"),
     ("CHANNEL_DIGESTS", "channel-digests"),
     ("NOTES", "notes"),
+    ("SITES", "sites"),
 ];
 
 /// `(repository, path of the copy, identity)`: one vendored copy for every non-Edge identity
 /// (R3-01 gave the six services that had none a `deploy/nats/identity.conf` as well).
-const FRAGMENTS: [(&str, &str, &str); 13] = [
+const FRAGMENTS: [(&str, &str, &str); 14] = [
     ("telegram", "deploy/nats/identity.conf", "TELEGRAM"),
     ("chatgpt", "deploy/nats/identity.conf", "CHATGPT"),
     ("claude", "deploy/nats/identity.conf", "CLAUDE"),
@@ -98,11 +100,12 @@ const FRAGMENTS: [(&str, &str, &str); 13] = [
     ("github", "deploy/nats/identity.conf", "GITHUB"),
     ("vault", "deploy/nats/identity.conf", "VAULT"),
     ("notes", "deploy/nats/identity.conf", "NOTES"),
+    ("sites", "deploy/nats/identity.conf", "SITES"),
 ];
 
 /// R3-01: the one reply namespace each non-Edge identity may subscribe to. EDGE keeps `_INBOX.>`.
 /// `_INBOX_x.>` does not match `_INBOX.>` because NATS compares whole tokens.
-const INBOX_PREFIXES: [(&str, &str); 13] = [
+const INBOX_PREFIXES: [(&str, &str); 14] = [
     ("TELEGRAM", "_INBOX_telegram"),
     ("CHATGPT", "_INBOX_chatgpt"),
     ("CLAUDE", "_INBOX_claude"),
@@ -119,13 +122,14 @@ const INBOX_PREFIXES: [(&str, &str); 13] = [
     ("VAULT", "_INBOX_vault"),
     ("CHANNEL_DIGESTS", "_INBOX_channel_digests"),
     ("NOTES", "_INBOX_notes"),
+    ("SITES", "_INBOX_sites"),
 ];
 
 const COMMANDS: &str = "ratatoskr_commands";
 const EVENTS: &str = "ratatoskr_events";
 
 /// `(stream, durable, owning identity)`: the ACL owner column of the fixed-durable table.
-const DURABLE_OWNERS: [(&str, &str, &str); 29] = [
+const DURABLE_OWNERS: [(&str, &str, &str); 34] = [
     (EVENTS, "ratatoskr_telegram_notifications", "TELEGRAM"),
     (COMMANDS, "ratatoskr_x_browser_capture", "X"),
     (COMMANDS, "ratatoskr_instagram_browser_capture", "INSTAGRAM"),
@@ -179,6 +183,11 @@ const DURABLE_OWNERS: [(&str, &str, &str); 29] = [
     (EVENTS, "ratatoskr_threads_deletion_acks", "THREADS"),
     (EVENTS, "ratatoskr_knowledge_notes_files", "KNOWLEDGE"),
     (EVENTS, "ratatoskr_knowledge_notes_vaults", "KNOWLEDGE"),
+    (COMMANDS, "ratatoskr_notes_write_requests", "NOTES"),
+    (COMMANDS, "ratatoskr_sites_release_builds", "SITES"),
+    (EVENTS, "ratatoskr_sites_note_changes", "SITES"),
+    (EVENTS, "ratatoskr_sites_vault_disconnections", "SITES"),
+    (EVENTS, "ratatoskr_sites_approvals", "SITES"),
 ];
 
 /// R5-11 and R5-12: `(subject, identities that may publish it)`. The set must match exactly.
@@ -257,7 +266,7 @@ fn is_allowed_wildcard(subject: &str) -> bool {
 }
 
 #[test]
-fn platform_conf_has_exactly_the_fourteen_identities() {
+fn platform_conf_has_exactly_the_fifteen_identities() {
     let manifest = committed_manifest();
     let found = platform_stanzas();
     let names = found
@@ -286,7 +295,7 @@ fn platform_conf_has_exactly_the_fourteen_identities() {
             .iter()
             .map(|name| (*name).to_owned())
             .collect::<BTreeSet<_>>(),
-        "ratatoskr.conf must hold exactly the fourteen identities of the bus topology"
+        "ratatoskr.conf must hold exactly the fifteen identities of the bus topology"
     );
     for identity in IDENTITIES {
         require_checkout(&manifest, owner_of(identity));
@@ -422,7 +431,14 @@ fn non_edge_stanzas_obey_the_permission_invariants() {
     match edge {
         Some(edge) => {
             let publish = allow_list(&edge.text, "publish:");
-            if publish != ["cmd.>", "$JS.API.>", "$JS.ACK.>"] {
+            if publish
+                != [
+                    "cmd.>",
+                    "evt.platform.site_approval.changed.v1",
+                    "$JS.API.>",
+                    "$JS.ACK.>",
+                ]
+            {
                 problems.push(format!("EDGE publish allow is {publish:?}"));
             }
         }
@@ -460,6 +476,51 @@ fn the_deletion_publish_rights_belong_to_exactly_their_stanzas() {
                 "`{subject}` may be published by {actual:?}, expected exactly {wanted:?}"
             ));
         }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// SITE-025 (`fleet-bus-topology`): the SITES stanza consumes its four durables, publishes its two
+/// event subjects, and no command; only EDGE publishes the release build command.
+#[test]
+fn sites_stanza_allows_its_durables_and_events() {
+    let found = platform_stanzas();
+    let Some(sites) = found.iter().find(|stanza| stanza.name == "SITES") else {
+        panic!("ratatoskr.conf has no SITES stanza");
+    };
+    let publish = allow_list(&sites.text, "publish:");
+    let mut problems = Vec::new();
+    for (stream, durable, _) in DURABLE_OWNERS
+        .iter()
+        .filter(|(_, _, owner)| *owner == "SITES")
+    {
+        for wanted in [
+            format!("$JS.API.CONSUMER.INFO.{stream}.{durable}"),
+            format!("$JS.API.CONSUMER.MSG.NEXT.{stream}.{durable}"),
+            format!("$JS.ACK.{stream}.{durable}.>"),
+        ] {
+            if !publish.contains(&wanted) {
+                problems.push(format!("SITES does not allow `{wanted}`"));
+            }
+        }
+    }
+    for event in [
+        "evt.sites.release.published.v1",
+        "evt.platform.operation.reported.v1",
+    ] {
+        if !publish.iter().any(|allowed| allowed == event) {
+            problems.push(format!("SITES does not allow `{event}`"));
+        }
+    }
+    for subject in publish.iter().filter(|subject| subject.starts_with("cmd.")) {
+        problems.push(format!("SITES may publish the command `{subject}`"));
+    }
+    let command = "cmd.sites.release.build_requested.v1";
+    let named = publishers_of(&found, command);
+    if !named.is_empty() {
+        problems.push(format!(
+            "`{command}` is named by {named:?}; only EDGE publishes it, through `cmd.>`"
+        ));
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }

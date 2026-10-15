@@ -60,7 +60,7 @@ Mitigations:
   because a line of `ob` can name a file of the vault.
 - Only `ratatoskr-notes` can open the key file. The service refuses a key file that is a symbolic
   link, that has another owner, or that other users can open.
-- One polkit rule lets `ratatoskr-notes` start and stop only the three notes template units, with a
+- One polkit rule lets `ratatoskr-notes` start and stop only the four notes template units, with a
   UUID instance name. A template unit starts only `/usr/bin/ob`, `/bin/rm` and `/bin/sh -c`, and
   `release_artifact_callers.rs` checks this at each pin.
 - No secret goes into a log line, an event, an error envelope or the journal of a unit. The notes

@@ -78,3 +78,7 @@
 	path = repos/clients/site-sdk
 	url = https://github.com/po4yka/ratatoskr-site-sdk.git
 	branch = main
+[submodule "sites"]
+	path = repos/sites
+	url = https://github.com/po4yka/ratatoskr-sites.git
+	branch = main

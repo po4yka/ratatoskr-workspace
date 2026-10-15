@@ -34,7 +34,7 @@ service first starts. The decision is ADR-0009, and the behaviour is the openspe
 | Secret | Where it comes from | Leaves the host? |
 |---|---|---|
 | PostgreSQL role passwords | generated on the host, `/etc/ratatoskr/secrets/postgres/<role>.password` | no; set through psql's standard input |
-| nkey seeds (all fourteen identities) | `nk -gen user -pubout` on the host, `/etc/ratatoskr/<identity>.nkey` | no; only the public keys go into `ratatoskr.conf` |
+| nkey seeds (all fifteen identities) | `nk -gen user -pubout` on the host, `/etc/ratatoskr/<identity>.nkey` | no; only the public keys go into `ratatoskr.conf` |
 | Telegram signing key | `ratatoskr-telegram-webhook assertion-key generate` on the host | no; only its public key goes into `edge.conf` |
 | Telegram webhook secret, channel-digests service secret | generated on the host | no |
 | Knowledge's secrets shared with GitHub (README endpoint) and channel-digests (manifest source, recap result reader) | generated on the host, readable by `ratatoskr-knowledge` | no |

@@ -65,6 +65,9 @@ ratatoskr_users:
   - {name: ratatoskr-notes-sync, groups: []}
   # Knowledge reads note bytes through the read group from OBS-023 on (design D12).
   - {name: ratatoskr-knowledge, groups: [ratatoskr, ratatoskr-notes-blobs]}
+  # Sites reads note bytes through the same read group (SITE-025, design D3); its unit names the
+  # group in SupplementaryGroups= too.
+  - {name: ratatoskr-sites, groups: [ratatoskr, ratatoskr-notes-blobs]}
 
 # The one layout the three deploy guides agree on once reconciled (DPL-022): the shared `ratatoskr`
 # group owns the configuration and log directories, and each data directory belongs to one service.
@@ -84,6 +87,9 @@ ratatoskr_directories:
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-notes, owner: ratatoskr-notes, group: ratatoskr-notes-blobs, mode: "2750"}
   # The Knowledge blob root, in ReadWritePaths= of ratatoskr-knowledge.service with no `-`.
   - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-knowledge, owner: ratatoskr-knowledge, group: ratatoskr-knowledge, mode: "0700"}
+  # The Sites blob root (pages and assets of each release), in ReadWritePaths= of
+  # ratatoskr-sites.service with no `-`.
+  - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-sites, owner: ratatoskr-sites, group: ratatoskr-sites, mode: "0700"}
   # The working trees and the ob client state of the notes sync connections (owner decision B of
   # 2026-10-14). ob creates trees/<id> and clients/<id> as ratatoskr-notes-sync. The setgid bit of
   # the trees root gives each tree the read group of the notes service; with UMask=0027 a tree is

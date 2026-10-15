@@ -43,6 +43,7 @@
         - ratatoskr-telegram-webhook
         - ratatoskr-telegram-dispatcher
         - ratatoskr-nats
+        - ratatoskr-sites
 
     - name: "host_facts: each user's first group is its own"
       ansible.builtin.assert:
@@ -62,6 +63,7 @@
         - {path: /mnt/nvme/ratatoskr/nats, owner: ratatoskr-nats, group: ratatoskr-nats, mode: "0700"}
         - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-extractor, owner: ratatoskr-extractor, group: ratatoskr-extractor, mode: "0700"}
         - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-blobs, mode: "2750"}
+        - {path: /mnt/nvme/ratatoskr/blobs/ratatoskr-sites, owner: ratatoskr-sites, group: ratatoskr-sites, mode: "0700"}
         - {path: /mnt/nvme/ratatoskr/archive-staging, owner: ratatoskr-edge, group: ratatoskr-edge, mode: "0700"}
         - {path: /var/lib/ratatoskr-telegram, owner: ratatoskr-telegram-webhook, group: ratatoskr-telegram-webhook, mode: "0750"}
       loop_control:
@@ -386,7 +388,9 @@
               *) wrong="$wrong$1 $2 $3 $4: exit $rc, want $5"$'\n' ;;
             esac
           }
-          for template in ratatoskr-notes-sync@.service ratatoskr-notes-login@.service ratatoskr-notes-cleanup@.service; do
+          # ratatoskr-notes-sync@ is the one sync unit before OBS-024 7.33; it is no longer listed, so
+          # the rule must refuse it.
+          for template in ratatoskr-notes-sync-pull@.service ratatoskr-notes-sync-bidi@.service ratatoskr-notes-login@.service ratatoskr-notes-cleanup@.service ratatoskr-notes-sync@.service; do
             instance="${template/@./@$uuid.}"
             case "$listed" in *" $template "*) want=allowed ;; *) want=refused ;; esac
             check ratatoskr-notes manage-units "$instance" start "$want"
@@ -406,18 +410,19 @@
       changed_when: false
 
     # --- notes_blob_read_group ---------------------------------------------------------------------
-    # The blob root of ratatoskr-notes is setgid with the read group, and Knowledge is its only
-    # member (design D12). The playbook creates no ratatoskr-x user while X is not enrolled, so the
-    # case refuses a read by EVERY ratatoskr-* user outside the group, which includes ratatoskr-x
-    # whenever it exists. The fixture blob is written as ratatoskr-notes writes, with umask 0027.
+    # The blob root of ratatoskr-notes is setgid with the read group, and Knowledge and Sites are its
+    # only members (design D12; SITE-025, design D3). The playbook creates no ratatoskr-x user while
+    # X is not enrolled, so the case refuses a read by EVERY ratatoskr-* user outside the group,
+    # which includes ratatoskr-x whenever it exists. The fixture blob is written as ratatoskr-notes
+    # writes, with umask 0027.
     - name: "notes_blob_read_group: the group"
       ansible.builtin.command: getent group ratatoskr-notes-blobs
       register: notes_blob_group
       changed_when: false
 
-    - name: "notes_blob_read_group: Knowledge is the only member"
+    - name: "notes_blob_read_group: Knowledge and Sites are the only members"
       ansible.builtin.assert:
-        that: notes_blob_group.stdout.split(':')[3] | trim == 'ratatoskr-knowledge'
+        that: notes_blob_group.stdout.split(':')[3] | trim | split(',') | sort == ['ratatoskr-knowledge', 'ratatoskr-sites']
         fail_msg: "{{ notes_blob_group.stdout }}"
 
     - name: "notes_blob_read_group: the blob root"
@@ -469,7 +474,7 @@
       loop_control:
         label: "{{ item.item }}"
 
-    - name: "notes_blob_read_group: Knowledge reads the blob, and no other ratatoskr-* user can"
+    - name: "notes_blob_read_group: Knowledge and Sites read the blob, and no other ratatoskr-* user can"
       ansible.builtin.shell:
         executable: /bin/bash
         cmd: |
@@ -478,9 +483,10 @@
           wrong=""
           reads() { setpriv --reuid="$1" --regid="$1" --init-groups cat "$blob" >/dev/null 2>&1; }
           reads ratatoskr-knowledge || wrong="${wrong}ratatoskr-knowledge cannot read the blob"$'\n'
+          reads ratatoskr-sites || wrong="${wrong}ratatoskr-sites cannot read the blob"$'\n'
           others=0
           for user in $(getent passwd | cut -d: -f1 | grep '^ratatoskr-'); do
-            case "$user" in ratatoskr-notes|ratatoskr-knowledge) continue ;; esac
+            case "$user" in ratatoskr-notes|ratatoskr-knowledge|ratatoskr-sites) continue ;; esac
             others=$((others + 1))
             if reads "$user"; then wrong="${wrong}${user} reads the blob"$'\n'; fi
           done
@@ -747,7 +753,7 @@
         that:
           - "'REPLACE_ME' not in (nats_conf.content | b64decode)"
           - (nats_conf.content | b64decode) is not search('SU[A-Z2-7]{56}')
-          - (nats_conf.content | b64decode | regex_findall('nkey:\s*U[A-Z2-7]{55}') | length) == 14
+          - (nats_conf.content | b64decode | regex_findall('nkey:\s*U[A-Z2-7]{55}') | length) == 15
 
     - name: "seed_modes: each seed file"
       ansible.builtin.stat:

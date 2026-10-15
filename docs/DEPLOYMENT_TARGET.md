@@ -58,6 +58,7 @@ keeps durable state off it either way.
 | Off-host copies | `/mnt/backup/borg` | SATA SSD, 954 GB |
 | Telegram blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-telegram` | NVMe |
 | Notes blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, owner `ratatoskr-notes:ratatoskr-notes-blobs`, mode 2750 (setgid) | NVMe |
+| Sites blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-sites`, owner `ratatoskr-sites:ratatoskr-sites`, mode 0700 | NVMe |
 | Notes working trees | `/mnt/nvme/ratatoskr/notes/trees`, owner `ratatoskr-notes-sync:ratatoskr-notes-trees`, mode 2750 (setgid); one `<id>` for each `sync` connection, mode 2750, files 0640 | NVMe |
 | Notes `ob` client state | `/mnt/nvme/ratatoskr/notes/clients`, owner `ratatoskr-notes-sync:ratatoskr-notes-sync`, mode 0700; one `<id>` for each `sync` connection, mode 0700 | NVMe |
 | Notes sync journal | `/var/log/journal/<machine id>.ratatoskr-notes-sync` (`LogNamespace=ratatoskr-notes-sync` of the sync unit), owner `root:systemd-journal`, mode 2755, with an ACL and a default ACL that name the group `ratatoskr-notes` (`r-x`) and no other group; at most 8 MiB (`journald@ratatoskr-notes-sync.conf`) | `/var/log` (log2ram tmpfs) |
@@ -79,10 +80,10 @@ Two rules follow, and both are contracts rather than advice:
   state no repository can repair. The group is a host prerequisite, not something a unit file creates.
   The notes blob root follows the same rule with the read group `ratatoskr-notes-blobs`:
   `ratatoskr-notes` writes it with `UMask=0027` (planned, notes task 6.8), so a blob is mode 0640 with that group, and
-  `ratatoskr-knowledge` is the only member of the group. A later reader, such as
-  `ratatoskr-sites`, joins the group in its own change. The deploy role creates the group, the
-  membership and the root (`deploy/ansible/group_vars/all/host.yml`), and the Molecule verify case
-  `notes_blob_read_group` checks them.
+  `ratatoskr-knowledge` and `ratatoskr-sites` (SITE-025, design D3) are the only members of the
+  group. The deploy role creates the group, the memberships and the root
+  (`deploy/ansible/group_vars/all/host.yml`), and the Molecule verify case `notes_blob_read_group`
+  checks them.
 - **`/mnt/backup` is a second volume on the same machine.** It survives a disk failure and does not
   survive losing the Pi. Nothing may treat it as an off-host replica — `vault`'s policy of blocking
   `healthy` until a verified remote copy exists is not satisfied by it.
@@ -149,7 +150,7 @@ because Platform is installed first. Each unit carries `PartOf=ratatoskr.target`
 boot starts it. The PostgreSQL and NATS containers are not members and stay up. A new unit in any
 repository carries the same two lines.
 
-**A template unit is installed and never started by the playbook.** `ratatoskr-notes` ships three
+**A template unit is installed and never started by the playbook.** `ratatoskr-notes` ships four
 template units (`*@.service`). The instance name is the connection id, a lowercase UUID. Each unit
 runs as `ratatoskr-notes-sync` and starts only `/usr/bin/ob`, `/bin/rm` or `/bin/sh -c`, with `HOME` and `XDG_CONFIG_HOME` set to the
 client state `/mnt/nvme/ratatoskr/notes/clients/<id>` of the connection, and the working tree
@@ -157,14 +158,19 @@ client state `/mnt/nvme/ratatoskr/notes/clients/<id>` of the connection, and the
 
 | Unit | Type | Started by | Does |
 |---|---|---|---|
-| `ratatoskr-notes-sync@.service` | long-running | the Sync supervisor of the notes service, for each `sync` connection | `ob sync --continuous` on the working tree of the connection; logs to the journal namespace `ratatoskr-notes-sync` |
+| `ratatoskr-notes-sync-pull@.service` | long-running | the Sync supervisor of the notes service, for each `sync` connection whose write mode is off | `ob sync-config` with the mode `pull-only` and `--conflict-strategy conflict`, then `ob sync --continuous` on the working tree of the connection; logs to the journal namespace `ratatoskr-notes-sync` |
+| `ratatoskr-notes-sync-bidi@.service` | long-running | the Sync supervisor of the notes service, for each `sync` connection whose write mode is on | the same as the pull unit, with the mode `bidirectional` |
 | `ratatoskr-notes-login@.service` | oneshot | the notes service, at the connect of a `sync` connection | `ob login`, then `ob sync-setup`; reads the secrets with `LoadCredential=` from `/run/ratatoskr-notes/credentials/<id>/` |
 | `ratatoskr-notes-cleanup@.service` | oneshot | the notes service, at a disconnect and after a failed login | `ob sync-unlink`, then removes the working tree and the client state of the connection |
 
+Each write mode has its own fixed sync unit, with the mode as a literal argument and no
+`EnvironmentFile=` (OBS-024, design D5). The notes service stops the unit of the other mode before
+it starts one, so at most one sync unit of a connection runs.
+
 The playbook installs each unit that `ratatoskr_template_units` in `services.json` lists,
 byte-identical to its pin, and reloads systemd. It does not enable or start a template unit. At the
-current pin, notes ships the login and cleanup units; the sync unit joins the list when notes ships
-it. One polkit rule, `/etc/polkit-1/rules.d/60-ratatoskr-template-units.rules`, lets
+current pin, notes ships the login, cleanup and the two sync units. One polkit rule,
+`/etc/polkit-1/rules.d/60-ratatoskr-template-units.rules`, lets
 `ratatoskr-notes` start and stop an instance of these units whose instance name is a lowercase
 UUID, and allows nothing else: no other verb, unit, instance name or user, and no change to a unit
 file. The Molecule verify case `notes_sync_unit` checks this with `pkcheck`. A template unit does not
@@ -173,7 +179,8 @@ join `ratatoskr.target`, and it starts only a program of a reviewed allow-list (
 artifact (openspec `release-artifacts`).
 
 **Memory budget of a `sync` connection: 512M (PROVISIONAL).** Each `sync` connection runs one
-Node.js process, `ob sync --continuous`, in its own instance of `ratatoskr-notes-sync@.service`, so
+Node.js process, `ob sync --continuous`, in its own instance of `ratatoskr-notes-sync-pull@.service`
+or `ratatoskr-notes-sync-bidi@.service`, so
 the memory of the notes deployment grows by this budget for each connection. 512M is a placeholder
 for `MemoryMax=` of the sync unit, not a measurement. Spike 3.1 of `add-notes-vault-connections`
 measures the resident memory of one continuous sync with a 1 GiB fixture vault on a host of this
@@ -360,6 +367,7 @@ bind to `0.0.0.0`.
 | 8097 | `ratatoskr-claude` archive receipt (`/v1/ai-archives/receipt`, `/v1/capabilities`), a dedicated listener (`RATATOSKR__RECEIPT__LISTEN_ADDRESS`) next to the operator listener `9086` | loopback; reached only through Platform archive acceptance |
 | 8098 | `ratatoskr-channel-digests` API (`/v1/manifests`, `/v1/subscriptions`, `/v1/results`, `/ready`) | loopback; Platform and Knowledge only |
 | 8099 | `ratatoskr-notes` domain API (`/v1/notes`), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9471` | loopback; reached only through Edge |
+| 8100 | `ratatoskr-sites` domain API (`/v1/sites`, and the Content Delivery API), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9472` | loopback; reached only through Edge |
 | 9081 | `ratatoskr-knowledge` operator listener | host only |
 | 9082 | `ratatoskr-instagram` operator listener | host only |
 | 9083 | `ratatoskr-instagram` product API (`POST /v1/captures`, data exports) | host only |
@@ -375,8 +383,9 @@ bind to `0.0.0.0`.
 | 9469 | `ratatoskr-channel-digests` API operator listener | host only |
 | 9470 | `ratatoskr-channel-digests` worker operator listener | host only |
 | 9471 | `ratatoskr-notes` operator listener | host only |
+| 9472 | `ratatoskr-sites` operator listener | host only |
 | 9570 | `ratatoskr-vault` operator listener | host only |
-| 4222 | NATS client, a container, `ratatoskr-nats`, config in `platform/deploy/nats/`; the server binds `0.0.0.0` inside the container and the port is published on `127.0.0.1` only, and it requires an nkey; the largest message it accepts is 8 MiB (`max_payload: 8MB`, up from the 1 MiB default); every identity except Edge subscribes only to its own reply prefix, `_INBOX_telegram`, `_INBOX_chatgpt`, `_INBOX_claude`, `_INBOX_x`, `_INBOX_instagram`, `_INBOX_threads`, `_INBOX_extractor`, `_INBOX_extractor_browser_worker`, `_INBOX_knowledge`, `_INBOX_github`, `_INBOX_vault` or `_INBOX_channel_digests` (R3-01), so one service cannot read another's JetStream deliveries, and a service built before Round 3 times out under this ACL | host only |
+| 4222 | NATS client, a container, `ratatoskr-nats`, config in `platform/deploy/nats/`; the server binds `0.0.0.0` inside the container and the port is published on `127.0.0.1` only, and it requires an nkey; the largest message it accepts is 8 MiB (`max_payload: 8MB`, up from the 1 MiB default); every identity except Edge subscribes only to its own reply prefix, `_INBOX_telegram`, `_INBOX_chatgpt`, `_INBOX_claude`, `_INBOX_x`, `_INBOX_instagram`, `_INBOX_threads`, `_INBOX_extractor`, `_INBOX_extractor_browser_worker`, `_INBOX_knowledge`, `_INBOX_github`, `_INBOX_vault`, `_INBOX_channel_digests`, `_INBOX_notes` or `_INBOX_sites` (R3-01), so one service cannot read another's JetStream deliveries, and a service built before Round 3 times out under this ACL | host only |
 | 8222 | NATS monitoring, the same container; bound inside the container as above and published on `127.0.0.1` only | host only |
 | 5432 | PostgreSQL | host only |
 
