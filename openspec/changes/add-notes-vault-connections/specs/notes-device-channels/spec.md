@@ -24,7 +24,9 @@ SHALL NOT decide which connection a device may use.
 
 `ratatoskr-notes` SHALL answer `404` to a device request for a connection of another owner. It SHALL
 refuse with `notes.channel_mismatch` a device request whose device kind does not match the channel
-of the connection.
+of the connection. It SHALL answer `410` with `notes.connection.removed`, which a device does not
+retry, when the owner removed the connection and its own device sends the request, and `404` with
+`notes.connection.not_found` for a connection that failed.
 
 #### Scenario: A plugin of another owner sends changes
 
@@ -35,6 +37,11 @@ of the connection.
 
 - **WHEN** the export agent of the owner sends a change batch to a connection whose channel is `plugin`
 - **THEN** the request is refused with `notes.channel_mismatch`, and no change is recorded, verified by `services/notes/tests/device_channel.rs::export_agent_on_plugin_connection_is_channel_mismatch` in `ratatoskr-notes`
+
+#### Scenario: The device of a removed connection sends changes
+
+- **WHEN** the owner removed a `plugin` connection, and its device then sends a change batch, a manifest or an upload
+- **THEN** each request is refused with `410` and `notes.connection.removed`, and a request for a failed connection gets `404` with `notes.connection.not_found`, verified by `services/notes/tests/device_channel.rs::removed_connection_is_gone_and_a_failed_one_is_not_found` in `ratatoskr-notes`
 
 ### Requirement: One device channel connection has exactly one device
 
@@ -61,7 +68,8 @@ operating system protects outside the vault.
 
 ### Requirement: A change batch is bounded and ordered by the device sequence
 
-A change batch SHALL hold at most 256 changes. Each change SHALL name the NFC path, the kind
+A change batch SHALL hold at most 256 changes in a body of at most 2 MiB, and a manifest at most
+100 000 entries in a body of at most 32 MiB. Each change SHALL name the NFC path, the kind
 (`created`, `updated`, `renamed` with the old path, or `deleted`), the SHA-256 and byte length of
 the new bytes except for `deleted`, and the device's change sequence, which SHALL increase by one
 per change.
@@ -89,16 +97,32 @@ event.
 
 ### Requirement: Bytes arrive before the change that names them
 
-A change whose hash names bytes that `ratatoskr-notes` does not hold SHALL be refused with
-`notes.channel.bytes_missing` and the list of missing hashes. A device SHALL upload such bytes through
-the shared chunked, resumable transfer contract on `/v1/notes/connections/{id}/blobs`, which Edge
-serves with the `transfer` route class. `ratatoskr-notes` SHALL verify the SHA-256 of every uploaded
-blob before it accepts it.
+A change batch or a manifest SHALL name only a hash that its own connection uploaded, a revision of
+a file of its own connection, or the blob of no bytes. Any other hash SHALL be refused with
+`notes.channel.bytes_missing` and the list of missing hashes, even when another connection holds the
+bytes.
+
+#### Scenario: A device names the bytes of another connection
+
+- **WHEN** the device of owner A sends a batch or a manifest that names the SHA-256 of a file of a connection of owner B
+- **THEN** the request is refused with `notes.channel.bytes_missing` for that hash, and nothing is committed, verified by `services/notes/tests/device_channel.rs::foreign_bytes_are_missing_for_another_connection` in `ratatoskr-notes`
+
+### Requirement: A device uploads bytes through the shared transfer contract
+
+A device SHALL upload bytes through the shared chunked, resumable transfer contract on
+`/v1/notes/connections/{id}/blobs` (the `transfer` route class): at most 64 MiB for each session,
+16 MiB for each chunk, and never 0 bytes (`400`). `ratatoskr-notes` SHALL verify the SHA-256 at the
+finalize step. A mismatch SHALL be the finalize outcome `digest_mismatch` at `200`, not an error.
 
 #### Scenario: Bytes with a wrong hash are uploaded
 
-- **WHEN** a device completes an upload whose bytes do not match the declared SHA-256
-- **THEN** the upload is refused with `transfer.digest_mismatch`, and no blob is registered, verified by `services/notes/tests/device_channel.rs::upload_with_wrong_digest_is_refused` in `ratatoskr-notes`
+- **WHEN** a device finalizes an upload whose bytes do not match the declared SHA-256
+- **THEN** the finalize step answers `200` with the outcome `digest_mismatch`, and no blob is registered, verified by `services/notes/tests/device_channel.rs::upload_with_wrong_digest_is_refused` in `ratatoskr-notes`
+
+#### Scenario: A file of no bytes
+
+- **WHEN** a device uploads 0 bytes, and then sends a batch with a `created` change of 0 bytes
+- **THEN** the upload is refused with `400`, and the batch is committed without an upload, verified by `services/notes/tests/device_channel.rs::empty_file_needs_no_upload` in `ratatoskr-notes`
 
 ### Requirement: A device reconciles by manifest after a gap
 

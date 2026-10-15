@@ -299,25 +299,30 @@ SITE-027 adds `platform_site_events`.
 - Error codes named so far: `notes.channel_mismatch`, `notes.write.conflict`,
   `notes.write.disabled`, `notes.write.transformed` (a warning), `notes.write.partially_applied`,
   `notes.connection.not_found`, `notes.connection.vault_already_connected`,
-  `notes.connection.cleanup_failed`, `notes.request.unauthenticated`, `notes.request.invalid`,
-  `notes.service.unavailable`, the four login codes `notes.sync.login_failed`,
-  `notes.sync.mfa_required`, `notes.sync.e2e_password_wrong` and `notes.sync.vault_not_found`, the
-  expired Sync login `notes.sync.login_expired`, the unreadable journal namespace of the sync units
-  `notes.sync.journal_unreadable` (logged at the start of the service), the file codes
-  `notes.file.not_found` (a read of an unknown path or revision) and `notes.file.path_collision`
-  (a status: two paths that differ only in case, of which one is published), `sites.site_not_found`, `sites.page_not_found`, `sites.asset_not_found`,
-  `sites.slug_collision`, `sites.publication_suspended`,
-  `platform.manifest_digest_stale`, `platform.site_hostname_taken` and
-  `edge.capability_not_granted`.
+  `notes.connection.removed` (`410` on a device route after the owner removed the connection; a
+  device does not retry it), `notes.connection.cleanup_failed`, the device channel codes
+  `notes.channel.sequence_gap` (with the committed sequence), `notes.channel.batch_too_large`,
+  `notes.channel.bytes_missing` (with the missing hashes) and `notes.channel.manifest_missing` (no
+  manifest within 30 minutes of a device connect), `notes.request.unauthenticated`,
+  `notes.request.invalid`, `notes.service.unavailable`, the four login codes
+  `notes.sync.login_failed`, `notes.sync.mfa_required`, `notes.sync.e2e_password_wrong` and
+  `notes.sync.vault_not_found`, the expired Sync login `notes.sync.login_expired`, the unreadable
+  journal namespace of the sync units `notes.sync.journal_unreadable` (logged at the start of the
+  service), the file codes `notes.file.not_found` (a read of an unknown path or revision) and
+  `notes.file.path_collision` (a status: two paths that differ only in case, of which one is
+  published), `sites.site_not_found`, `sites.page_not_found`, `sites.asset_not_found`,
+  `sites.slug_collision`, `sites.publication_suspended`, `platform.manifest_digest_stale`,
+  `platform.site_hostname_taken` and `edge.capability_not_granted`.
 - Registered device kinds: `obsidian_plugin` and `site_deployer`.
 
 ### Edge routes
 
 | Prefix | Owner | Route class (ADR-0015 of Platform) |
 |---|---|---|
-| `/v1/notes/connections` (`POST` connects, 202), `.../{id}` (`DELETE` disconnects, 204), `.../{id}/changes` | notes | `control`; the connect body is never persisted at Edge |
+| `/v1/notes/connections` (`POST` connects, 202), `.../{id}` (`DELETE` disconnects, 204) | notes | `control`; the connect body is never persisted at Edge |
 | `GET /v1/notes/connections` (the caller's connections), `GET .../{id}/files`, `GET .../{id}/files/{*path}` (the current bytes, or `?revision=` for a past revision), `GET .../{id}/index/{*path}` (links, backlinks, tags and properties), `PUT .../{id}/excluded-folders` | notes | `control`; read only, except the excluded folders; a file route refuses `PUT` and `DELETE` with 405 |
-| `/v1/notes/connections/{id}/blobs` | notes | `transfer` |
+| `POST .../{id}/changes` (at most 256 changes, body at most 2 MiB), `POST .../{id}/manifest` (at most 100 000 entries, body at most 32 MiB) | notes; device routes | `control`; a batch or a manifest names only a hash that its own connection uploaded, a revision of its own connection, or the blob of no bytes, else `notes.channel.bytes_missing` |
+| `POST .../{id}/blobs` (a session of at most 64 MiB), `PUT .../blobs/{token}/chunks/{index}` (a chunk of at most 16 MiB), `GET .../blobs/{token}/status`, `POST .../blobs/{token}/finalize` | notes; device routes | `transfer`; the shared transfer contract. An upload of 0 bytes is refused with `400`. A wrong SHA-256 is the finalize outcome `digest_mismatch` at `200`, not an error code |
 | `/v1/notes/connections/{id}/writes` | Edge publishes the write command | `control` |
 | `/v1/notes/connections/{id}/write-mode` | notes | `control` |
 | `/v1/notes/connections/{id}/device-operations` | notes | `control` (the device queue of OBS-024) |
