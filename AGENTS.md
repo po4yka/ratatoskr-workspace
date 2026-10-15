@@ -68,7 +68,7 @@ lands, and trusted by nobody.
 This repository is the store for the fleet. What belongs here is behaviour that more than one
 repository can see — the shape of a contract, the meaning of a field, the order in which repositories
 must receive a change. Behaviour internal to one repository belongs in that repository's own
-`openspec/`, not here. The nineteen product repositories reference this store by name, so a spec
+`openspec/`, not here. The twenty-one product repositories reference this store by name, so a spec
 written here is readable from all of them.
 
 ### Tests come first
@@ -313,7 +313,7 @@ Never run or authorize the following without explicit user approval and a verifi
 Prefer additive operations and dry-run/status output. Preserve unrelated user changes.
 
 A branch already merged into `main` is the one exception, and it points the other way: delete it.
-`delete_branch_on_merge` is set on all 20 repositories, so GitHub does it at the merge; a branch left
+`delete_branch_on_merge` is set on all 22 repositories, so GitHub does it at the merge; a branch left
 over from before is deleted by hand. Its head is reachable from `main`, so nothing is lost, and the
 pull request keeps the name, the diff and the checks. Use `git branch -d`, which refuses a branch that
 is not fully merged, and never `-D`, which is the flag that removes one without asking.

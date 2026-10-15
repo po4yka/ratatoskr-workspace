@@ -14,10 +14,10 @@
 # gated from that commit on rather than from a later one that remembers to add this workflow.
 #
 # WHY THE VERSION IS PINNED, like zizmor 1.29.0 and rust-toolchain.toml. Dependabot moves an action
-# SHA; it does not move this input. A new OpenSpec release therefore cannot turn twenty
+# SHA; it does not move this input. A new OpenSpec release therefore cannot turn twenty-two
 # repositories red overnight. Stores, which this fleet uses, are a beta feature whose flags and file
 # formats may change between releases — that makes the pin load-bearing rather than tidy. Raising it
-# is one commit in twenty repositories, and the drift check is what says so.
+# is one commit in twenty-two repositories, and the drift check is what says so.
 #
 # THIS IS THE ONE COPY. It runs in every Ratatoskr repository through a short wrapper that
 # carries the triggers and the concurrency group and calls this file at a pinned commit of

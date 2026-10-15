@@ -6,13 +6,15 @@ context: |
   change must reach the repositories, and what a consumer may rely on. Behaviour internal to one
   repository belongs in that repository's own openspec/, not here.
 
-  The fleet is twenty repositories: nineteen product repositories plus this one. At the pins of
-  2026-10-14, fourteen product repositories hold Rust code at their root — ratatoskr-contracts,
+  The fleet is twenty-two repositories: twenty-one product repositories plus this one. At the pins
+  of 2026-10-15 the workspace pins twenty of them; ratatoskr-sites, which holds Rust, is not pinned
+  yet. Fourteen pinned product repositories hold Rust code at their root — ratatoskr-contracts,
   ratatoskr-platform, ratatoskr-extractor, ratatoskr-knowledge, ratatoskr-github, ratatoskr-vault,
   ratatoskr-x, ratatoskr-instagram, ratatoskr-threads, ratatoskr-chatgpt, ratatoskr-claude,
   ratatoskr-telegram, ratatoskr-channel-digests and ratatoskr-notes. ratatoskr-web,
-  ratatoskr-browser-extension and ratatoskr-obsidian-plugin hold TypeScript, ratatoskr-mobile holds
-  Kotlin, ratatoskr-export-agent holds Swift, and this workspace holds Rust under harness/. A change may still describe behaviour
+  ratatoskr-browser-extension, ratatoskr-obsidian-plugin and ratatoskr-site-sdk hold TypeScript,
+  ratatoskr-mobile holds Kotlin, ratatoskr-export-agent holds Swift, and this workspace holds Rust
+  under harness/. A change may still describe behaviour
   for a repository that has no code for it yet; that is normal here.
 
   Dependency order, from AGENTS.md: contracts, then backward-compatible consumers, then producers,

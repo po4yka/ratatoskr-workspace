@@ -18,11 +18,13 @@ to find the policy in one place.
 Every number in this document comes from a command that was run. If you change a control, run the
 command again and correct the number.
 
-The fleet is 20 repositories, and that number is measured rather than asserted. On 2026-10-14
-`users/po4yka/repos` lists exactly 20 non-archived, non-fork repositories whose name begins
+The fleet is 22 repositories, and that number is measured rather than asserted. On 2026-10-15
+`users/po4yka/repos` lists exactly 22 non-archived, non-fork repositories whose name begins
 `ratatoskr-`, all public and all with `main` as the default branch. The nineteenth is
 `ratatoskr-notes` and the twentieth is `ratatoskr-obsidian-plugin`, both pinned by the workspace with
-OBS-023.
+OBS-023. The twenty-first is `ratatoskr-sites` and the twenty-second is `ratatoskr-site-sdk`, both
+created for SITE-025. The workspace pins `ratatoskr-site-sdk`. It does not pin `ratatoskr-sites` yet,
+because that repository locks another contracts revision than the rest of the fleet.
 
 This paragraph was first written twice on 2026-08-19, and the reason is worth keeping. `ratatoskr-web`
 was created that afternoon, and a count taken between the two events read 16 and concluded the
@@ -243,33 +245,33 @@ the recorded rule, not live netfilter. The freeze means none of it has run on th
 
 ## What each repository has
 
-All 20 repositories are public. The default branch of each repository is `main`. The table was measured on 2026-10-14 with read-only `GET` calls to the endpoints that [Platform state](#platform-state) writes, to `rules/branches/main`, and to the tree of `main` in each repository. `ratatoskr-obsidian-plugin` was measured the same way on the day it was pinned.
+All 22 repositories are public. The default branch of each repository is `main`. The table was measured on 2026-10-14 with read-only `GET` calls to the endpoints that [Platform state](#platform-state) writes, to `rules/branches/main`, and to the tree of `main` in each repository. `ratatoskr-obsidian-plugin` was measured the same way on the day it was pinned, and `ratatoskr-sites` and `ratatoskr-site-sdk` on 2026-10-15.
 
 | Control | Repositories | Notes |
 |---|---|---|
-| `.gitattributes` | 20 of 20 | One line: `* text=auto eol=lf` |
-| `.editorconfig` | 20 of 20 | Editor defaults. No check enforces the file |
-| `.githooks/pre-commit` | 20 of 20 | Identical file. See [Git hooks](#git-hooks) |
-| Branch ruleset on `main` | 20 of 20 | `deletion`, `required_signatures` and `required_status_checks`, which lists the three shared checks and the repository's own CI jobs. See [What the ruleset requires](#what-the-ruleset-requires-and-what-it-cannot) |
-| Dependabot alerts | 20 of 20 | GitHub reports a vulnerable dependency |
-| Dependabot security updates | 20 of 20 | GitHub opens a pull request for an advisory against a locked dependency. See [Dependabot](#dependabot) |
-| `.github/dependabot.yml` | 20 of 20 | Version updates for the `github-actions` ecosystem, grouped, monthly, with a seven-day cooldown |
-| `allow_auto_merge`, and `.github/workflows/dependabot-automerge.yml` | 20 of 20 | Identical wrapper. A Dependabot pull request merges itself once every required check passes. See [Dependabot](#dependabot) |
-| Secret scanning and push protection | 20 of 20 | GitHub gives these to a public repository |
-| `sha_pinning_required` for Actions | 20 of 20 | A workflow must pin each action to a commit SHA |
-| The fleet gate, `.github/workflows/fleet.yml` | 20 of 20 | Identical wrapper around the workspace's `reusable-fleet.yml`. See [The fleet gate](#the-fleet-gate) |
-| The workflow gate, `.github/workflows/zizmor.yml` | 20 of 20 | Identical wrapper around the workspace's `reusable-zizmor.yml`. See [The workflow gate](#the-workflow-gate) |
-| `openspec / specs` in `required_status_checks` | 20 of 20 | Added after the name had been published by a real run, and read back on each repository |
-| `delete_branch_on_merge` | 20 of 20 | A merged branch is deleted by GitHub at the merge. See [A merged branch is deleted](#a-merged-branch-is-deleted) |
-| The spec gate, `.github/workflows/openspec.yml` | 20 of 20 | Identical wrapper around the workspace's `reusable-openspec.yml`. See [The spec gate](#the-spec-gate) |
-| `openspec/config.yaml` | 20 of 20 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
-| `skills-lock.json` | 16 of 20 | The `skills` CLI lockfile. Its `po4yka/rust-skills` entries are identical in the 15 whose stack is Rust; the workspace also locks `plannotator/effective-html`, and `ratatoskr-web` has its own, for design skills |
-| The Rust skill catalogue, `.agents/skills/` | 15 of 20 | 18 skills vendored from `po4yka/rust-skills`, identical in every repository whose stack is Rust. See [The Rust skill catalogue](#the-rust-skill-catalogue) |
-| Size limits in a linter configuration | 18 of 20 | `clippy.toml` in the fourteen with a root `Cargo.toml` and in the workspace `harness/`, `eslint.config.js` in `ratatoskr-web`, `ratatoskr-browser-extension` and `ratatoskr-obsidian-plugin`. See [Size limits](#size-limits) |
-| A repository gate, `.github/workflows/ci.yml` | 20 of 20 | Every repository, on `push`, `pull_request` and a weekly schedule. See [A `main` nobody pushes to](#a-main-nobody-pushes-to) |
-| The advisory check, `.github/workflows/advisories.yml` | 15 of 20 | Every repository with Rust, as a wrapper around the workspace's `reusable-advisories.yml`. The workspace wrapper passes `manifest-dir: harness`, so it differs from the other fourteen, and the drift check requires only its presence. `ratatoskr-web` and `ratatoskr-obsidian-plugin` audit their own tree in `ci.yml` because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
-| The drift check, `.github/workflows/drift.yml` | 1 of 20 | In `ratatoskr-workspace`, and it reads all 20. See [The drift check](#the-drift-check) |
-| The release, `.github/workflows/release.yml` | 2 of 20 | In `ratatoskr-platform` and `ratatoskr-browser-extension`. See [Deployment](#deployment) |
+| `.gitattributes` | 22 of 22 | One line: `* text=auto eol=lf` |
+| `.editorconfig` | 22 of 22 | Editor defaults. No check enforces the file |
+| `.githooks/pre-commit` | 22 of 22 | Identical file. See [Git hooks](#git-hooks) |
+| Branch ruleset on `main` | 22 of 22 | `deletion`, `required_signatures` and `required_status_checks`, which lists the three shared checks and the repository's own CI jobs. See [What the ruleset requires](#what-the-ruleset-requires-and-what-it-cannot) |
+| Dependabot alerts | 22 of 22 | GitHub reports a vulnerable dependency |
+| Dependabot security updates | 22 of 22 | GitHub opens a pull request for an advisory against a locked dependency. See [Dependabot](#dependabot) |
+| `.github/dependabot.yml` | 22 of 22 | Version updates for the `github-actions` ecosystem, grouped, monthly, with a seven-day cooldown |
+| `allow_auto_merge`, and `.github/workflows/dependabot-automerge.yml` | 22 of 22 | Identical wrapper. A Dependabot pull request merges itself once every required check passes. See [Dependabot](#dependabot) |
+| Secret scanning and push protection | 22 of 22 | GitHub gives these to a public repository |
+| `sha_pinning_required` for Actions | 22 of 22 | A workflow must pin each action to a commit SHA |
+| The fleet gate, `.github/workflows/fleet.yml` | 22 of 22 | Identical wrapper around the workspace's `reusable-fleet.yml`. See [The fleet gate](#the-fleet-gate) |
+| The workflow gate, `.github/workflows/zizmor.yml` | 22 of 22 | Identical wrapper around the workspace's `reusable-zizmor.yml`. See [The workflow gate](#the-workflow-gate) |
+| `openspec / specs` in `required_status_checks` | 22 of 22 | Added after the name had been published by a real run, and read back on each repository |
+| `delete_branch_on_merge` | 22 of 22 | A merged branch is deleted by GitHub at the merge. See [A merged branch is deleted](#a-merged-branch-is-deleted) |
+| The spec gate, `.github/workflows/openspec.yml` | 22 of 22 | Identical wrapper around the workspace's `reusable-openspec.yml`. See [The spec gate](#the-spec-gate) |
+| `openspec/config.yaml` | 22 of 22 | Present everywhere and deliberately NOT identical: its `context:` names one repository. See [The spec gate](#the-spec-gate) |
+| `skills-lock.json` | 17 of 22 | The `skills` CLI lockfile. Its `po4yka/rust-skills` entries are identical in the 16 whose stack is Rust; the workspace also locks `plannotator/effective-html`, and `ratatoskr-web` has its own, for design skills |
+| The Rust skill catalogue, `.agents/skills/` | 16 of 22 | 18 skills vendored from `po4yka/rust-skills`, identical in every repository whose stack is Rust. See [The Rust skill catalogue](#the-rust-skill-catalogue) |
+| Size limits in a linter configuration | 20 of 22 | `clippy.toml` in the fifteen with a root `Cargo.toml` and in the workspace `harness/`, `eslint.config.js` in `ratatoskr-web`, `ratatoskr-browser-extension`, `ratatoskr-obsidian-plugin` and `ratatoskr-site-sdk`. See [Size limits](#size-limits) |
+| A repository gate, `.github/workflows/ci.yml` | 22 of 22 | Every repository, on `push`, `pull_request` and a weekly schedule. See [A `main` nobody pushes to](#a-main-nobody-pushes-to) |
+| The advisory check, `.github/workflows/advisories.yml` | 16 of 22 | Every repository with Rust, as a wrapper around the workspace's `reusable-advisories.yml`. The workspace wrapper passes `manifest-dir: harness`, so it differs from the other fifteen, and the drift check requires only its presence. `ratatoskr-web`, `ratatoskr-obsidian-plugin` and `ratatoskr-site-sdk` audit their own tree in `ci.yml` because `npm audit` needs the lockfile and not a schedule. See [The advisory check](#the-advisory-check-that-runs-when-nothing-has-changed) |
+| The drift check, `.github/workflows/drift.yml` | 1 of 22 | In `ratatoskr-workspace`, and it reads all 22. See [The drift check](#the-drift-check) |
+| The release, `.github/workflows/release.yml` | 2 of 22 | In `ratatoskr-platform` and `ratatoskr-browser-extension`. See [Deployment](#deployment) |
 
 ### What the ruleset requires, and what it cannot
 
@@ -497,10 +499,10 @@ only quieter.
 
 ### Dependabot
 
-`.github/dependabot.yml` is in all 20 repositories, and each one watches the `github-actions`
+`.github/dependabot.yml` is in all 22 repositories, and each one watches the `github-actions`
 ecosystem only. The configuration groups the updates into one pull request each month.
 
-The file was in the first Rust repositories first. It is now in all 20 because each repository pins two
+The file was in the first Rust repositories first. It is now in all 22 because each repository pins two
 actions across two workflows, and a pin without a maintainer is the thing this file exists to prevent.
 An action pin rots, and it rots silently: a reader cannot find a pin whose `# vX.Y.Z` comment no longer
 agrees with its SHA. Dependabot corrects the SHA and the comment together.
@@ -512,7 +514,7 @@ repositories without Rust no language ecosystem is named at all: the commit that
 code brings its own gate and its own lockfile policy, and that commit is where the question belongs.
 
 A security fix is the exception, and it needs no entry in the file. Dependabot security updates are
-enabled in the settings of all 20 repositories, and both forms of `dependabot.yml` say so in their
+enabled in the settings of all 22 repositories, and both forms of `dependabot.yml` say so in their
 header, so an advisory against a locked dependency opens its own pull request once GitHub's advisory
 database carries it. They were disabled until September 2026, and on `ratatoskr-notes` until 2026-10-14. `cargo deny check` finds the same
 advisory, but only as a red job that somebody then fixes by hand in every repository:
@@ -530,7 +532,7 @@ an advisory lands.
 
 ### A Dependabot pull request merges itself
 
-`allow_auto_merge` is enabled on all 20 repositories, and each carries the identical wrapper
+`allow_auto_merge` is enabled on all 22 repositories, and each carries the identical wrapper
 `.github/workflows/dependabot-automerge.yml`, which calls `reusable-dependabot-automerge.yml` in this
 workspace. The job runs `gh pr merge --auto --squash` and nothing else, and only on a pull request
 whose author is `dependabot[bot]` and whose head is in the same repository — the author, not
@@ -659,7 +661,7 @@ alternative is setting the standard for hand-written code at the shape of a gene
 ### A repository with no Rust or Node.js manifest
 
 Such a repository has nothing for this configuration to govern. What keeps that from being a hole is one
-step of [the fleet gate](#the-fleet-gate), which runs the same in all 20 repositories and sits beside
+step of [the fleet gate](#the-fleet-gate), which runs the same in all 22 repositories and sits beside
 the step that already asserts a manifest arrives with its `ci.yml`:
 
 - a tracked `Cargo.toml` requires a tracked `clippy.toml`
@@ -682,7 +684,7 @@ untracked `clippy.toml` to it still exits 1, which is the case the word "tracked
 
 ## The fleet gate
 
-Each repository runs `.github/workflows/fleet.yml`, and the file is identical in all 20. It is a
+Each repository runs `.github/workflows/fleet.yml`, and the file is identical in all 22. It is a
 wrapper: it holds the triggers, the concurrency group and the permissions, and its one job calls
 `.github/workflows/reusable-fleet.yml` in this workspace at a pinned 40-hex commit. The steps below
 live in that reusable file and nowhere else. The job installs nothing and uses one action, so it has
@@ -755,7 +757,7 @@ module inside `src/` is not read.
 
 ### Why the credential and key checks are not redundant
 
-GitHub secret scanning is enabled on all twenty repositories, and it has a pattern for a PostgreSQL
+GitHub secret scanning is enabled on all twenty-two repositories, and it has a pattern for a PostgreSQL
 connection string that carries credentials and a pattern for an RSA private key. Both are classified as
 GENERIC rather than provider patterns, and generic-pattern scanning is a separate setting.
 
@@ -870,7 +872,7 @@ checks the OpenSpec artifacts: the specs that say what the system does, and the 
 against them. `docs/adr/0008-openspec-and-test-first.md` records why the fleet plans this way.
 
 Where the artifacts live: `ratatoskr-workspace` is the store, under the id `ratatoskr-workspace`, and
-holds behaviour more than one repository can see. Each of the other nineteen has its own `openspec/`
+holds behaviour more than one repository can see. Each of the other twenty-one has its own `openspec/`
 root and references the store by name. `openspec/specs/` started empty in the first seventeen and grows
 one change at a time. `ratatoskr-channel-digests` joined with one spec already in it; the nine documents each repository already had were deliberately NOT converted, for
 the reason the ADR gives.
@@ -972,17 +974,17 @@ carries the two commands.
 
 ## The Rust skill catalogue
 
-Fifteen of the twenty repositories hold Rust. Fourteen have a root `Cargo.toml`: Channel Digests,
-ChatGPT, Claude, Contracts, Extractor, GitHub, Instagram, Knowledge, Notes, Platform, Telegram,
-Threads, Vault and X. The workspace keeps its `ws` CLI under `harness/`. Each of the fifteen
+Sixteen of the twenty-two repositories hold Rust. Fifteen have a root `Cargo.toml`: Channel Digests,
+ChatGPT, Claude, Contracts, Extractor, GitHub, Instagram, Knowledge, Notes, Platform, Sites,
+Telegram, Threads, Vault and X. The workspace keeps its `ws` CLI under `harness/`. Each of the sixteen
 carries eighteen skills under `.agents/skills/`, with `.claude/skills/` symlinked to them so Claude
 Code and Codex read one copy rather than two.
 
-The five that do not carry it are the five whose first code is another language: `ratatoskr-web`,
-`ratatoskr-browser-extension` and `ratatoskr-obsidian-plugin` in TypeScript, `ratatoskr-export-agent` in Swift, and
-`ratatoskr-mobile` in Kotlin Multiplatform and Swift. No Rust in this fleet crosses a language
-boundary — there is no UniFFI, no JNI and no Swift C ABI anywhere in it — which is why the FFI half
-of the catalogue is absent from all twenty.
+The six that do not carry it are the six whose first code is another language: `ratatoskr-web`,
+`ratatoskr-browser-extension`, `ratatoskr-obsidian-plugin` and `ratatoskr-site-sdk` in TypeScript,
+`ratatoskr-export-agent` in Swift, and `ratatoskr-mobile` in Kotlin Multiplatform and Swift. No Rust
+in this fleet crosses a language boundary — there is no UniFFI, no JNI and no Swift C ABI anywhere
+in it — which is why the FFI half of the catalogue is absent from all twenty-two.
 
 ### Where they come from, and what a clone has to do
 
@@ -1079,7 +1081,7 @@ that platform has, and every step of `fleet.yml` passes on its tree.
 
 A handful of files are the same file in every repository, and until this check nothing noticed when
 they stopped being the same file. The four wrappers `fleet.yml`, `zizmor.yml`, `openspec.yml` and
-`dependabot-automerge.yml`, `.githooks/pre-commit` and `CLAUDE.md` are byte-identical in all 20.
+`dependabot-automerge.yml`, `.githooks/pre-commit` and `CLAUDE.md` are byte-identical in all 22.
 `.github/dependabot.yml` has two intended forms, one for a repository with Rust in it and one for a
 repository without Rust.
 
@@ -1168,7 +1170,7 @@ repository, and only the real one had a 409 in it.
 ## A merged branch is deleted
 
 **A branch that has been merged into `main` is deleted. It is not kept.** `delete_branch_on_merge` is
-set on all 20 repositories, so GitHub removes the head branch at the moment the pull request merges,
+set on all 22 repositories, so GitHub removes the head branch at the moment the pull request merges,
 and nobody has to remember to.
 
 The rule states what to do about the branches that already existed, too: delete them. Eighty-two of
@@ -1218,7 +1220,7 @@ Each row is the result of a command that was run against the fleet.
 | `typos` | 8 findings, 0 real defects | Rejected. Two findings are deliberate spelling errors in a test that asserts an unknown configuration key is refused. A correction breaks the test |
 | `markdownlint` | 0 findings, with MD013 and MD060 off | Rejected for now. The documents are correct already, so the tool guards against a regression and finds no defect. 13 near-identical workflows are a cost that this does not repay. With MD013 on, the tool reports many line lengths and no defect |
 | A link checker (`lychee` or equivalent) | 0 broken links. The 13 repositories have 0 relative links | Rejected. There is nothing to check. `lycheeverse/lychee-action` also fails by default when it finds no link |
-| `gitleaks` in CI | Push protection is on in 20 of 20 repositories | Rejected in CI. Push protection covers a provider token. It does not cover a password in a connection string, and the pre-commit hook covers that |
+| `gitleaks` in CI | Push protection is on in 22 of 22 repositories | Rejected in CI. Push protection covers a provider token. It does not cover a password in a connection string, and the pre-commit hook covers that |
 | CodeQL | `code-scanning/default-setup` answers `languages: []` for each repository that has no code | Rejected. For `ratatoskr-contracts` the expected number of findings is zero, and the analysis gates nothing |
 | `taplo` | Not run | Rejected. It finds no defect that `cargo fetch --locked` does not find, and it reformats the aligned dependency tables |
 | `actionlint` | 0 findings across the 20 workflow files, with `shellcheck` 0.11.0 present | Rejected. GitHub refuses invalid workflow YAML before a job starts, and `zizmor` now covers the security surface from a gate rather than from a hand-run command. It is still worth running by hand when a `run:` block is edited: it is the tool that reads those blocks with `shellcheck` |
@@ -1238,7 +1240,7 @@ Each row is the result of a command that was run against the fleet.
 | Installing the Rust skills per machine, with `npx skills add --global`, instead of vendoring them | Not adopted | Rejected. It is genuinely one copy, which is what a central catalogue sounds like, but it is invisible to a fresh clone, to a second machine and to review, and nothing can check it. The fleet already carries two per-machine steps and records both as limits; a third that governs how code gets written is worse than 763 KiB of tracked text |
 | A git submodule of `po4yka/rust-skills` instead of vendored copies | Not adopted | Rejected. One pinned SHA rather than 94 paths is a real advantage, and an uninitialised submodule is a silently empty directory: the agent reports nothing and simply has no skills. That is the failure mode this project refuses in a gate, and it is no better in a catalogue |
 | A step in `fleet.yml` asserting that the Rust skills are present | Not added | Rejected. The fleet gate runs the same steps in all 18 and four of them legitimately have no Rust, so the step has no condition it can read. `Cargo.toml` is the only Rust signal a repository can see about itself, and a repository that only plans Rust does not have one yet. The drift check is where it belongs, because it is the one job that sees more than one repository at a time |
-| Asserting that `openspec/config.yaml` is one blob across the fleet | 20 of 20 differ, by design | Rejected. Its `context:` block names one repository's role, its stack and where its tests live. The `rules` and `operations` beneath it ARE identical, and a tree read compares whole blobs and cannot compare a fragment of one. Presence is asserted instead |
+| Asserting that `openspec/config.yaml` is one blob across the fleet | 22 of 22 differ, by design | Rejected. Its `context:` block names one repository's role, its stack and where its tests live. The `rules` and `operations` beneath it ARE identical, and a tree read compares whole blobs and cannot compare a fragment of one. Presence is asserted instead |
 
 ## A cancelled run is a missing verdict
 
@@ -1561,7 +1563,7 @@ failing test first, and a rule with nothing behind it in CI is a rule that decay
 for an invocation and not for a passing or a useful test — the pull request is where those are read.
 
 Nothing about OpenSpec arrives with the first code. `openspec/`, `openspec/config.yaml` and
-`.github/workflows/openspec.yml` are already in all twenty repositories, because planning is what
+`.github/workflows/openspec.yml` are already in all twenty-two repositories, because planning is what
 a repository with no code has most of. What the first code commit adds to `openspec/config.yaml` is
 one line in its `context:` naming where the tests now live.
 

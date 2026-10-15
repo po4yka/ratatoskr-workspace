@@ -2,7 +2,7 @@
 
 `ratatoskr-workspace` is the coordination repository for Ratatoskr: a self-hosted, multi-repository platform for capturing, extracting, analysing, searching, and backing up personal knowledge from the web, GitHub, social networks, Telegram, ChatGPT, and Claude.
 
-> **Status:** reproducible snapshot slice implemented. Nineteen public child repositories are pinned
+> **Status:** reproducible snapshot slice implemented. Twenty public child repositories are pinned
 > by gitlinks; `workspace.toml`, `workspace.lock`, the Rust snapshot harness, and hosted snapshot CI
 > are executable. Task-worktree, general integration-profile, PR, release, and MCP orchestration
 > remain later milestones.
@@ -254,10 +254,11 @@ Planned profiles:
 | `ratatoskr-mobile` | Android/iOS sharing, offline capture queue, and mobile experience |
 | `ratatoskr-notes` | Obsidian vault connections, the file index and revisions of notes, and the Obsidian Sync supervisor |
 | `ratatoskr-obsidian-plugin` | Obsidian plugin that sends the changes of a vault without Obsidian Sync to Notes through Edge |
+| `ratatoskr-site-sdk` | The site SDK and the starter template of a site that reads its releases through the Content Delivery API |
 
-This repository is the twentieth. Besides the responsibilities above it is the OpenSpec store,
+This repository is the twenty-first. Besides the responsibilities above it is the OpenSpec store,
 under the id `ratatoskr-workspace`: `openspec/specs/` holds the behaviour more than one repository
-can see, and `openspec/changes/` holds the cross-repository work in motion. Each of the nineteen
+can see, and `openspec/changes/` holds the cross-repository work in motion. Each of the twenty
 above references it by name from its own `openspec/config.yaml`. See
 `docs/adr/0008-openspec-and-test-first.md`.
 
@@ -287,7 +288,7 @@ The snapshot slice is implemented and tested. Sections that describe task worktr
 profiles, agent runners, PR/release automation, or MCP are target architecture until their own
 changes land.
 
-The fleet is not. Eleven of the nineteen product repositories hold code:
+The fleet is not. Twelve of the twenty pinned product repositories hold code:
 
 | Repository | State |
 |---|---|
@@ -302,11 +303,13 @@ The fleet is not. Eleven of the nineteen product repositories hold code:
 | `ratatoskr-web` | TypeScript. Generated Edge gateway, authenticated shell, public status, search/reader and archive views, owner operational views, Vitest/Playwright accessibility coverage, build, and CI. |
 | `ratatoskr-notes` | Rust. Vault connections with one channel per vault, disconnect, and the cleanup template unit of a `sync` connection. The Sync supervisor, the index and the read API remain planned. |
 | `ratatoskr-obsidian-plugin` | TypeScript. The `plugin` channel: pairing as a registered device through Edge, a device credential kept outside the vault folder, the vault manifest at each start, and each file change in order. Not in the Obsidian community plugin list. |
+| `ratatoskr-site-sdk` | TypeScript. The starter template: a home page that lists the pages of a release and a page view that renders the `ast` of a page, never its `html`, against a stub of the Content Delivery API. The generated client waits for the API description of `ratatoskr-sites` (ADR-0012). |
 | `x`, `instagram`, `threads`, `chatgpt`, `claude`, `mobile`, `browser-extension`, `export-agent` | Documents and fleet/OpenSpec gates. No product manifest or runtime yet. |
 
-Two more repositories are planned and do not exist yet: `ratatoskr-sites` and
-`ratatoskr-site-sdk`. With `ratatoskr-notes` and `ratatoskr-obsidian-plugin` they connect Obsidian
-vaults and serve independent sites. `docs/NOTES_AND_SITES.md` describes the target, and ADR-0010 and
+`ratatoskr-sites` exists, with its scaffolding and a reader that checks each note blob, but the
+workspace does not pin it yet, because it locks another contracts revision than the rest of the
+fleet. With `ratatoskr-notes`, `ratatoskr-obsidian-plugin` and `ratatoskr-site-sdk` it connects
+Obsidian vaults and serves independent sites. `docs/NOTES_AND_SITES.md` describes the target, and ADR-0010 and
 ADR-0011 record the decisions.
 
 The first domain loop now exists in source: Platform publishes
