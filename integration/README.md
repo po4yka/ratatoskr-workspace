@@ -179,3 +179,16 @@ committed privacy vault through Notes and requests the first release through Edg
 requests read every release page and asset and search all private canaries. The workspace
 `sites-integration` job runs this profile on arm64 against the exact committed child pins.
 `result.json` is published only after source validation and successful teardown.
+
+## Public OCI proof capability probe (SITE-028)
+
+`integration/tests/site_bundle_real_proof.sh` verifies the real public Sites service-release OCI
+manifest and its Sigstore proof with `gh` 2.102.0 and `oras` 1.3.0. It uses private empty tool
+configuration and no token, checks the raw manifest/proof digests and signed identity, then adds
+one byte to the manifest and requires verification to fail. It writes evidence under
+`evidence/site028-real-proof/`, or the explicit `RATATOSKR_EVIDENCE_DIR`.
+
+Run it manually with the approved tools on PATH, or absolute `RATATOSKR_GH_BIN` and
+`RATATOSKR_ORAS_BIN` paths. It needs public GHCR and Sigstore network access. It downloads only
+metadata and proof, and publishes nothing. This is a capability probe on a service artifact,
+not acceptance of the site-bundle workflow, production verifier, ARM64 ABI or memory budget.

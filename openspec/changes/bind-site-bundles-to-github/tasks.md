@@ -28,8 +28,8 @@ commit. Pin-only items have no failing test first because they change generated 
 
 ## 2. Decision and real proof spike
 
-- [ ] 2.1 Record the explicit owner approval of runtime `gh` and `oras` in SITE-028 before adding either production dependency. No failing test first: authority record. Verify the exact decision and versions, licenses, update policy and public-only scope in the changeset.
-- [ ] 2.2 Add and run `integration/tests/site_bundle_real_proof.sh` against a real public artifact: local-manifest verification succeeds with an empty tool configuration and no token, while one changed manifest byte fails cryptographic verification. This is a capability spike, not a product implementation; retain both observed results and stop if credential-free verification fails.
+- [x] 2.1 Record the explicit owner approval of runtime `gh` and `oras` in SITE-028 before adding either production dependency. No failing test first: authority record. Verify the exact decision and versions, licenses, update policy and public-only scope in the changeset.
+- [x] 2.2 Add and run `integration/tests/site_bundle_real_proof.sh` against a real public artifact: local-manifest verification succeeds with an empty tool configuration and no token, while one changed manifest byte fails cryptographic verification. This is a capability spike, not a product implementation; retain both observed results and stop if credential-free verification fails.
 - [ ] 2.3 Create isolated writer worktrees and record bases, ownership and dependency order in SITE-028. No failing test first: topology record. Verify clean baseline submodules and `./ws doctor`.
 
 ## 3. Contracts and fleet revision
@@ -78,3 +78,16 @@ commit. Pin-only items have no failing test first because they change generated 
 
 - Archive only after the old active Sites deltas are reconciled and every tracked item is complete.
 - Keep runtime acceptance, CI and any later production deployment as separate evidence levels.
+
+## Apply evidence, 2026-10-16
+
+- The owner approved `gh` 2.102.0 and `oras` 1.3.0 for public GHCR after the plan was presented.
+- `integration/tests/site_bundle_real_proof.sh` passed with an environment containing only PATH
+  and private tool/config/cache/state paths, no token. It fetched the exact public Sites release
+  OCI manifest at `sha256:48e1d62ba1add116c0ebf38b86a32569cda6490fcb3ae0c7b513a7521f2753ba`,
+  checked its raw digest and proof-layer digest, then verified its real signature, source commit
+  `3860ddc`, trusted workflow at `75b3ed8` and immutable certificate repository ID `1420131804`.
+  The original exited zero; adding one space to its raw manifest made verification exit one.
+- This is the service-release capability spike. It does not close the site-bundle policy,
+  ARM64 ABI, production memory bound, runtime installation or server integration tasks.
+  Local evidence is `evidence/site028-script/summary.json` and adjacent complete command results.

@@ -65,7 +65,7 @@ an untrusted request URL or forward credentials. This path must have negative SS
 The SDK can retain client verification for early feedback. It downloads the proof, resolves the
 digest and sends the new request. Server verification remains authoritative.
 
-### D3. Runtime dependency proposal, awaiting owner approval
+### D3. Runtime dependencies, owner-approved 2026-10-16
 
 Use pinned `gh` 2.102.0 (MIT) and `oras` 1.3.0 (Apache-2.0) as absolute, root-owned executables.
 Both tools already occur in SDK/controller workflows but are new production runtime dependencies
@@ -80,7 +80,7 @@ make readiness fail and deploy refuse; there is no fallback to the old raw-tar p
 
 The alternative is an in-process Sigstore/OCI library, with its own new dependency and maintenance
 approval. A second alternative is server GitHub credentials; that adds a credential lifecycle and
-is outside this proposal. The owner must approve D3 before apply installs or adds dependencies.
+is outside this proposal. The owner approved D3 after this plan was presented. The real proof, ABI and resource checks still gate implementation acceptance.
 
 Primary references checked on 2026-10-16:
 
