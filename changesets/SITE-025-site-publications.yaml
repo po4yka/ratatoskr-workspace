@@ -451,5 +451,8 @@ evidence:
       logs: /tmp/ratatoskr-molecule-converge-final.log; /tmp/ratatoskr-molecule-idempotence-final.log; /tmp/ratatoskr-molecule-verify-final.log
     workspace_ci:
       workflow: .github/workflows/ci.yml
+      observed_failure: Published workspace 80f0c7c failed sites-integration before any service build. The ARM runner had no rg command; site_owner_editing_profile_test.sh stopped at line 11. Log /tmp/ratatoskr-sites-integration-ci-80f0c7c.log.
+      host_tool_correction: Install ripgrep and golang-go through apt before the profile. The NATS key generator requires Go 1.25 and uses the standard verified toolchain download from its module declaration. Check Python, Git, ripgrep, Go, Compose, Buildx and the Docker daemon before the profile.
+      correction_validation: Local shell syntax, ShellCheck, actionlint, zizmor and both current profile contract tests passed. A new published CI result is still required; the earlier local runtime results do not assert CI success.
       policy: Check GitHub results for each published workspace commit. Local results and confirmed child CI do not assert the result of a future workspace run.
     completion: Local verification is complete at the recorded snapshot. The OpenSpec records retain the historical RED conditions and stated owner decisions; workspace CI is an external gate per published commit.

@@ -95,8 +95,23 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
+      - name: Install the sites integration host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep golang-go
+          # The NATS key generator declares Go 1.25 and uses Go's verified toolchain download.
+          go version
+          python3 --version
+          git --version
+          rg --version
+          docker compose version
+          docker buildx version
+          docker info > /dev/null
+
       - name: Run the pinned sites integration profile
         shell: bash
+        env:
+          GOTOOLCHAIN: auto
         run: |
           set -euo pipefail
           export RATATOSKR_TASK_NAMESPACE="sites-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
