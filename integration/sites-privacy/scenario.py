@@ -11,8 +11,9 @@ def run(call, connection, eventually, digest, owner_token, sites_context):
              for path in sorted(root.rglob('*')) if path.is_file()}
     assert files and 'home.md' in files and 'img/plan.png' in files
     # Read the committed canaries from their source bytes, including the excluded image.
-    canaries = sorted(set(re.findall(rb'zq7[a-z0-9]+', b'\n'.join(files.values()))))
-    assert len(canaries) >= 21, 'the privacy fixture lost its negative controls'
+    canaries = sorted(set(re.findall(rb'zq7[a-z0-9]+', b'\n'.join(files.values())))
+                      | {b'COMMENT-SECRET', b'HTML-COMMENT-SECRET'})
+    assert len(canaries) >= 24, 'the privacy fixture lost its negative controls'
     cid = connection(files, 'privacy-fixture')
     site = '/v1/sites/privacy-fixture'
     manifest = (b'site_id = "privacy-fixture"\nhostname = "privacy.example.test"\n'
@@ -30,6 +31,7 @@ def run(call, connection, eventually, digest, owner_token, sites_context):
 
     def private_bytes_absent(data):
         assert b'zq7' not in data.lower(), 'private canary in an anonymous response'
+        assert b'comment-secret' not in data.lower(), 'private comment in an anonymous response'
         assert b'owner-marker@example.test' not in data, 'unapproved frontmatter in a release'
 
     private_bytes_absent(json.dumps(release).encode())
