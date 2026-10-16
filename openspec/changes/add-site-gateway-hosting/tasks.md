@@ -14,10 +14,10 @@ extend what DPL-022 creates: the Ansible playbook and its `host` role, `services
 Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inventory.rs`.
 
 - [x] 1.1 `ratatoskr-contracts`: `sites/bundle-manifest.v1` and the deploy request and response shapes (group 3). It merges first, because every repository below reads them. Direct to `main` after review; pinned at `2c72602`, CI green (8 of 8 check runs). Group 3 is complete.
-- [ ] 1.2 `ratatoskr-sites`, branch `site-026/gateway-and-deploys`: the deploy receipt, the deploy store and activation (group 4), the gateway projection rewrite (group 5), then the `ratatoskr-sites-gateway` binary and its unit (groups 6 and 7). PR: _link_
-- [ ] 1.3 `ratatoskr-platform`: the `site_deployer` device kind and its pairing, the `deploy` route class and its rows for the deploy and activate routes, and the `X-Ratatoskr-Client-IP` trust rule (group 8). It merges before 1.4. Direct to `main` after review, not a `site-026/` branch; pinned at `943bc91` for 8.1 to 8.8, CI green (7 of 7 check runs), locking the contracts at `2c72602`. The review fixes 8.9 and 8.10 are at Platform `1b65f2b`. Platform `1b65f2b` is its pushed main, CI green (7 of 7 check runs), and is not pinned yet: its SITES stanza allows `evt.sites.draft.changed.v1`, and the copy in `ratatoskr-sites` (`deploy/nats/identity.conf`, SITE-027 9.6) is not pinned, so `bus_acl.rs::every_service_fragment_equals_its_platform_stanza` fails until Platform and sites move in one step. This item stays open until that pin.
+- [x] 1.2 `ratatoskr-sites`: deploy receipt/store/activation, projection rewrite and gateway binary/unit (groups 4–7) are published on `main` at `3860ddc`, all seven CI checks green (run 38903420745), 188 local tests and release build passed. Pinned in workspace `927ddd2`. No PR: direct publication under the recorded owner authorization; the historical RED task records remain separate.
+- [x] 1.3 `ratatoskr-platform`: `site_deployer` pairing, deploy route class and client-IP trust (group 8), including review fixes 8.9/8.10, are published at `becf91e`, all seven CI checks green (run 38910313608). Pinned with Sites `3860ddc` in workspace `927ddd2`; the SITES fragments match. No PR: direct publication under the recorded owner authorization.
 - [x] 1.4 `ratatoskr-site-sdk`: `reusable-site-bundle.yml`, `ratatoskr-site login` and `ratatoskr-site deploy` (group 9). Direct to `main` after review; pinned at `f29520d`, CI green (4 of 4 check runs). Before 9.1, `3b10833` vendors the bundle manifest and the deploy answers of `ratatoskr-contracts` at `2c72602`, with no test: vendored files. Group 9 is complete, with the review fixes 9.6 to 9.11. Open low items of the review: the build job of `reusable-site-bundle.yml` holds `id-token: write` and `packages: write`, and `ratatoskr-site deploy` has no `--source-ref`.
-- [ ] 1.5 `ratatoskr-workspace`, on `main` for the planning records and last for the rest: pins advanced to 1.1–1.4, then the enrolment, the ingress block, the port and storage rows, the harness checks and the documentation (groups 10 and 11). PR: _link_
+- [ ] 1.5 `ratatoskr-workspace`: functional provisioning, ingress, checks and runbook are verified in snapshot `927ddd2`; final Molecule converge, zero-change idempotence and full verify pass. The historical test-before-implementation condition of 10.8 was missed and remains open. No PR: publication follows the owner authorization; workspace CI is checked per published commit.
 
 ## 2. Planning records
 
@@ -102,7 +102,7 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 
 ## 10. Workspace checks and provisioning (ratatoskr-workspace; waits for DPL-022)
 
-- [ ] 10.1 Pin advance: move `contracts`, `sites`, `platform` and `site-sdk` to the merges of 1.1–1.4 with `./ws lock generate`, and verify with `./ws doctor`. No failing test first: generated files.
+- [x] 10.1 Pin advance: move `contracts`, `sites`, `platform` and `site-sdk` to the merges of 1.1–1.4 with `./ws lock generate --output workspace.lock`, and verify with `./ws doctor`. No failing test first: generated files. Verified in `927ddd2`; lock, doctor and committed snapshot checks pass.
 - [x] 10.2 RED: with the pins of 10.1, run `harness/crates/workspace-core/tests/port_allocation.rs`. Confirm that `no_two_deploy_examples_bind_the_same_port_and_every_bind_is_allocated` fails and its message names `8183` and `9473`, because the port table has no rows for them.
 - [x] 10.3 GREEN: add the rows for `8183` and `9473` to the port table and the bundle row to the storage table in `docs/DEPLOYMENT_TARGET.md`. Verify that 10.2 passes.
 - [x] 10.4 RED: run `harness/crates/workspace-core/tests/deploy_inventory.rs`. Confirm that `every_pinned_unit_is_enrolled` fails and its message names `ratatoskr-sites-gateway.service`.
@@ -110,7 +110,7 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 - [x] 10.6 RED: add `harness/crates/workspace-core/tests/sites_ingress.rs` with `every_listed_hostname_has_one_rule_inside_the_block` (asserts one rule to `http://127.0.0.1:8183` per hostname of `group_vars/all/sites.json`) and `no_rule_outside_the_block_points_to_the_gateway` (asserts that no rule outside the markers names port 8183), each with a mutation case. Confirm that they fail because the template does not exist.
 - [x] 10.7 GREEN: add `group_vars/all/sites.json` (empty list) and the ingress task with the marked block and a reload handler. Verify 10.6.
 - [ ] 10.8 RED: add the Molecule verify case `sites_tree_and_ingress`: after converge with one test hostname, it asserts the owner, group and mode `2750` of the tree, the rendered block, and that a request with that `Host` to `127.0.0.1:8183` returns `sites.gateway.unknown_host`, because no approval exists. Confirm that it fails before 10.5 and 10.7 are on the branch, because the tree does not exist.
-- [ ] 10.9 GREEN: converge Molecule with 10.5 and 10.7, and verify 10.8 and the idempotence phase with zero changes. Verify also that the existing `freeze_guard` case still stops the production inventory.
+- [x] 10.9 GREEN: converge Molecule with 10.5 and 10.7, and verify 10.8 and the idempotence phase with zero changes. Verify also that the existing `freeze_guard` case still stops the production inventory.
 
 ## 11. Documentation (ratatoskr-workspace; waits for DPL-022)
 
@@ -134,8 +134,8 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 - A local preflight with the production freeze setting stopped at the first assertion: zero tasks
   changed. This is separate from the Molecule `freeze_guard` verification.
 - Molecule created the disposable Debian host. Its prepare phase could not pull the pinned pgvector
-  image from the inner Docker daemon (registry timeout). 10.8 and 10.9 stay open until a real
-  converge, idempotence and verify run passes. No production operation was run.
+  image from the inner Docker daemon (registry timeout). At that point 10.8 and 10.9 were open for a real
+  converge, idempotence and verify run; the final results are recorded below. No production operation was run.
 
 - 10.8 RED: the tagged `sites_tree_and_ingress` case ran against the prepared disposable host
   before converge and failed on `sites_tree.stat.exists` (one task passed, zero changed).
@@ -147,4 +147,23 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 - Process deviation for 10.8: the new tagged verify case failed on the unprovisioned host after
   the provisioning implementation was committed. It proves the absent-tree failure, but it does
   not prove the required test-before-implementation order. That historical condition was missed;
-  the task remains unticked. Final converge and verification are still required by 10.9.
+  the task remains unticked. The final functional checks required by 10.9 passed below.
+
+- The exact pgvector image was transferred to the disposable host after the registry timeout.
+  Artifacts were downloaded and attested. Converge installed the Sites and gateway binaries and
+  units and started both, then the local Docker daemon stopped. The run exited 4: 210 tasks OK,
+  92 changed, one unreachable host, no failed assertion. That interrupted run is not a Molecule pass. The final successful sequence below closes 10.9.
+
+- Verifier correction (`21a0954`): two unquoted `that` expressions containing colon-space parsed
+  as YAML mappings, so Ansible treated both as true. RED: the actual stand-in config with the
+  wrong hostname and gateway port still passed all six tagged tasks; the refusal wrapper failed.
+  GREEN: after quoting them, each independent mutation failed its exact assertion, then the
+  restored config passed six tasks, zero changed. The same-file scan found and fixed the matching
+  artifact-tamper message assertion. This correction does not repair the historical 10.8 order.
+
+- 10.9 GREEN on the final published Platform `becf91e` / Sites `3860ddc` inputs, pinned in
+  workspace `927ddd2`: `molecule converge` exited 0 (229 OK, 12 changed); `molecule idempotence`
+  exited 0 (220 OK, zero changed); `molecule verify` exited 0 (113 OK, zero skipped or failed).
+  The one ignored task is the deliberate role-file SQL failure, followed by its exact assertion.
+  `sites_tree_and_ingress`, no-restart replay, freeze guard, pin mismatch, corrected artifact
+  tamper, verbose secret scan and stop-as-one passed. No production host operation was run.

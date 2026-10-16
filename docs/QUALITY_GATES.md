@@ -176,7 +176,13 @@ consistently: it guards against a rename and did not fail first.
 The tests that need Docker, the composed profiles under `integration/`, are not part of this gate and
 were not run for XR-021 round 2 or 3; their static contract tests ran with a stubbed `docker`, and
 `integration/tests/no_unauthenticated_broker_test.sh` fails when any compose profile starts a NATS
-broker without a rendered configuration. The multi-service run is `integration/native/`: a manual,
+broker without a rendered configuration. The `sites-integration` job runs the task-specific
+`site-owner-editing` composed profile on arm64: consent, conflict, acknowledged edits, explicit
+release and SSE, owner-scoped Knowledge search, Notes write-back, and the privacy vault. Its
+principals, device/Sync peers and Knowledge input are synthetic; its domain services, HTTP, SQL and
+bus are real. This gate does not prove browser or Obsidian acceptance or host permissions.
+
+The older multi-service run is `integration/native/`: a manual,
 machine-dependent harness that builds the services natively, runs them under the deployed ACL with
 the checked-in PostgreSQL provisioning on the production loopback ports, and drives eight flows
 through Edge. It is not a CI gate and nothing in CI runs it;

@@ -55,9 +55,9 @@ repositories:
       - "278697dddb293cbe18eebbae3f1405f18ad363f3 test(notes): pin that only the peer address opens /internal/"
   - id: ratatoskr-sites
     role: new-service-registry-publications-release-builder-approval-projection-delivery-api
-    branch: main@f0066a23071040c9d94ff4e33660ed537a82130f
+    branch: main@3860ddca89a7a7851c623bd6186e390e0ce85f29
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/sites at f0066a23071040c9d94ff4e33660ed537a82130f (tasks 5.1 to 5.43 at a4587f7, first pinned at d6aeab2, which added sites to the fleet as repository 21; 5.44 to 5.94 after a4587f7; group 5 complete), CI green (7 of 7 check runs), locking the contracts at 2c726027da79e0e899ad482afead0a2000b03e61. 5.21m passes the _INBOX_sites literal to custom_inbox_prefix (bus_acl.rs::the_owner_repository_uses_the_prefix_literal), 5.21n calls the reusable release-artifact workflow (release_artifact_callers.rs), and task 9.6 enrols the service in services.json with its user, role, NATS identity and blob root (deploy_inventory.rs, Molecule). The service consumes its four durables, so bus_durables.rs checks their names and filters in it. 5.44 to 5.94 add the removal build, which rebuilds from the stored sources of the current release and releases no new content, the notes index read over HTTP on loopback (RATATOSKR__NOTES__BASE_URL, default http://127.0.0.1:8099, which deploy/systemd/sites.conf.example also sets; the new code sites.connection_not_found), and the provenance of each source row, page and asset. The enrolment in services.json needs no new setting, because the copied example and the default give the loopback URL. A known limit is that it serves a single owner and does not scope sites by owner
+    pin: Verified snapshot repos/sites at 3860ddca89a7a7851c623bd6186e390e0ce85f29; pushed main, 188 tests, release build and independent review passed; all seven CI checks including release-artifact passed (run 38903420745). Workspace pin commit 927ddd201e02f6956cc261c1839f5c27dea98c58.
     commits:
       - "5b6b0c20a764c792f414ef794c37ced732e1b77f chore: scaffold ratatoskr-sites from the fleet template"
       - "92c2c030359ae3e38dba510dae91fbc54cbe7401 docs(openspec): open site-025-sites-service"
@@ -189,10 +189,10 @@ repositories:
       - "f0066a23071040c9d94ff4e33660ed537a82130f docs(sites): state the exact 5.85 state and the limits of the sources"
   - id: ratatoskr-platform
     role: public-and-site-route-classes-adr-0017-site-approvals-build-route-sites-identity-and-durables
-    branch: main@3a47f0f8a70203f74e432f20ade4c8bcd2fba034
+    branch: main@becf91ebae27c9c1352336da679c7352426aabe0
     base: f76005e4297142bb2a4ebb114b4140704cd5384f
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/platform at 943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 (tasks 6.1 to 6.15 at 3a47f0f, 6.16 and 6.17 at 302279d and 943bc91; advanced from 6df9717 with the whole fleet to the contracts 2c72602; the range also holds SITE-026 group 8), CI green (7 of 7 check runs). The harness holds the SITES identity, the four sites durables with the ack waits 300, 120, 30 and 30 s (the sites consumer names each one), EDGE's grant of evt.platform.site_approval.changed.v1, the sites route (8100) and bus_acl.rs::sites_stanza_allows_its_durables_and_events; docs/DEPLOYMENT_TARGET.md allocates 8100 and 9472. The Platform half of 4.3 and 4.4 (0cdb2d5 and ae74b43; gateway/paths.rs::forwardable resolves %2e, %2f, %5c and dot segments, and refuses a path that leaves its prefix or starts with internal) is not pinned yet, because Platform 1b65f2bdc690eb934ef4434c5cb19e00f3f67351 is its pushed main, CI green (7 of 7 check runs), and its SITES stanza allows evt.sites.draft.changed.v1, which the copy in ratatoskr-sites (deploy/nats/identity.conf, SITE-027 task 9.6) at the pinned f0066a2 does not, so harness bus_acl.rs::every_service_fragment_equals_its_platform_stanza fails until Platform and sites move in one step; it was the open Platform half of 4.3
+    pin: Verified snapshot repos/platform at becf91ebae27c9c1352336da679c7352426aabe0; pushed main, local six-check gate with 636 tests and independent review passed. Includes the earlier Notes and SITE-025/026/027 changes and the Notes upload JSON/octet-stream media-type correction. Workspace pin commit 927ddd201e02f6956cc261c1839f5c27dea98c58; workspace CI is checked per published commit. The SITES draft-event ACL now matches Sites 3860ddc.
     commits:
       - "07105d644ae694ba834dd63db80702c736c88b54 chore(deps): move the contracts pin to df646b0"
       - "0a249bce54b5b738bc012881af37e7f9b79a0b58 docs(adr): record the public route class and the site route classes"
@@ -217,12 +217,15 @@ repositories:
       - "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2 feat(core): report sites.manage where Edge routes sites"
       - "0cdb2d582ab127b6ce6fab95c027fc61ea250d1b test(public-api): require that no public path reaches notes internal"
       - "ae74b435f0524f3e0c1a1272267bdd8dd0135f2f fix(public-api): forward no path that resolves to an internal route"
+      - "cb8a35ec95d299ee9fe458ab35439c10be45b569 test(edge): require Notes upload request media types"
+      - "9fc99207e788c8d9f98e9d1f7f58b623833558ca fix(edge): declare Notes site upload media types"
+      - "becf91ebae27c9c1352336da679c7352426aabe0 docs(edge): record the verified site upload fix"
   - id: ratatoskr-site-sdk
     role: new-generated-client-and-starter-template
     branch: main@a3a9215f6cb33163c15840f4c1b75a6e32b3f24f
     created: 2026-10-15, public
     pull_requests: none, pushed directly to main after an independent review, under the repository owner authorization
-    pin: repos/clients/site-sdk at a3a9215f6cb33163c15840f4c1b75a6e32b3f24f (tasks 7.1 to 7.12, group 7 complete; first pinned at 89c683a, which added site-sdk to the fleet), CI green (4 of 4 check runs). 7.2 and 7.3 vendor openapi/content-delivery.json byte-exact from ratatoskr-sites at a4587f7 (ADR-0012) and generate the delivery client from it. A client ships no systemd unit
+    pin: inherited joint snapshot repos/clients/site-sdk at f29520de29724e63bea55a140671af40b2b2ee42; tasks 7.1 to 7.12 finished at a3a9215f6cb33163c15840f4c1b75a6e32b3f24f (first pinned at 89c683a, which added site-sdk to the fleet); the later SITE-026/027 client features remain in this batch, CI green (4 of 4 check runs). 7.2 and 7.3 vendor openapi/content-delivery.json byte-exact from ratatoskr-sites at a4587f7 (ADR-0012) and generate the delivery client from it. A client ships no systemd unit
     commits:
       - "215d9ae4df5873d4f422db974b62cd8b24647a73 chore: create the repository for the site SDK and the template"
       - "f54627a867de8f34787370ceecbb85a613c80f9d test(template): home page lists the fixture pages"
@@ -257,8 +260,9 @@ repositories:
       - "c794d567f42fc7abce9cd1f9f63f9e30baf7b730 fix(sites): ask for the approval before a release of a site"
   - id: ratatoskr-workspace
     role: fleet-membership-pins-ports-deploy-enrolment-harness-and-documentation
-    branch: main
-    pull_requests: none, local commits on main, not pushed by the writer
+    branch: finish-sites-integration
+    worktree: .workspaces/site-finish/workspace
+    pull_requests: none; scoped local commits, publication coordinated after integration checks
     commits:
       - "40efed544aef5f5c9cca51283c5423eb4200ed0c build: pin the fleet at contracts 2c72602 and add ratatoskr-sites"
       - "5e368fcd718682e68844b5c36f2785bb6df71463 deploy(ansible): let the notes service and ob both write the trees"
@@ -359,7 +363,7 @@ rollout:
   - The workspace adds both repositories, advances the pins, allocates the ports and enrols the unit.
   - The real host is not touched while it is frozen.
 rollback:
-  - Revert each repository's commit. Reverting Platform's route rows removes the public surface at once. Nothing has shipped.
+  - For the resumed repository batch, restore the whole verified workspace snapshot at 2f23c08ba96275535953bd1cf7e27af0696729af with history-preserving reverts, including the inherited Notes, SDK and Web pins, configuration and docs; revalidate together. Never revert Platform or Sites independently. See evidence.resume_2026_10_16.resumed_batch_rollback.
 verification:
   - privacy.rs and sanitise.rs in ratatoskr-sites (canary fixture vault, full rebuilds)
   - selection.rs, slug.rs, release_build.rs, release_switch.rs, build_triggers.rs, disconnect.rs, manifest_projection.rs, effective_set.rs, route_classes.rs, delivery.rs, search.rs, notes_blob_read.rs, deploy_files.rs and deployment_profile.rs in ratatoskr-sites
@@ -369,4 +373,83 @@ verification:
   - check-generated.test.ts and fixture-release.test.ts in ratatoskr-site-sdk
   - committed_snapshot.rs, bus_acl.rs, bus_durables.rs, postgres_roles.rs, port_allocation.rs, edge_upstreams.rs and deploy_inventory.rs in ratatoskr-workspace
   - the integration scenario integration/sites-privacy/
-evidence: {}
+evidence:
+  resume_2026_10_16:
+    workspace_branch: finish-sites-integration
+    inherited_reviewed_commits: [6ba5903, d163f9f, 48c5b2e, 392f58c, e41f559]
+    resumed_reviewed_commits: [255b3ee, eb2225d, eaefca3, 21a0954, 1e078e2]
+    review: independent source audit and structured reviews; no actionable findings remain in these commits
+    sites_pin: 3860ddca89a7a7851c623bd6186e390e0ce85f29
+    platform_status: Published candidate becf91ebae27c9c1352336da679c7352426aabe0 passed its local full gate and independent review; the complete local composed run and all seven published CI checks passed, including the attested release artifact (run 38910313608). Final Molecule converge, idempotence and verify also passed.
+    contract_defect: Platform 1b65f2b omitted application/json on Notes open/finalize requests; Notes rejected JSON extraction as 400 and Edge returned public 502. RED cb8a35e reproduced the missing header; GREEN 9fc9920 fixes JSON and octet-stream media types.
+    local_checks:
+      - cargo fmt --all -- --check and cargo clippy --workspace --all-targets --all-features --locked -- -D warnings passed.
+      - cargo test --workspace --all-features --locked passed 130 tests across 28 suites, no failed or ignored tests, on eaefca3 with proposed Platform 1b65f2b / Sites 3860ddc; log /tmp/ratatoskr-workspace-final-tests.log.
+      - cargo deny check passed; no dependency changed in the resumed integration work.
+      - Profile contract and no_unauthenticated_broker_test.sh passed; shellcheck, Python compile, ruff F, actionlint and zizmor passed.
+      - Pinned OpenSpec 1.10.0 validate --all --strict passed 44 items; validate --archived passed 19 items.
+      - Actual nginx 1.28 served both framing refusal headers with the inherited web configuration.
+    red_evidence:
+      - SITE-027 profile absent, SITES draft event permission absent and platform_site_events durable absent each failed its new assertion before implementation or joint pin advance.
+      - SITE-026 ports 8183/9473 and gateway enrollment failed before their configuration rows; both ingress tests failed on the absent template.
+      - The actual disposable cloudflared unit without ExecReload refused systemctl reload; reload-or-restart then worked.
+    build_deviation: Local Compose used RATATOSKR_SITE027_APT_HTTPS=1 to use HTTPS Debian mirrors, bootstrap the runtime CA trust from the builder and select the installed Rust 1.97.0. Child source and lockfiles were unchanged; TLS and signature checks stayed enabled.
+    composed_runtime:
+      command: bash /tmp/ratatoskr-site027-run-current.sh (sets the documented exact inputs and invokes integration/run-site-owner-editing.sh)
+      exit_status: 0
+      platform: becf91ebae27c9c1352336da679c7352426aabe0
+      sites: 3860ddca89a7a7851c623bd6186e390e0ce85f29
+      notes: e16068aed6d9a33acb4eaf90485d00b3a2ec2331
+      knowledge: 9ce88f423889b005341f1a472012d4034f40896d
+      result: evidence/sitefinish027/result.json
+      passed: eleven scenario steps; exact stale conflict row/event, ACK deduplication, manual release isolation, public release SSE, both owner-only search routes, four Notes write-back legs and the privacy vault
+      privacy_controls: 13 public pages, one public asset, 24 negative searches (22 zq7 canaries and both comment controls) and one positive search
+      finalization: final source checks and Compose teardown passed; no project container remained; result published only after successful cleanup
+      bus_checks: bus_acl 17 and bus_durables 14 passed on the final proposed snapshot; no ignored tests
+    verifier_correction:
+      commit: 21a0954
+      defect: Three unquoted YAML assertions with colon-space parsed as mappings and were treated as true by Ansible 2.18, including two ingress assertions and the artifact-tamper message check.
+      red: The real stand-in config had the wrong hostname and gateway port; the old tagged verifier incorrectly passed all six tasks and the expected-refusal wrapper exited 1.
+      green: After quoting the expressions, the wrong hostname and wrong port each failed their exact assertion. The restored config passed six tasks with zero changes; no accidental mapping condition remained.
+    molecule_attempt:
+      result: interrupted when the local Docker daemon stopped; converge exited 4 with 210 tasks OK, 92 changed, one unreachable host and no failed assertion
+      resolution: The persisted disposable host was resumed; the final published child snapshot passed the full sequence below.
+      scope: disposable ratatoskr-host only; no operation on the production host
+    process_deviations:
+      - OBS-024 14.1 and 14.2 historical RED against pre-write-consumer pins was not observed; those tasks remain open. The new ACL characterization has a mutation proof.
+      - SITE-026 10.8 failed on the unprovisioned host after its implementation commit; the required historical test-first order was missed and the task remains open.
+      - Existing SITE-027 Platform 5.3 history keeps its RED amendment in the GREEN commit, as recorded in the repository history.
+    excluded_acceptance:
+      - No operation on the frozen production host; no DNS or Cloudflare setting changed.
+      - No site repository binding or other excluded owner decision was implemented.
+      - The synthetic device and Sync peers do not prove a real Obsidian session; seeded Knowledge input does not prove LLM ingestion.
+    resumed_batch_rollout:
+      - Require child repository CI, the composed profile and final Molecule checks to pass.
+      - Publish Platform and Sites gitlinks, workspace.lock and EXPECTED_PINS together in one workspace commit; retain the inherited Notes, SDK and Web pins in this verified batch.
+      - Record the resulting workspace pin commit and its checks; keep the frozen production host untouched.
+    resumed_batch_rollback:
+      target: 2f23c08ba96275535953bd1cf7e27af0696729af
+      method: Preserve workspace history with workspace revert commits that restore the entire resumed batch to this previous published verified workspace snapshot, including the inherited five commits, pins, documentation and configuration; then revalidate the complete snapshot.
+      constraint: Never roll back the Platform or Sites pins alone. Their NATS ACL fragments form an atomic pair, and the inherited SDK and Web pins depend on the new API. A snapshot rollback must restore all affected repository pins and workspace metadata together.
+      host: No production host rollback is run while the host is frozen; this is a repository snapshot procedure only.
+    verified_snapshot:
+      commit: 927ddd201e02f6956cc261c1839f5c27dea98c58
+      lock_command: ./ws lock generate --output workspace.lock
+      checks: ./ws lock check and ./ws doctor passed; committed_snapshot passed against the final pins
+      inherited_pins: Notes e16068a, site-sdk f29520d and Web 0f5f8c8 remain in the same verified batch
+    final_molecule:
+      command_sequence: molecule converge; molecule idempotence; molecule verify (from deploy/ansible)
+      platform: becf91ebae27c9c1352336da679c7352426aabe0
+      sites: 3860ddca89a7a7851c623bd6186e390e0ce85f29
+      source_test_fixes: [21a0954, 1e078e2]
+      converge: exit 0; 229 tasks OK, 12 changed, zero failed or unreachable
+      idempotence: exit 0; 220 tasks OK, zero changed, failed or unreachable
+      verify: exit 0; 113 tasks OK, 12 changed, zero skipped, failed or unreachable
+      expected_negative: The one ignored Ansible task deliberately calls no_such_function in role_file_failure; the next assertion checks the expected SQL error and absence of a success marker. No verify case was skipped.
+      cases: Sites tree/group/mode and ingress, unknown-host refusal, units and Notes permissions, NATS keys, DB grants, no restart on rerun, freeze guard, pin mismatch, artifact tamper with the corrected exact message check, verbose secret scan, and stop_as_one all passed.
+      postcondition: The last case stopped ratatoskr.target and every enrolled service in the disposable host.
+      logs: /tmp/ratatoskr-molecule-converge-final.log; /tmp/ratatoskr-molecule-idempotence-final.log; /tmp/ratatoskr-molecule-verify-final.log
+    workspace_ci:
+      workflow: .github/workflows/ci.yml
+      policy: Check GitHub results for each published workspace commit. Local results and confirmed child CI do not assert the result of a future workspace run.
+    completion: Local verification is complete at the recorded snapshot. The OpenSpec records retain the historical RED conditions and stated owner decisions; workspace CI is an external gate per published commit.

@@ -1,6 +1,6 @@
 # Obsidian vaults and independent sites
 
-> Status: Write path implemented in child repositories; composed verification pending
+> Status: Write path and sites implemented; local composed checks passed; production host frozen
 > Last reviewed: 2026-10-16
 > Decisions: [ADR-0010](adr/0010-notes-and-obsidian-vault-connections.md),
 > [ADR-0011](adr/0011-independent-sites-on-the-single-host.md)  
@@ -426,7 +426,7 @@ verifies it on the controller and uploads it through Edge.
 
 SITE-025 is implemented in the child repositories. Its fleet entries, service enrollment and
 privacy scenario exist in the workspace. This implementation status does not archive the change;
-the integration job and the final verified pins remain separate completion gates.
+the verified pins are recorded in the changesets, and workspace CI is checked per published commit.
 
 ```
  OBS-023 add-notes-vault-connections      read path, spike first

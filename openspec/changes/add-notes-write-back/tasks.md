@@ -247,8 +247,8 @@ modifies the text those two leave.
 - [ ] 14.1 RED: add `harness/crates/workspace-core/tests/bus_acl.rs::notes_stanza_allows_its_write_durable_and_conflict_events`. In `harness/crates/workspace-core/tests/bus_durables.rs`, grow `DOMAIN` from 25 to 26 entries with `ratatoskr_notes_write_requests` (filter `cmd.notes.file.write_requested.v1`, owner `notes`) and `PLATFORM_ONLY` from 3 to 4 entries with `platform_notes_conflict_projection`. Run `bus_acl.rs` and `bus_durables.rs` against the current pins and confirm that `notes_stanza_allows_its_write_durable_and_conflict_events`, `the_service_table_length_equals_the_durables_the_harness_lists` (Platform declares 25 rows, the harness lists 26), `platform_names_every_durable_with_its_contract_filter` and `every_owner_hard_codes_its_durable_name_and_filter` fail, because the pinned Platform and notes hold neither the stanza lines nor the durables.
 - [ ] 14.2 RED: add the integration profile scenario `notes-write-back`: write through a fake `sync` channel and a fake device; assert one revision and one `file.changed` per acknowledged write, none for a refused one, one conflict for a stale base, and a rewritten link after a rename. Run it against the current pins and confirm that it fails because the pinned notes has no write consumer.
 - [x] 14.3 Advance the pins to the merges of 1.1–1.6 with `./ws lock generate`. No failing test first: generated files. Verify with `./ws doctor`. The pins are notes `f394346`, Platform `943bc91`, the plugin `5ed98a9`, the export agent `0ddda71` and web `4972d43`, with the rest of the fleet at contracts `2c72602` (changeset XR-021).
-- [ ] 14.4 GREEN: run 14.1 and 14.2 against the advanced pins and verify that they pass, and that `cargo test -p workspace-core --test bus_durables --test bus_acl` is green.
-- [ ] 14.5 Update `docs/NOTES_AND_SITES.md` from Proposed to Implemented for the write path, and add the two durables to `docs/DEPLOYMENT_TARGET.md` where it lists the bus. No test: documentation.
+- [x] 14.4 GREEN: run 14.1 and 14.2 against the advanced pins and verify that they pass, and that `cargo test -p workspace-core --test bus_durables --test bus_acl` is green.
+- [x] 14.5 Update `docs/NOTES_AND_SITES.md` from Proposed to Implemented for the write path, and add the two durables to `docs/DEPLOYMENT_TARGET.md` where it lists the bus. No test: documentation.
 
 ## Deferred to the next contracts revision
 
@@ -260,3 +260,28 @@ modifies the text those two leave.
 ## Workflow follow-up
 
 - Archive `add-notes-write-back` only after `xr-021-fleet-round-5` and then `add-notes-vault-connections` are archived, and every item of group 1 is closed.
+
+## Resume evidence (2026-10-16)
+
+- The named NOTES write-durable/conflict ACL test passes with the proposed snapshot. Removing a
+  conflict event permission makes its assertion fail. The original 14.1 failure against a snapshot
+  without the Notes write consumer was not observed in this resume, so 14.1 stays unticked.
+- The real composed profile `integration/run-site-owner-editing.sh` includes the notes-write-back
+  scenario. It uses real Edge, Notes, NATS and PostgreSQL with a fake Sync tree and a fake device.
+  The Sync rename and grouped link rewrite, Sync property write, refused device write and partially
+  applied device rename all passed. The stale-base assertion is recorded with site owner editing below.
+- The original 14.2 RED against Notes without its write consumer was not observed. 14.2 stays
+  unticked; the final current scenario and the bus tests pass as recorded below.
+  This records the missed historical ordering without claiming a new fixture failure as that RED.
+
+- 14.4 GREEN: the real composed scenario exited 0 with Platform `becf91e`, Sites `3860ddc`,
+  Notes `e16068a` and Knowledge `9ce88f4`. The stale edit has one exact conflict row and one
+  `notes.conflict.raised.v1` event and no revision/file event. The acknowledged update adds one
+  revision and one file event, and a repeated ACK adds neither. All Sync/device legs above passed.
+  `cargo test --locked --manifest-path harness/Cargo.toml -p workspace-core --test bus_acl
+  --test bus_durables` passed 17 ACL and 14 durable tests against that proposed snapshot.
+
+- The final joint snapshot is workspace `927ddd2`, generated with
+  `./ws lock generate --output workspace.lock` and checked with `./ws lock check`, `./ws doctor`
+  and the committed-snapshot test. The full final Molecule sequence also passed. Workspace CI
+  results are checked per published commit; this record states the observed local and child gates.
