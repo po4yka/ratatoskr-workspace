@@ -30,6 +30,50 @@
       delegate_to: localhost
       become: false
 
+    # --- sites_tree_and_ingress ---------------------------------------------------------------
+    - name: "sites_tree_and_ingress: the bundle tree"
+      ansible.builtin.stat:
+        path: /mnt/nvme/ratatoskr/sites
+      register: sites_tree
+
+    - name: "sites_tree_and_ingress: only sites writes and the gateway group reads"
+      ansible.builtin.assert:
+        that:
+          - sites_tree.stat.isdir
+          - sites_tree.stat.pw_name == 'ratatoskr-sites'
+          - sites_tree.stat.gr_name == 'ratatoskr-sites-bundles'
+          - sites_tree.stat.mode == '2750'
+        quiet: true
+
+    - name: "sites_tree_and_ingress: the resulting tunnel rules"
+      ansible.builtin.slurp:
+        src: /etc/cloudflared/config.yml
+      register: sites_ingress
+
+    - name: "sites_tree_and_ingress: one site rule and the existing API and catch-all rules"
+      ansible.builtin.assert:
+        that:
+          - (sites_ingress.content | b64decode).count('# BEGIN ratatoskr-sites') == 1
+          - (sites_ingress.content | b64decode).count('hostname: garden.example.test') == 1
+          - (sites_ingress.content | b64decode).count('service: http://127.0.0.1:8183') == 1
+          - "'hostname: api.example.test' in (sites_ingress.content | b64decode)"
+          - "'service: http_status:404' in (sites_ingress.content | b64decode)"
+        quiet: true
+
+    - name: "sites_tree_and_ingress: no approval reaches no site"
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8183/
+        headers:
+          Host: garden.example.test
+        status_code: 404
+        return_content: true
+      register: sites_unknown
+
+    - name: "sites_tree_and_ingress: the gateway refuses the unapproved hostname"
+      ansible.builtin.assert:
+        that: sites_unknown.json.code == 'sites.gateway.unknown_host'
+        quiet: true
+
     # --- host_facts -------------------------------------------------------------------------------
     - name: "host_facts: every user exists with its own group and memberships"
       ansible.builtin.command: id -nG {{ item }}

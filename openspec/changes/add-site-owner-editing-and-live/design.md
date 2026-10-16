@@ -257,10 +257,10 @@ user as the only tenant authority and the same bounds. Any tenant selector is re
 Known limits that the review of Platform groups 5 to 8 accepted (Platform `da2242b`):
 
 - [Edge reads the upload of a site edit into memory] → Up to 16 MiB per request (one chunk of the
-  notes transfer contract). The per-site and per-client bounds limit how many such reads run at once.
-- [The owner shares the public rate bucket of the site] → An owner request from a site, an owner
-  stream included, takes a token of the public bucket of that site, so heavy anonymous traffic can
-  slow the owner. Accepted: a separate bucket would need a second key per site.
+  notes transfer contract). The HTTP listener concurrency limit in `platform_http::shed` bounds concurrent reads.
+- [The owner shares the public rate bucket of the site] → Owner reads of public content and owner event streams
+  take tokens from the public bucket of that site, so heavy anonymous traffic can slow those reads.
+  Owner edit, upload, draft, library and knowledge routes do not use that bucket. Accepted: a separate bucket would need a second key per site.
 - [`content_blob` is not checked to be the blob of this upload] → Edge checks the `BlobRef` and its
   digest, not that the same request uploaded it. The same digest means the same bytes, so the write
   is the same.

@@ -46,6 +46,7 @@ ratatoskr_groups:
   # ob writes the trees as ratatoskr-notes-sync, and the notes service reads them and writes the
   # delivered writes of the `sync` channel into them (OBS-024, decision 7.11).
   - ratatoskr-notes-trees
+  - ratatoskr-sites-bundles
 
 # Each service user gets its own group (--user-group) and these memberships, as the deploy guides of
 # Platform, the extractor and Telegram create them.
@@ -68,6 +69,7 @@ ratatoskr_users:
   - {name: ratatoskr-knowledge, groups: [ratatoskr, ratatoskr-notes-blobs]}
   # Sites reads note bytes through the same read group (SITE-025, design D3); its unit names the
   # group in SupplementaryGroups= too.
+  - {name: ratatoskr-sites-gateway, groups: [ratatoskr, ratatoskr-sites-bundles]}
   - {name: ratatoskr-sites, groups: [ratatoskr, ratatoskr-notes-blobs]}
 
 # The one layout the three deploy guides agree on once reconciled (DPL-022): the shared `ratatoskr`
@@ -80,6 +82,7 @@ ratatoskr_directories:
   # Every service traverses the mount point to reach its own directory below it.
   - {path: /mnt/nvme, owner: root, group: root, mode: "0755"}
   - {path: /mnt/nvme/ratatoskr, owner: root, group: root, mode: "0755"}
+  - {path: /mnt/nvme/ratatoskr/sites, owner: ratatoskr-sites, group: ratatoskr-sites-bundles, mode: "2750"}
   - {path: /mnt/nvme/ratatoskr/logs, owner: root, group: ratatoskr, mode: "0770"}
   - {path: /mnt/nvme/ratatoskr/nats, owner: ratatoskr-nats, group: ratatoskr-nats, mode: "0700"}
   - {path: /mnt/nvme/ratatoskr/blobs, owner: root, group: root, mode: "0755"}
@@ -153,3 +156,6 @@ ratatoskr_generated_secrets:
   - {path: /etc/ratatoskr/secrets/github-readme-service-secret, owner: root, group: ratatoskr-knowledge, mode: "0640"}
   - {path: /etc/ratatoskr/secrets/channel-digests-source-secret, owner: root, group: ratatoskr-knowledge, mode: "0640"}
   - {path: /etc/ratatoskr/secrets/channel-digests-result-reader-secret, owner: root, group: ratatoskr-knowledge, mode: "0640"}
+
+# The existing tunnel configuration is host state. Only the marked site block is managed.
+ratatoskr_cloudflared_config: /etc/cloudflared/config.yml

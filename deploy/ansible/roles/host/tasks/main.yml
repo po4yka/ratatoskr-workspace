@@ -189,3 +189,6 @@
       - ratatoskr operator listeners, from the monitoring bridge
   register: ratatoskr_ufw
   changed_when: "'Skipping' not in ratatoskr_ufw.stdout"
+
+- name: Site routes in the existing tunnel configuration
+  ansible.builtin.import_tasks: sites-ingress.yml

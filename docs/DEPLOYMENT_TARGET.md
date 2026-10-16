@@ -58,6 +58,7 @@ keeps durable state off it either way.
 | Off-host copies | `/mnt/backup/borg` | SATA SSD, 954 GB |
 | Telegram blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-telegram` | NVMe |
 | Notes blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-notes`, owner `ratatoskr-notes:ratatoskr-notes-blobs`, mode 2750 (setgid) | NVMe |
+| Site bundles | `/mnt/nvme/ratatoskr/sites`, owner `ratatoskr-sites:ratatoskr-sites-bundles`, mode 2750; gateway reads through the group | NVMe |
 | Sites blobs | `/mnt/nvme/ratatoskr/blobs/ratatoskr-sites`, owner `ratatoskr-sites:ratatoskr-sites`, mode 0700 | NVMe |
 | Notes working trees | `/mnt/nvme/ratatoskr/notes/trees`, owner `ratatoskr-notes-sync:ratatoskr-notes-trees`, mode 2770 (setgid); one `<id>` for each `sync` connection, folders 2770, files 0660 | NVMe |
 | Notes `ob` client state | `/mnt/nvme/ratatoskr/notes/clients`, owner `ratatoskr-notes-sync:ratatoskr-notes-sync`, mode 0700; one `<id>` for each `sync` connection, mode 0700 | NVMe |
@@ -366,6 +367,8 @@ bind to `0.0.0.0`.
 |---|---|---|
 | 8080 | `ratatoskr-edge` public API; also the base URL Telegram's Platform client targets | `cloudflared` tunnel |
 | 8181 | `ratatoskr-ingest` webhook adapter | `cloudflared` tunnel |
+| 8183 | `ratatoskr-sites-gateway` public listener | `cloudflared` tunnel, loopback only |
+| 9473 | `ratatoskr-sites-gateway` operator listener | Host only |
 | 8182 | `ratatoskr-telegram-webhook` public listener | `cloudflared` tunnel |
 | 8091 | `ratatoskr-knowledge` domain API (`/v1/k`, `/v1/capabilities`, `/internal/search`, `/internal/user-content/*`), a dedicated listener (`RATATOSKR__API__LISTEN_ADDRESS`) next to the operator listener `9081` | loopback; reached only through Edge and Platform's library client |
 | 8092 | `ratatoskr-github` domain API (`/v1/gh`), plus its internal reader routes, which Edge never exposes | loopback; reached only through Edge |

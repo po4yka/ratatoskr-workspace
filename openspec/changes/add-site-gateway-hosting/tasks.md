@@ -103,21 +103,36 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 ## 10. Workspace checks and provisioning (ratatoskr-workspace; waits for DPL-022)
 
 - [ ] 10.1 Pin advance: move `contracts`, `sites`, `platform` and `site-sdk` to the merges of 1.1–1.4 with `./ws lock generate`, and verify with `./ws doctor`. No failing test first: generated files.
-- [ ] 10.2 RED: with the pins of 10.1, run `harness/crates/workspace-core/tests/port_allocation.rs`. Confirm that `no_two_deploy_examples_bind_the_same_port_and_every_bind_is_allocated` fails and its message names `8183` and `9473`, because the port table has no rows for them.
-- [ ] 10.3 GREEN: add the rows for `8183` and `9473` to the port table and the bundle row to the storage table in `docs/DEPLOYMENT_TARGET.md`. Verify that 10.2 passes.
-- [ ] 10.4 RED: run `harness/crates/workspace-core/tests/deploy_inventory.rs`. Confirm that `every_pinned_unit_is_enrolled` fails and its message names `ratatoskr-sites-gateway.service`.
-- [ ] 10.5 GREEN: enrol the gateway in `deploy/ansible/group_vars/all/services.json` and add the `ratatoskr-sites-bundles` group and the `/mnt/nvme/ratatoskr/sites` tree to the `host` role. Verify 10.4.
-- [ ] 10.6 RED: add `harness/crates/workspace-core/tests/sites_ingress.rs` with `every_listed_hostname_has_one_rule_inside_the_block` (asserts one rule to `http://127.0.0.1:8183` per hostname of `group_vars/all/sites.json`) and `no_rule_outside_the_block_points_to_the_gateway` (asserts that no rule outside the markers names port 8183), each with a mutation case. Confirm that they fail because the template does not exist.
-- [ ] 10.7 GREEN: add `group_vars/all/sites.json` (empty list) and the ingress task with the marked block and a reload handler. Verify 10.6.
+- [x] 10.2 RED: with the pins of 10.1, run `harness/crates/workspace-core/tests/port_allocation.rs`. Confirm that `no_two_deploy_examples_bind_the_same_port_and_every_bind_is_allocated` fails and its message names `8183` and `9473`, because the port table has no rows for them.
+- [x] 10.3 GREEN: add the rows for `8183` and `9473` to the port table and the bundle row to the storage table in `docs/DEPLOYMENT_TARGET.md`. Verify that 10.2 passes.
+- [x] 10.4 RED: run `harness/crates/workspace-core/tests/deploy_inventory.rs`. Confirm that `every_pinned_unit_is_enrolled` fails and its message names `ratatoskr-sites-gateway.service`.
+- [x] 10.5 GREEN: enrol the gateway in `deploy/ansible/group_vars/all/services.json` and add the `ratatoskr-sites-bundles` group and the `/mnt/nvme/ratatoskr/sites` tree to the `host` role. Verify 10.4.
+- [x] 10.6 RED: add `harness/crates/workspace-core/tests/sites_ingress.rs` with `every_listed_hostname_has_one_rule_inside_the_block` (asserts one rule to `http://127.0.0.1:8183` per hostname of `group_vars/all/sites.json`) and `no_rule_outside_the_block_points_to_the_gateway` (asserts that no rule outside the markers names port 8183), each with a mutation case. Confirm that they fail because the template does not exist.
+- [x] 10.7 GREEN: add `group_vars/all/sites.json` (empty list) and the ingress task with the marked block and a reload handler. Verify 10.6.
 - [ ] 10.8 RED: add the Molecule verify case `sites_tree_and_ingress`: after converge with one test hostname, it asserts the owner, group and mode `2750` of the tree, the rendered block, and that a request with that `Host` to `127.0.0.1:8183` returns `sites.gateway.unknown_host`, because no approval exists. Confirm that it fails before 10.5 and 10.7 are on the branch, because the tree does not exist.
 - [ ] 10.9 GREEN: converge Molecule with 10.5 and 10.7, and verify 10.8 and the idempotence phase with zero changes. Verify also that the existing `freeze_guard` case still stops the production inventory.
 
 ## 11. Documentation (ratatoskr-workspace; waits for DPL-022)
 
-- [ ] 11.1 Add the runbook steps to `deploy/README.md`: the DNS record with `cloudflared tunnel route dns`, the HSTS setting in the Cloudflare zone, pairing a `site_deployer` device, and the first `ratatoskr-site deploy`. No test: documentation. Verify that every command in the steps exists in the pinned SDK.
-- [ ] 11.2 Record the gateway's checks in `docs/QUALITY_GATES.md`, including what they cannot see: the attestation proves where a bundle was built, not that its scripts are safe. No test: documentation.
+- [x] 11.1 Add the runbook steps to `deploy/README.md`: the DNS record with `cloudflared tunnel route dns`, the HSTS setting in the Cloudflare zone, pairing a `site_deployer` device, and the first `ratatoskr-site deploy`. No test: documentation. Verify that every command in the steps exists in the pinned SDK.
+- [x] 11.2 Record the gateway's checks in `docs/QUALITY_GATES.md`, including what they cannot see: the attestation proves where a bundle was built, not that its scripts are safe. No test: documentation.
 
 ## Workflow follow-up
 
 - Archive this change only after SITE-025 and DPL-022 are archived and every item of group 1 has merged and its link is recorded.
 - Deploying to the real host waits for the owner to lift the freeze in `DEPLOYMENT_TARGET.md`.
+
+## Resume evidence (2026-10-16)
+
+- Proposed joint checkouts: Platform `1b65f2b`, sites `203453b`. These are test inputs; the final
+  verified pins are recorded by the workspace coordinator.
+- 10.2 RED named both unallocated gateway ports, 8183 and 9473. 10.4 RED named the unenrolled
+  `ratatoskr-sites-gateway.service`. 10.6 RED ran two tests; both failed on the missing template.
+- GREEN: `port_allocation` 4, `deploy_inventory` 9 and `sites_ingress` 2 tests passed. The local
+  ingress task test used the real Ansible role and cloudflared validator: first converge changed
+  the block and called reload, the second changed zero tasks, and an unmanaged gateway route failed.
+- A local preflight with the production freeze setting stopped at the first assertion: zero tasks
+  changed. This is separate from the Molecule `freeze_guard` verification.
+- Molecule created the disposable Debian host. Its prepare phase could not pull the pinned pgvector
+  image from the inner Docker daemon (registry timeout). 10.8 and 10.9 stay open until a real
+  converge, idempotence and verify run passes. No production operation was run.

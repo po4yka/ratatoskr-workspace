@@ -1,0 +1,6 @@
+# BEGIN ratatoskr-sites
+{% for hostname in ratatoskr_sites_hostnames %}
+  - hostname: {{ hostname }}
+    service: http://127.0.0.1:8183
+{% endfor %}
+# END ratatoskr-sites

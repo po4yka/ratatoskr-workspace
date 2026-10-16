@@ -108,6 +108,12 @@ jobs:
         working-directory: harness
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
+      - name: Jinja renderer for the ingress contract tests
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ingress-tests"
+          "$RUNNER_TEMP/ingress-tests/bin/pip" install --quiet Jinja2==3.1.6 # zizmor: ignore[adhoc-packages]
+          echo "$RUNNER_TEMP/ingress-tests/bin" >> "$GITHUB_PATH"
+
       - name: Rust tests
         working-directory: harness
         run: cargo test --workspace --all-features --locked

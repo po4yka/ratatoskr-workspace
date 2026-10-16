@@ -504,8 +504,11 @@ fn sites_stanza_allows_its_durables_and_events() {
             }
         }
     }
+    // `evt.sites.draft.changed.v1` is the draft event of an owner edit (SITE-027 12.4), which Edge
+    // reads through `platform_site_events`.
     for event in [
         "evt.sites.release.published.v1",
+        "evt.sites.draft.changed.v1",
         "evt.platform.operation.reported.v1",
     ] {
         if !publish.iter().any(|allowed| allowed == event) {

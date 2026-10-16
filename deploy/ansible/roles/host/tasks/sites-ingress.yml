@@ -1,0 +1,35 @@
+# The tunnel and DNS belong to the operator. Change only this marked block before the catch-all.
+- name: Site hostnames are explicit DNS names with no wildcard or YAML syntax
+  ansible.builtin.assert:
+    that:
+      - item is match('^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$')
+    quiet: true
+  loop: "{{ ratatoskr_sites_hostnames }}"
+
+- name: Site hostnames are unique
+  ansible.builtin.assert:
+    that: ratatoskr_sites_hostnames | unique | length == ratatoskr_sites_hostnames | length
+    quiet: true
+
+- name: Read the existing tunnel configuration
+  ansible.builtin.slurp:
+    src: "{{ ratatoskr_cloudflared_config }}"
+  register: ratatoskr_tunnel_config
+
+- name: The tunnel has a catch-all and no unmanaged gateway route
+  ansible.builtin.assert:
+    that:
+      - >-
+        (ratatoskr_tunnel_config.content | b64decode) is search('(?m)^  - service: http_status:404\s*$')
+      - "':8183' not in ((ratatoskr_tunnel_config.content | b64decode) | regex_replace('(?ms)^# BEGIN ratatoskr-sites$.*?^# END ratatoskr-sites$', ''))"
+    fail_msg: The tunnel needs its final http_status:404 rule and no gateway route outside the managed block.
+    quiet: true
+
+- name: Each site has one route inside the managed tunnel block
+  ansible.builtin.blockinfile:
+    path: "{{ ratatoskr_cloudflared_config }}"
+    marker: "# {mark} ratatoskr-sites"
+    insertbefore: '^  - service: http_status:404\s*$'
+    block: "{{ lookup('ansible.builtin.template', 'sites-ingress.j2') | replace('# BEGIN ratatoskr-sites\n', '') | replace('# END ratatoskr-sites\n', '') }}"
+    validate: cloudflared tunnel --config %s ingress validate
+  notify: Reload cloudflared

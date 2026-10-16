@@ -44,6 +44,7 @@ provisioner:
       ratatoskr-host:
         # The only thing that lets the playbook run while DEPLOYMENT_TARGET.md says "frozen".
         ratatoskr_test_target: true
+        ratatoskr_sites_hostnames: [garden.example.test]
         # Test values, not secrets: nothing they open exists outside this container.
         ratatoskr_operator_secrets:
           telegram_bot_token: "123456:MOLECULE-test-token"

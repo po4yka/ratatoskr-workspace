@@ -177,3 +177,47 @@
             && ln -s /etc/ratatoskr-molecule-canary /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder/file-link.md
             && ln -s /etc/ratatoskr-molecule-canary.d /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f/folder-link
         creates: /mnt/nvme/ratatoskr/notes/trees/0b9e2f4a-7c1d-4e3b-8a6f-5d2c1b0a9e8f
+
+    # A tunnel process is not started: this stand-in has no Cloudflare account. Use the real
+    # validator and a reloadable local unit to observe the playbook's reload without networking.
+    - name: The pinned cloudflared validator for the disposable arm64 host
+      ansible.builtin.get_url:
+        url: https://github.com/cloudflare/cloudflared/releases/download/2026.10.1/cloudflared-linux-arm64
+        dest: /usr/local/bin/cloudflared
+        checksum: sha256:2c65dfabf616c40efc7545d107d7a57ad5e21377e2964b7e88af19a238074a46
+        mode: "0755"
+
+    - name: The fixture tunnel configuration directory
+      ansible.builtin.file:
+        path: /etc/cloudflared
+        state: directory
+        mode: "0755"
+
+    - name: The existing tunnel rules that the managed block must preserve
+      ansible.builtin.copy:
+        dest: /etc/cloudflared/config.yml
+        mode: "0644"
+        force: false
+        content: |
+          tunnel: 00000000-0000-4000-8000-000000000001
+          ingress:
+            - hostname: api.example.test
+              service: http://127.0.0.1:8080
+            - service: http_status:404
+
+    - name: The reloadable tunnel stand-in (no external tunnel or account)
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/cloudflared.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Disposable cloudflared reload stand-in
+          [Service]
+          ExecStart=/bin/sleep infinity
+          ExecReload=/bin/true
+
+    - name: The reload stand-in runs
+      ansible.builtin.systemd_service:
+        name: cloudflared.service
+        state: started
+        daemon_reload: true

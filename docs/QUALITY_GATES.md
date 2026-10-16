@@ -1616,3 +1616,19 @@ bypass in order to work at all. For a Rust repository the names are `gate` and `
 repository already requires. Every job of `ci.yml` belongs in the list, because Dependabot's
 auto-merge waits only for required checks. Do NOT add `advisories`: it has no `push` or
 `pull_request` trigger, so requiring it would block every merge and never be satisfied.
+
+### Site gateway provisioning (SITE-026)
+
+`workspace-core` tests `port_allocation`, `deploy_inventory` and `sites_ingress` hold the gateway's
+8183/9473 listeners, service enrolment and marked tunnel block to the pinned child files. Ingress
+mutation tests drop a hostname, change its upstream, and place a gateway route outside the block.
+`integration/tests/sites_ingress_test.sh` runs the production ingress tasks against a private local
+configuration, uses the real cloudflared validator, checks that a second run changes nothing, and
+refuses an unmanaged gateway route. Its reload handler records the call; it opens no tunnel.
+The Molecule case `sites_tree_and_ingress` checks the bundle tree's owner, group and mode, the
+rendered rule and the real gateway's refusal of a hostname that has no approval. Molecule's
+idempotence phase and `freeze_guard` remain separate checks.
+
+These checks do not prove DNS or TLS termination, production file permissions, or the safety of
+scripts in a site bundle. A bundle attestation proves where a bundle was built; it does not prove
+that its scripts are safe. The owner must review site code before approving its capabilities.

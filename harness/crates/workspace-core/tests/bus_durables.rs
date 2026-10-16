@@ -620,6 +620,80 @@ fn platform_names_every_durable_with_its_contract_filter() {
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
+/// The durable through which Edge feeds the site event stream `/v1/sites/{site}/events`
+/// (SITE-027), and its two filters.
+const SITE_EVENTS: &str = "platform_site_events";
+const SITE_EVENTS_FILTERS: [&str; 2] = [
+    "evt.sites.release.published.v1",
+    "evt.sites.draft.changed.v1",
+];
+
+/// The text of Edge's own consumer list in Platform's table, from its declaration to its end.
+fn edge_consumer_list(table: &str) -> Option<&str> {
+    let start = table.find("EDGE_INTERNAL_CONSUMERS: [FixedConsumerSpec;")?;
+    let rest = table.get(start..)?;
+    rest.get(..rest.find("];")?)
+}
+
+/// Disagreements between Platform's table and the site events projection, one line each.
+fn site_events_problems(table: &str) -> Vec<String> {
+    let mut problems = Vec::new();
+    if !has_literal(table, SITE_EVENTS) {
+        problems.push(format!(
+            "Platform's {PLATFORM_TABLE} does not name `{SITE_EVENTS}`"
+        ));
+        return problems;
+    }
+    for filter in SITE_EVENTS_FILTERS {
+        if !has_literal(table, filter) {
+            problems.push(format!("`{SITE_EVENTS}` has no filter `{filter}`"));
+        }
+    }
+    let constant = table
+        .find(&format!("\"{SITE_EVENTS}\""))
+        .and_then(|at| table.get(..at))
+        .and_then(|before| before.rsplit("const ").next())
+        .and_then(|declaration| declaration.split(':').next())
+        .map(str::trim)
+        .unwrap_or_default();
+    let owned_by_edge = edge_consumer_list(table).is_some_and(|list| {
+        has_literal(list, SITE_EVENTS) || (!constant.is_empty() && list.contains(constant))
+    });
+    if !owned_by_edge {
+        problems.push(format!(
+            "`{SITE_EVENTS}` is not in EDGE_INTERNAL_CONSUMERS, so EDGE does not own it"
+        ));
+    }
+    let declared = number_after(table, "DOMAIN_CONSUMERS: [FixedConsumerSpec;");
+    if declared != Some(DOMAIN.len() as u64) {
+        problems.push(format!(
+            "DOMAIN_CONSUMERS declares {declared:?} rows, the harness lists {}",
+            DOMAIN.len()
+        ));
+    }
+    problems
+}
+
+#[test]
+fn platform_names_the_site_events_projection() {
+    let table = platform_table_text();
+    let problems = site_events_problems(&table);
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+
+    let dropped = table.replace(
+        "\"evt.sites.draft.changed.v1\"",
+        "\"evt.sites.draft.dropped.v1\"",
+    );
+    assert_ne!(dropped, table, "the mutation did not change the table");
+    let problems = site_events_problems(&dropped);
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    assert!(
+        problems
+            .first()
+            .is_some_and(|line| line.contains("evt.sites.draft.changed.v1"))
+    );
+}
+
 #[test]
 fn every_owner_hard_codes_its_durable_name_and_filter() {
     let manifest = committed_manifest();

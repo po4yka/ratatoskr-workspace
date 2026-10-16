@@ -121,6 +121,20 @@
         "RATATOSKR__BUS__URL": "nats://127.0.0.1:4222",
         "RATATOSKR__BUS__NKEY_SEED_PATH": "/etc/ratatoskr/sites.nkey"
       }
+    },
+    {
+      "name": "sites-gateway",
+      "repository": "sites",
+      "unit": "ratatoskr-sites-gateway.service",
+      "binary": "ratatoskr-sites-gateway",
+      "user": "ratatoskr-sites-gateway",
+      "config_example": "deploy/systemd/sites-gateway.conf.example",
+      "config": "/etc/ratatoskr/sites-gateway.conf",
+      "database_role": "ratatoskr_sites",
+      "role_file": false,
+      "operator_port": 9473,
+      "ready_path": "/health/ready",
+      "settings": {}
     }
   ],
   "ratatoskr_template_units": [
