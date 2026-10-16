@@ -1625,6 +1625,8 @@ mutation tests drop a hostname, change its upstream, and place a gateway route o
 `integration/tests/sites_ingress_test.sh` runs the production ingress tasks against a private local
 configuration, uses the real cloudflared validator, checks that a second run changes nothing, and
 refuses an unmanaged gateway route. Its reload handler records the call; it opens no tunnel.
+The handler uses `reload-or-restart` for the standard cloudflared unit, which has no `ExecReload`.
+The disposable unit also has no `ExecReload`, so a converge must exercise the restart fallback.
 The Molecule case `sites_tree_and_ingress` checks the bundle tree's owner, group and mode, the
 rendered rule and the real gateway's refusal of a hostname that has no approval. Molecule's
 idempotence phase and `freeze_guard` remain separate checks.

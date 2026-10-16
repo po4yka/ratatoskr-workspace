@@ -109,7 +109,7 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 - [x] 10.5 GREEN: enrol the gateway in `deploy/ansible/group_vars/all/services.json` and add the `ratatoskr-sites-bundles` group and the `/mnt/nvme/ratatoskr/sites` tree to the `host` role. Verify 10.4.
 - [x] 10.6 RED: add `harness/crates/workspace-core/tests/sites_ingress.rs` with `every_listed_hostname_has_one_rule_inside_the_block` (asserts one rule to `http://127.0.0.1:8183` per hostname of `group_vars/all/sites.json`) and `no_rule_outside_the_block_points_to_the_gateway` (asserts that no rule outside the markers names port 8183), each with a mutation case. Confirm that they fail because the template does not exist.
 - [x] 10.7 GREEN: add `group_vars/all/sites.json` (empty list) and the ingress task with the marked block and a reload handler. Verify 10.6.
-- [ ] 10.8 RED: add the Molecule verify case `sites_tree_and_ingress`: after converge with one test hostname, it asserts the owner, group and mode `2750` of the tree, the rendered block, and that a request with that `Host` to `127.0.0.1:8183` returns `sites.gateway.unknown_host`, because no approval exists. Confirm that it fails before 10.5 and 10.7 are on the branch, because the tree does not exist.
+- [x] 10.8 RED: add the Molecule verify case `sites_tree_and_ingress`: after converge with one test hostname, it asserts the owner, group and mode `2750` of the tree, the rendered block, and that a request with that `Host` to `127.0.0.1:8183` returns `sites.gateway.unknown_host`, because no approval exists. Confirm that it fails before 10.5 and 10.7 are on the branch, because the tree does not exist.
 - [ ] 10.9 GREEN: converge Molecule with 10.5 and 10.7, and verify 10.8 and the idempotence phase with zero changes. Verify also that the existing `freeze_guard` case still stops the production inventory.
 
 ## 11. Documentation (ratatoskr-workspace; waits for DPL-022)
@@ -136,3 +136,10 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 - Molecule created the disposable Debian host. Its prepare phase could not pull the pinned pgvector
   image from the inner Docker daemon (registry timeout). 10.8 and 10.9 stay open until a real
   converge, idempotence and verify run passes. No production operation was run.
+
+- 10.8 RED: the tagged `sites_tree_and_ingress` case ran against the prepared disposable host
+  before converge and failed on `sites_tree.stat.exists` (one task passed, zero changed).
+
+- Handler correction RED: after removing `ExecReload` from the disposable tunnel unit (as in the
+  upstream unit), `systemctl reload cloudflared.service` failed with "Job type reload is not
+  applicable". GREEN uses `reload-or-restart`, so the normal unit can apply the changed config.

@@ -209,7 +209,9 @@ process that binds `127.0.0.83` on purpose can still forge it; the host is the t
 
 A new task in the Ansible `host` role renders a block between `# BEGIN ratatoskr-sites` and
 `# END ratatoskr-sites` in the `cloudflared` configuration, from the list `sites.json` in
-`group_vars/all/`. It then reloads `cloudflared`. Rules outside the block are not touched. Creating
+`group_vars/all/`. It then runs `systemctl reload-or-restart cloudflared.service`. The standard upstream unit has no
+`ExecReload`, so that unit restarts and briefly reconnects the tunnel. A unit that supports reload
+uses its reload action. Rules outside the block are not touched. Creating
 the DNS record (`cloudflared tunnel route dns`) changes the owner's Cloudflare account, so it stays
 a runbook step and no task runs it.
 

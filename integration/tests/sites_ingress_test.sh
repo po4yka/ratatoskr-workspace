@@ -41,7 +41,9 @@ rg -q 'Reload observed' "$scratch/first.log"
 cloudflared tunnel --config "$scratch/config.yml" ingress validate
 ANSIBLE_ROLES_PATH="$scratch/roles" ansible-playbook -i localhost, "$scratch/test.yml" -e "@$scratch/vars.json" > "$scratch/second.log"
 rg -q 'changed=0 .*failed=0' "$scratch/second.log"
-! rg -q 'Reload observed' "$scratch/second.log"
+if rg -q 'Reload observed' "$scratch/second.log"; then
+  printf 'FAIL: unchanged ingress reloaded the tunnel\n' >&2; exit 1
+fi
 printf '  # unmanaged http://127.0.0.1:8183\n' >> "$scratch/config.yml"
 if ANSIBLE_ROLES_PATH="$scratch/roles" ansible-playbook -i localhost, "$scratch/test.yml" -e "@$scratch/vars.json" > "$scratch/refused.log" 2>&1; then
   printf 'FAIL: unmanaged gateway route was accepted\n' >&2; exit 1

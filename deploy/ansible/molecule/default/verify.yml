@@ -32,13 +32,16 @@
 
     # --- sites_tree_and_ingress ---------------------------------------------------------------
     - name: "sites_tree_and_ingress: the bundle tree"
+      tags: sites_tree_and_ingress
       ansible.builtin.stat:
         path: /mnt/nvme/ratatoskr/sites
       register: sites_tree
 
     - name: "sites_tree_and_ingress: only sites writes and the gateway group reads"
+      tags: sites_tree_and_ingress
       ansible.builtin.assert:
         that:
+          - sites_tree.stat.exists
           - sites_tree.stat.isdir
           - sites_tree.stat.pw_name == 'ratatoskr-sites'
           - sites_tree.stat.gr_name == 'ratatoskr-sites-bundles'
@@ -46,11 +49,13 @@
         quiet: true
 
     - name: "sites_tree_and_ingress: the resulting tunnel rules"
+      tags: sites_tree_and_ingress
       ansible.builtin.slurp:
         src: /etc/cloudflared/config.yml
       register: sites_ingress
 
     - name: "sites_tree_and_ingress: one site rule and the existing API and catch-all rules"
+      tags: sites_tree_and_ingress
       ansible.builtin.assert:
         that:
           - (sites_ingress.content | b64decode).count('# BEGIN ratatoskr-sites') == 1
@@ -61,6 +66,7 @@
         quiet: true
 
     - name: "sites_tree_and_ingress: no approval reaches no site"
+      tags: sites_tree_and_ingress
       ansible.builtin.uri:
         url: http://127.0.0.1:8183/
         headers:
@@ -70,6 +76,7 @@
       register: sites_unknown
 
     - name: "sites_tree_and_ingress: the gateway refuses the unapproved hostname"
+      tags: sites_tree_and_ingress
       ansible.builtin.assert:
         that: sites_unknown.json.code == 'sites.gateway.unknown_host'
         quiet: true
