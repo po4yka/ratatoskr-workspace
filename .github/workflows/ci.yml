@@ -111,7 +111,8 @@ jobs:
       - name: Run the pinned sites integration profile
         shell: bash
         env:
-          GOTOOLCHAIN: auto
+          # Go 1.22 requests nonexistent go1.25 for the generator's language-only directive.
+          GOTOOLCHAIN: go1.25.0+auto
         run: |
           set -euo pipefail
           export RATATOSKR_TASK_NAMESPACE="sites-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
