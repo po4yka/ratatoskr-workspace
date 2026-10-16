@@ -79,7 +79,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "platform",
         "repos/platform",
-        "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2",
+        "becf91ebae27c9c1352336da679c7352426aabe0",
     ),
     (
         "site-sdk",
@@ -89,7 +89,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "sites",
         "repos/sites",
-        "f0066a23071040c9d94ff4e33660ed537a82130f",
+        "3860ddca89a7a7851c623bd6186e390e0ce85f29",
     ),
     (
         "telegram",

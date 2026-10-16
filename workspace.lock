@@ -153,9 +153,9 @@ id = "platform"
 path = "repos/platform"
 remote = "https://github.com/po4yka/ratatoskr-platform.git"
 default_branch = "main"
-commit = "943bc91c2254eabbb6ee93f53bc4e9d9cc22f3c2"
+commit = "becf91ebae27c9c1352336da679c7352426aabe0"
 digests = [
-  { path = "openapi/openapi.json", kind = "file", sha256 = "4a44eef775979065453953cf9b205537343e40cee4c34c074bb0bdce4d80331d" },
+  { path = "openapi/openapi.json", kind = "file", sha256 = "12a0d7ed21146dc7f3a0a262c4bbd1bd5fdb610b36d8c8229b88e8d4e1dc042e" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "eb76e54cf5e2ba9fbfb17af3019cddd85d3354274d38a24dcf9c998473224b05" },
 ]
 
@@ -176,11 +176,11 @@ id = "sites"
 path = "repos/sites"
 remote = "https://github.com/po4yka/ratatoskr-sites.git"
 default_branch = "main"
-commit = "f0066a23071040c9d94ff4e33660ed537a82130f"
+commit = "3860ddca89a7a7851c623bd6186e390e0ce85f29"
 digests = [
-  { path = "Cargo.lock", kind = "file", sha256 = "31a195ff53ec5e3313d5c02af318e57eec01181f9a0d30f22c405744d8b8a015" },
+  { path = "Cargo.lock", kind = "file", sha256 = "d25ce4fcd7dc6c2cade40e0e0252765b30ce3672736bab985369642a7bfd5e8d" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "bca12d4423084fb55a560a48eb70718c69662f8833e7717f23f7d45e79be3127" },
-  { path = "schema.sql", kind = "file", sha256 = "cc0d9130cf21ee6f39688e2feecab32c3566b054ee91d47756ebc877fc8630e3" },
+  { path = "schema.sql", kind = "file", sha256 = "58acfce5fa36450da3aef0af27c6cf5684a0a61a630391465ed9349472ca5712" },
 ]
 
 [[repositories]]
