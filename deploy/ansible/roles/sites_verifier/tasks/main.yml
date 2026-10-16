@@ -1,0 +1,102 @@
+# Reviewed public release archives. No registry token or user tool configuration is installed.
+- name: The tools are built for the one supported host architecture
+  ansible.builtin.command: uname -m
+  register: sites_verifier_arch
+  changed_when: false
+
+- name: Refuse an unsupported architecture
+  ansible.builtin.assert:
+    that: sites_verifier_arch.stdout == 'aarch64'
+    quiet: true
+
+- name: Root-owned verifier and archive directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /usr/lib/ratatoskr-sites
+    - /usr/lib/ratatoskr-sites/verifier
+    - /usr/share/licenses/ratatoskr-sites-verifier
+    - "{{ ratatoskr_state_dir }}/sites-verifier"
+    - "{{ ratatoskr_state_dir }}/sites-verifier/gh"
+    - "{{ ratatoskr_state_dir }}/sites-verifier/oras"
+
+- name: Release archives, checked against reviewed upstream SHA-256 values
+  ansible.builtin.get_url:
+    url: "{{ ratatoskr_sites_verifier[item].url }}"
+    dest: "{{ ratatoskr_state_dir }}/sites-verifier/{{ item }}.tar.gz"
+    checksum: "sha256:{{ ratatoskr_sites_verifier[item].arm64_sha256 }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [gh, oras]
+
+- name: Extract each verified archive into its own root-owned directory
+  ansible.builtin.unarchive:
+    src: "{{ ratatoskr_state_dir }}/sites-verifier/{{ item }}.tar.gz"
+    dest: "{{ ratatoskr_state_dir }}/sites-verifier/{{ item }}"
+    remote_src: true
+    creates: "{{ ratatoskr_state_dir }}/sites-verifier/{{ item }}/{{ ratatoskr_sites_verifier[item].binary }}"
+    owner: root
+    group: root
+  loop: [gh, oras]
+
+- name: Hash the extracted binaries before installation, including a replay
+  ansible.builtin.stat:
+    path: "{{ ratatoskr_state_dir }}/sites-verifier/{{ item }}/{{ ratatoskr_sites_verifier[item].binary }}"
+    checksum_algorithm: sha256
+  loop: [gh, oras]
+  register: sites_verifier_binaries
+
+- name: Refuse an altered extracted binary
+  ansible.builtin.assert:
+    that:
+      - item.stat.isreg
+      - item.stat.uid == 0
+      - item.stat.checksum == ratatoskr_sites_verifier[item.item].binary_sha256
+    quiet: true
+  loop: "{{ sites_verifier_binaries.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Install only the verified executables at fixed paths
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_state_dir }}/sites-verifier/{{ item }}/{{ ratatoskr_sites_verifier[item].binary }}"
+    dest: "/usr/lib/ratatoskr-sites/verifier/{{ item }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  loop: [gh, oras]
+
+- name: Install the release licenses
+  ansible.builtin.copy:
+    src: "{{ ratatoskr_state_dir }}/sites-verifier/{{ item }}/{{ ratatoskr_sites_verifier[item].license_path }}"
+    dest: "/usr/share/licenses/ratatoskr-sites-verifier/{{ item }}.LICENSE"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [gh, oras]
+
+- name: Install the reviewed Sigstore and GitHub trust-root snapshot
+  ansible.builtin.copy:
+    src: trusted-root.jsonl
+    dest: /usr/lib/ratatoskr-sites/verifier/trusted-root.jsonl
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Hash the installed trust-root snapshot
+  ansible.builtin.stat:
+    path: /usr/lib/ratatoskr-sites/verifier/trusted-root.jsonl
+    checksum_algorithm: sha256
+  register: sites_verifier_root
+
+- name: Refuse a trust root that differs from the reviewed policy
+  ansible.builtin.assert:
+    that: sites_verifier_root.stat.checksum == ratatoskr_sites_verifier.trusted_root_sha256
+    quiet: true

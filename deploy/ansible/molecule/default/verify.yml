@@ -30,6 +30,13 @@
       delegate_to: localhost
       become: false
 
+    - name: Verify the pinned public site bundle tools
+      ansible.builtin.include_tasks:
+        file: tasks/sites-verifier.yml
+        apply:
+          tags: sites_verifier
+      tags: sites_verifier
+
     # --- sites_tree_and_ingress ---------------------------------------------------------------
     - name: "sites_tree_and_ingress: the bundle tree"
       tags: sites_tree_and_ingress

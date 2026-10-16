@@ -1,0 +1,87 @@
+# Genuine signed SDK evidence, public and immutable. Never use a fake signature in this case.
+- name: "Sites verifier: fixed root-owned tools and trust root"
+  ansible.builtin.stat:
+    path: "/usr/lib/ratatoskr-sites/verifier/{{ item }}"
+    checksum_algorithm: sha256
+  loop: [gh, oras, trusted-root.jsonl]
+  register: sites_verifier_files
+
+- name: "Sites verifier: reject writable tools or roots"
+  ansible.builtin.assert:
+    that:
+      - item.stat.isreg
+      - item.stat.uid == 0
+      - item.stat.gid == 0
+      - item.stat.mode in ['0755', '0644']
+    quiet: true
+  loop: "{{ sites_verifier_files.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: "Sites verifier: public immutable proof fixture"
+  ansible.builtin.copy:
+    src: "{{ workspace }}/integration/fixtures/site028-real-proof/"
+    dest: /opt/ratatoskr-sites-verifier-fixture/
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: "Sites verifier: the resource and signature probe"
+  ansible.builtin.copy:
+    src: "{{ project }}/molecule/default/files/sites-verifier-probe.py"
+    dest: /opt/ratatoskr-sites-verifier-probe.py
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "Sites verifier: private working directory"
+  ansible.builtin.file:
+    path: /var/tmp/ratatoskr-sites-verifier-probe
+    state: directory
+    owner: ratatoskr-sites
+    group: ratatoskr-sites-bundles
+    mode: "0700"
+
+- name: "Sites verifier: anonymous immutable fetch inside 512 MiB"
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --unit=ratatoskr-sites-verifier-fetch
+      - --wait
+      - --collect
+      - --pipe
+      - --property=MemoryMax=512M
+      - --property=MemorySwapMax=0
+      - --property=CPUQuota=100%
+      - --property=TasksMax=64
+      - --property=User=ratatoskr-sites
+      - --property=Group=ratatoskr-sites-bundles
+      - /usr/bin/python3
+      - /opt/ratatoskr-sites-verifier-probe.py
+      - fetch
+      - /opt/ratatoskr-sites-verifier-fixture
+      - /var/tmp/ratatoskr-sites-verifier-probe
+  changed_when: false
+
+- name: "Sites verifier: valid signature and changed-byte refusal without network or credentials"
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --unit=ratatoskr-sites-verifier-signature
+      - --wait
+      - --collect
+      - --pipe
+      - --property=MemoryMax=512M
+      - --property=MemorySwapMax=0
+      - --property=CPUQuota=100%
+      - --property=TasksMax=64
+      - --property=User=ratatoskr-sites
+      - --property=Group=ratatoskr-sites-bundles
+      - --property=IPAddressDeny=any
+      - --property=RestrictAddressFamilies=AF_UNIX
+      - /usr/bin/python3
+      - /opt/ratatoskr-sites-verifier-probe.py
+      - verify
+      - /opt/ratatoskr-sites-verifier-fixture
+      - /var/tmp/ratatoskr-sites-verifier-probe
+  changed_when: false

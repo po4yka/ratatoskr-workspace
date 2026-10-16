@@ -1,0 +1,7 @@
+{
+  "repository": "po4yka/ratatoskr-site-sdk",
+  "commit": "009afe32df0d5e10aaef79ae3e6bd6ecb3a989c9",
+  "artifact_digest": "sha256:d88bfae6f5ec3af637568587d6077674f1893b176a2015c111e083bad602b4a5",
+  "signer_workflow": "po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml",
+  "signer_commit": "89331e6aa0b845c3565c1d9785b0dd5038e2de81"
+}

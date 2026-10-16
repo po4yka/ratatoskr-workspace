@@ -30,7 +30,7 @@ commit. Pin-only items have no failing test first because they change generated 
 
 - [x] 2.1 Record the explicit owner approval of runtime `gh` and `oras` in SITE-028 before adding either production dependency. No failing test first: authority record. Verify the exact decision and versions, licenses, update policy and public-only scope in the changeset.
 - [x] 2.2 Add and run `integration/tests/site_bundle_real_proof.sh` against a real public artifact: local-manifest verification succeeds with an empty tool configuration and no token, while one changed manifest byte fails cryptographic verification. This is a capability spike, not a product implementation; retain both observed results and stop if credential-free verification fails.
-- [ ] 2.3 Create isolated writer worktrees and record bases, ownership and dependency order in SITE-028. No failing test first: topology record. Verify clean baseline submodules and `./ws doctor`.
+- [x] 2.3 Create isolated writer worktrees and record bases, ownership and dependency order in SITE-028. No failing test first: topology record. Verify clean baseline submodules and `./ws doctor`.
 
 ## 3. Contracts and fleet revision
 
@@ -53,22 +53,22 @@ commit. Pin-only items have no failing test first because they change generated 
 
 ## 5. Platform approval and proxy
 
-- [ ] 5.1 RED: add `crates/public-api/tests/site_approvals.rs::approval_event_covers_the_repository` and `::new_approval_requires_repository_binding`, with the existing `::stale_digest_is_refused` case. Assert the digest/event carries the canonical identity and a changed binding cannot use the old approval. Confirm intended failures.
-- [ ] 5.2 GREEN: require the binding for new approvals and emit the expanded approval event; update the existing first-version schema in place. Verify 5.1 and approval withdrawal tests.
-- [ ] 5.3 RED: add `crates/public-api/tests/sites_deploy_routes.rs::digest_request_keeps_deploy_authority` and `::provenance_body_is_bounded_before_proxying`. Assert exact request forwarding and existing per-site grants, body limits and content type. Confirm the old raw-body proxy fails those assertions.
+- [x] 5.1 RED: add `crates/public-api/tests/site_approvals.rs::approval_event_covers_the_repository` and `::new_approval_requires_repository_binding`, with the existing `::stale_digest_is_refused` case. Assert the digest/event carries the canonical identity and a changed binding cannot use the old approval. Confirm intended failures.
+- [x] 5.2 GREEN: require the binding for new approvals and emit the expanded approval event; update the existing first-version schema in place. Verify 5.1 and approval withdrawal tests.
+- [x] 5.3 RED: add `crates/public-api/tests/sites_deploy_routes.rs::digest_request_keeps_deploy_authority` and `::provenance_body_is_bounded_before_proxying`. Assert exact request forwarding and existing per-site grants, body limits and content type. Confirm the old raw-body proxy fails those assertions.
 - [ ] 5.4 GREEN: forward the bounded JSON/proof without weakening identity or route guards. Verify 5.3, every Platform DEVELOPMENT command, independent review and CI; document the route in the same repository.
 
 ## 6. SDK and Web
 
-- [ ] 6.1 RED: add `tests/deploy-provenance.test.ts` cases "sends the immutable digest and proof", "rejects a missing proof before login" and "cannot override the approved origin". Assert the exact server body and zero requests for invalid input. Confirm intended failures.
+- [x] 6.1 RED: add `tests/deploy-provenance.test.ts` cases "sends the immutable digest and proof", "rejects a missing proof before login" and "cannot override the approved origin". Assert the exact server body and zero requests for invalid input. Confirm intended failures.
 - [ ] 6.2 GREEN: send the new request, retain client checks and pin the trusted workflow revision; document the command. Verify 6.1, SDK DEVELOPMENT gate, review and CI.
-- [ ] 6.3 RED: add `src/features/sites/repository-approval.test.tsx` cases "shows repository name and immutable id" and "requires approval again when binding changes". Assert the owner-visible identity and disabled old approval. Confirm intended failures.
+- [x] 6.3 RED: add `src/features/sites/repository-approval.test.tsx` cases "shows repository name and immutable id" and "requires approval again when binding changes". Assert the owner-visible identity and disabled old approval. Confirm intended failures.
 - [ ] 6.4 GREEN: show and approve the binding, with generated types from the same contracts commit. Verify 6.3, Web DEVELOPMENT gate, rendered desktop/mobile states, keyboard/error behavior, review and CI.
 
 ## 7. Workspace integration and provisioning
 
-- [ ] 7.1 RED: add `harness/crates/workspace-core/tests/sites_verifier_tools.rs::runtime_tools_are_pinned_and_confined` and the Molecule `sites_verifier` case. Assert pinned root-owned ARM64-compatible tools, no credential inheritance and successful real proof verification within 512 MiB. Confirm missing-tool or policy assertions fail on the previous disposable host.
-- [ ] 7.2 GREEN: provision the approved tool versions and server-owned trust root on the disposable host. Verify 7.1, zero-change idempotence and full Molecule. No operation on the frozen production host.
+- [x] 7.1 RED: add `harness/crates/workspace-core/tests/sites_verifier_tools.rs::runtime_tools_are_pinned_and_confined` and the Molecule `sites_verifier` case. Assert pinned root-owned ARM64-compatible tools, no credential inheritance and successful real proof verification within 512 MiB. Confirm missing-tool or policy assertions fail on the previous disposable host.
+- [x] 7.2 GREEN: provision the approved tool versions and server-owned trust root on the disposable host. Verify 7.1, zero-change idempotence and full Molecule. No operation on the frozen production host.
 - [ ] 7.3 RED: extend `integration/tests/site_owner_editing.py` with `verified_bundle_repository_boundary`: send foreign, unsigned, changed-digest and stale-approval requests, then valid real signed evidence. Assert refusals leave no deploy and only the valid request activates. Confirm intended failures before integration adapters change.
 - [ ] 7.4 GREEN: use the coordinated pins and real proof fixture; verify 7.3, existing privacy/write scenarios, withdrawal, rebinding, idempotency, cancellation and offline verified rollback. A synthetic signature is not acceptance evidence.
 - [ ] 7.5 Reconcile the active `site-bundles` and `site-manifest` deltas with the enforced policy, and update runbooks and SITE-028. No failing test first: specification and documentation. Verify strict OpenSpec validation and no contradictory raw-tar acceptance requirement.
@@ -139,3 +139,74 @@ commit. Pin-only items have no failing test first because they change generated 
 - Claude `bc07c02` now has five CI checks green. Extractor and SDK independent reviews are clean.
   Platform proxy suite passes all ten cases after its body/header fixtures were moved to JSON.
   OpenAPI regeneration succeeded. Full Platform gate and publication remain pending.
+
+- Apply continuation: the final locked approval recheck was drafted before the planned 4.5 race
+  RED test. This violates the required test-first order. The draft is not published, 4.5 stays
+  open, and the owner was asked for a separate exception. The historical OBS-024/SITE-026
+  exception does not cover this violation. Do not report a reconstructed RED as test-first proof.
+- Platform completed its full DEVELOPMENT gate, deny, OpenSpec and independent review. Its
+  behavior change is not published while expanded consumers and Sites enforcement are pending.
+- Knowledge `0e6e447` and Notes `5076346` passed full local gates and independent review and were
+  pushed. Their CI was still running at this checkpoint. Telegram completed its full local gate
+  and review. Threads first failed because the local gate runner omitted
+  `THREADS_ARCHIVE_TEST_NATS_URL`; its tests used the default port. The runner now sets the
+  owned broker URL. No product code or validation rule was changed for that failure.
+- Web repository display and missing-binding refusal each failed before implementation; the
+  focused registry suite now passes five cases. Full tests found only two expected generated
+  API drift failures while the Platform document and its commit lock await publication.
+- Sites raw-tar/owner regression now passes. Readiness returned 200 without a verifier before
+  the change and now returns 503. The preflight path test failed on a relative executable before
+  implementation and now passes. Stale verification cleanup observed zero removals instead of one;
+  its implementation is pending. These checks do not prove a real signed site bundle can deploy.
+
+- All twelve pin-only Rust consumers have passed complete local gates, independent review and
+  CI. SITE-028 records each full SHA. SDK `9661c6b` has five CI checks green after the fixture
+  permission comments were added. The immutable real proof still names source `009afe3` and
+  reusable workflow `89331e6`. The SDK client change has not shipped.
+- Real proof exposed an invalid ORAS flag on `manifest fetch`; both the regression assertion and
+  the real-tool lane failed before the flag was removed. Ten component tests now pass, with no
+  ignored tests. The real cases use actual CLI verification; synthetic output remains limited to
+  isolated policy and fault tests. Default and opt-in all-feature Clippy pass.
+- The runtime role passed on the disposable ARM64 container, and its replay changed zero tasks.
+  The public archive fetch and offline signature/refusal probe ran as UID 65534, with the container
+  network disconnected for signature verification. Its enforced bound was 536870912 bytes and
+  memory peak was 171868160 bytes. Both tool ELF files have AArch64 machine type, 65536-byte LOAD
+  alignment and no dynamic interpreter. This is not a native 16 KiB-kernel run.
+- Workspace Clippy and all 131 harness tests pass, with zero ignored; doctor is healthy and all
+  45 active specs/changes validate. The new runtime role and Molecule tasks pass ansible-lint.
+  Full Molecule is running. Its first attempt stopped before host creation because the local PATH
+  lacked the configured Docker credential helper; the retry uses an empty Docker auth configuration
+  and an explicit local socket. No personal registry credential is read for the retry.
+
+- Correction to the pending test-order decision: the server job queue and cancellation cleanup
+  were also drafted before the server-level 4.7 RED cases. The owner question now covers 4.5
+  and 4.7 and replaces the narrower question. Existing component checks are not evidence that
+  these server-level tests ran first. Keep both pairs open and the server draft unpublished
+  until the owner decides and the required behavior checks pass.
+
+- Full Molecule now passed all seven scenario actions, including zero-change idempotence and
+  every verify case. The new case fetched the genuine public artifact in a 512 MiB unit, then
+  verified its local proof with network address families restricted and IP traffic denied.
+  The separate no-network Docker probe also passed with swap explicitly disabled; its final
+  cumulative memory peak was 199110656 bytes. No production host was contacted.
+- Platform is committed locally at `16b502ed502dfcdcfe6ce8574d794f4a303d4dce` after the full gate
+  and review, but remains unpublished until Sites enforcement is ready. The Web draft now uses
+  its exact OpenAPI bytes and commit lock; API drift and typecheck pass. Web lint still requires
+  a small component extraction; browser acceptance is in progress.
+- The complete Sites test run observed 195 passes, seven failures and zero ignored. The failures
+  are the legacy raw-tar deploy route and unsealed activation happy paths. They must be replaced
+  with verified-request coverage before the server gate can close. This draft is not published.
+
+- The tooling RED evidence for 7.1 is the new harness assertion (`Sites verifier policy is
+  missing`) and the failed fixed-path executable checks on the prior disposable ARM64 image.
+  These ran before the runtime role was written. The new Molecule case subsequently passed
+  on the provisioned target. The root worktree, baseline checks and 7.2 are now validated.
+- Web now passes all 338 unit tests after its generated API was aligned to local Platform
+  commit `16b502e`. Browser approval/error and unbound cases passed on desktop and mobile;
+  visual inspection then found inner-card overflow at 320 px. A new cell-bound assertion
+  failed on mobile before the grid change. Layout GREEN is pending.
+
+- Web layout GREEN now passed both real-browser cases after a `minmax(0, 1fr)` value column
+  and wrapping were applied. The checks cover each cell against its card, page width, keyboard
+  approval, stale-digest feedback, missing binding and Axe. All 338 unit tests passed before
+  this layout-only fix; final full Web checks and publication remain pending.

@@ -76,6 +76,24 @@ user to `ratatoskr_users` in `group_vars/all/host.yml`. Its database role and it
 provisioned. `deploy_inventory.rs` fails while a pinned unit has no entry, and while an entry names a
 unit, binary or example that the pinned repository lacks.
 
+## Sites bundle verifier
+
+The `sites_verifier` role installs `gh` 2.102.0 and `oras` 1.3.0 for Linux ARM64 at fixed paths
+under `/usr/lib/ratatoskr-sites/verifier`. Root owns the binaries, the public trust-root snapshot
+and their parent directories. The release licenses are under
+`/usr/share/licenses/ratatoskr-sites-verifier`. `group_vars/all/sites-verifier.json` pins archive
+and extracted-binary hashes, licenses, the trust-root digest and the exact reviewed SDK workflow
+revision. The role refuses an altered extracted binary, also on a replay.
+
+Tool and trust-root updates require a reviewed pin change and the full Molecule gate. The
+`sites_verifier` verify case uses genuine public SDK evidence under a 512 MiB memory bound with
+swap disabled. It fetches the immutable archive without credentials, then verifies its local
+proof with network traffic and network address families disabled. The changed-manifest case
+must fail. `integration/fixtures/site028-real-proof/README.md` records the source of the evidence.
+
+SITE-028 server enforcement, service configuration and the final coordinated pins are still in
+progress. The frozen production host remains excluded by preflight.
+
 ## Testing it
 
 ```bash

@@ -1,0 +1,24 @@
+{
+  "ratatoskr_sites_verifier": {
+    "gh": {
+      "version": "2.102.0",
+      "license": "MIT",
+      "url": "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_arm64.tar.gz",
+      "arm64_sha256": "7862c86c72f43df3a2d93ddde6f473285b4e2af61b494849846827e513ef6484",
+      "binary": "gh_2.102.0_linux_arm64/bin/gh",
+      "binary_sha256": "93308395c2d296a63a662742c6366e4db413d2a4870d07bd9b84e491c065d65d",
+      "license_path": "gh_2.102.0_linux_arm64/LICENSE"
+    },
+    "oras": {
+      "version": "1.3.0",
+      "license": "Apache-2.0",
+      "url": "https://github.com/oras-project/oras/releases/download/v1.3.0/oras_1.3.0_linux_arm64.tar.gz",
+      "arm64_sha256": "7649738b48fde10542bcc8b0e9b460ba83936c75fb5be01ee6d4443764a14352",
+      "binary": "oras",
+      "binary_sha256": "e2b67c4efb35f20a546aacc680e0f81f907d3cf4cf9f1b2040c34bb471c428f1",
+      "license_path": "LICENSE"
+    },
+    "signer_commit": "89331e6aa0b845c3565c1d9785b0dd5038e2de81",
+    "trusted_root_sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c"
+  }
+}

@@ -27,6 +27,10 @@
       ansible.builtin.include_role:
         name: nodejs
 
+    - name: Root-owned public site bundle verification tools
+      ansible.builtin.include_role:
+        name: sites_verifier
+
     - name: Binaries, units and secrets of every enrolled service, and the template units
       ansible.builtin.include_role:
         name: ratatoskr_service
