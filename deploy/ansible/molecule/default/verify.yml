@@ -59,8 +59,8 @@
       ansible.builtin.assert:
         that:
           - (sites_ingress.content | b64decode).count('# BEGIN ratatoskr-sites') == 1
-          - (sites_ingress.content | b64decode).count('hostname: garden.example.test') == 1
-          - (sites_ingress.content | b64decode).count('service: http://127.0.0.1:8183') == 1
+          - "(sites_ingress.content | b64decode).count('hostname: garden.example.test') == 1"
+          - "(sites_ingress.content | b64decode).count('service: http://127.0.0.1:8183') == 1"
           - "'hostname: api.example.test' in (sites_ingress.content | b64decode)"
           - "'service: http_status:404' in (sites_ingress.content | b64decode)"
         quiet: true
@@ -1090,7 +1090,7 @@
     - name: "artifact_tamper: refused on the checksum, before the binary reaches the host"
       ansible.builtin.assert:
         that:
-          - lookup('ansible.builtin.file', scratch ~ '/tamper.log') is search('ratatoskr-extractor: does not match SHA256SUMS')
+          - "lookup('ansible.builtin.file', scratch ~ '/tamper.log') is search('ratatoskr-extractor: does not match SHA256SUMS')"
           - lookup('ansible.builtin.file', scratch ~ '/tamper.log') is not search('changed=[1-9]')
 
     # --- no_secret_in_output ------------------------------------------------------------------------
