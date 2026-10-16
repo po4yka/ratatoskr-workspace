@@ -36,8 +36,11 @@ An optional name-only string was rejected: it leaves name reuse and client claim
 ### D2. Verify an immutable artifact on the server
 
 The existing POST deploy route receives bounded JSON:
-`{"commit":"<40 hex>","artifact_digest":"sha256:<64 hex>","attestation_bundle":<Sigstore bundle>}`.
-It has no host, repository override, arbitrary URL, trusted root or command arguments. The server
+`{"commit":"<40 hex>","artifact_sha256":"<64 hex>","attestation_bundle":<Sigstore bundle>}`.
+The digest uses the existing `DigestHex` wire representation: 64 lower-case hex characters. The
+server adds the fixed `sha256:` algorithm prefix only for OCI tool calls. This also keeps content
+digests distinct from entity references in the contracts metadata lint. It has no host, repository
+override, arbitrary URL, trusted root or command arguments. The server
 constructs `ghcr.io/<approved owner/name>@<digest>` itself. Raw tar receives an unsupported-body
 error; owner/primary sessions receive no exemption.
 
@@ -105,6 +108,12 @@ no network, but still checks current approval and policy. Revocation affects lat
 existing public serving follows the current approval projection rules.
 
 ### D5. Bound verification and fail closed
+
+Process-group cleanup needs the safe `nix` 0.30 signal wrappers, with default features off and
+only `signal` enabled. Sites forbids `unsafe`; the standard library can create a process group but
+cannot signal it through a safe API. This follows Vault's existing runner pattern. The crate is
+MIT-licensed, Unix-only in this use, has no new daemon or credential path, and stays within the
+existing ARM64 build. The owner approved this narrowly scoped production dependency on 2026-10-16.
 
 Start with one verification slot, a 120-second total deadline, a 1 MiB JSON/proof bound, 1 MiB per
 metadata/output stream, at most one tar layer and the existing configured archive bound. Kill and

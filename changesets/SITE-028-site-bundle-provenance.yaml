@@ -5,7 +5,8 @@ goal: The Sites server accepts and activates only bundles whose signed origin ma
 non_goals: [private registries, new server GitHub credentials, production host operations, new API majors, database migrations, unrelated contracts repairs]
 owner_decision: Server-side provenance verification approved on 2026-10-16.
 runtime_dependency_decision: The owner explicitly approved pinned gh 2.102.0 and oras 1.3.0 for public GHCR on 2026-10-16. The real credential-free proof spike, ARM64 ABI and 512 MiB checks remain required.
-authorization: Planning and evidence only in the workspace task worktree. The previous owner authorization covers scoped commits and pushes after successful checks. After the plan was presented, the owner approved its runtime dependency choice. Apply starts with the real public proof spike before child implementation.
+signal_dependency_decision: The owner approved nix 0.30.1 (MIT), default features disabled and signal only, on 2026-10-16. It supplies safe process-group cleanup under the unsafe ban and adds no daemon or credential path.
+authorization: Apply is active in the assigned task worktrees. The previous owner authorization covers scoped commits and pushes after successful checks. After the plan was presented, the owner approved its runtime dependency choice. Apply starts with the real public proof spike before child implementation.
 workspace_writer:
   worktree: .workspaces/site-finish/workspace
   branch: bind-site-bundle-provenance
@@ -55,12 +56,123 @@ child_worktrees:
     writer: root
     allowed_paths: Sites wire types, registry metadata, Sites fixtures, generated outputs, API baseline and related documentation.
     dependencies: First implementation repository; no sibling imports.
-  - remaining: Not created; record one writer, base and purpose branch for each before its source changes.
+  - repository: ratatoskr-sites
+    worktree: .workspaces/site028/repos/sites
+    branch: site-bundle-provenance-sites
+    base: 3860ddca89a7a7851c623bd6186e390e0ce85f29
+    writer: root
+    allowed_paths: Contracts pin and generated metadata, Sites approval projection, deploy verifier/store/activation, gateway proof state, service configuration, tests and owning documentation.
+    dependencies: Contracts 66bdb0c has all eight CI checks green before consumer writes.
+  - repository: ratatoskr-channel-digests
+    worktree: .workspaces/site028/repos/channel-digests
+    branch: site-bundle-provenance-channel-digests
+    base: 08cf71e6677d120c9887286272ee352a9243006e
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-chatgpt
+    worktree: .workspaces/site028/repos/chatgpt
+    branch: site-bundle-provenance-chatgpt
+    base: 1101452f2f4137d6c8805b0db5cca575e7834bc1
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-claude
+    worktree: .workspaces/site028/repos/claude
+    branch: site-bundle-provenance-claude
+    base: a71701a45bd7db842926f41be23274adf429dd0e
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-extractor
+    worktree: .workspaces/site028/repos/extractor
+    branch: site-bundle-provenance-extractor
+    base: d1b7b012cbc9906509ad0a1fd22d3d735a43717e
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-github
+    worktree: .workspaces/site028/repos/github
+    branch: site-bundle-provenance-github
+    base: 59bdddd8cb1a1f238c0b72765f76ce7adc1f8c8a
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-instagram
+    worktree: .workspaces/site028/repos/instagram
+    branch: site-bundle-provenance-instagram
+    base: 3f32997b954a952e420963e7f8e8067dccaa1ef3
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-knowledge
+    worktree: .workspaces/site028/repos/knowledge
+    branch: site-bundle-provenance-knowledge
+    base: 9ce88f423889b005341f1a472012d4034f40896d
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-notes
+    worktree: .workspaces/site028/repos/notes
+    branch: site-bundle-provenance-notes
+    base: e16068aed6d9a33acb4eaf90485d00b3a2ec2331
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-platform
+    worktree: .workspaces/site028/repos/platform
+    branch: site-bundle-provenance-platform
+    base: becf91ebae27c9c1352336da679c7352426aabe0
+    writer: root
+    allowed_paths: Contracts pin, repository approval producer, deploy proxy, generated API and related tests/docs.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-site-sdk
+    worktree: .workspaces/site028/repos/site-sdk
+    branch: site-bundle-provenance-site-sdk
+    base: f29520de29724e63bea55a140671af40b2b2ee42
+    writer: root
+    allowed_paths: Generated contracts, bundle workflow, immutable deploy client and related tests/docs.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-telegram
+    worktree: .workspaces/site028/repos/telegram
+    branch: site-bundle-provenance-telegram
+    base: 0c424cc5c5858f1b212722923039c7f393b296a6
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-threads
+    worktree: .workspaces/site028/repos/threads
+    branch: site-bundle-provenance-threads
+    base: 20c3a9a276e97e1ce6bc9a1cc9ecbfa6b84b037b
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-vault
+    worktree: .workspaces/site028/repos/vault
+    branch: site-bundle-provenance-vault
+    base: 469ffef9616864b808766df8d0168f04acbb84ca
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-web
+    worktree: .workspaces/site028/repos/web
+    branch: site-bundle-provenance-web
+    base: 0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f
+    writer: root
+    allowed_paths: Generated API, repository approval UI and related tests/docs.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
+  - repository: ratatoskr-x
+    worktree: .workspaces/site028/repos/x
+    branch: site-bundle-provenance-x
+    base: 7de8f43a45edb75c4a7a13928983e857874ca400
+    writer: root
+    allowed_paths: Contracts pin and generated dependency metadata only.
+    dependencies: Contracts 66bdb0c; behavior changes follow expanded consumers and approved server policy.
 dependency_order: contracts -> all expanded consumers at one revision -> approval producer -> SDK and Web -> integration and disposable provisioning -> verified workspace pins
 compatibility: Keep the first API version; consumers decode the optional expanded binding before producers emit it. Deploy refuses absent binding and raw tar. Old clients fail clearly without a provenance bypass.
 schema: Edit the current schema definitions in place and create fresh isolated test databases. Add no migrations or migration tooling.
 rollout: No production operation in this change. The frozen host is excluded. Merge expanded contracts and consumers first, then producers and clients; publish only tested combined pins.
-rollback: Stop deploy writes and preserve the last verified served bundle. Restoring an endpoint that bypasses provenance requires explicit owner approval. No implementation from this plan has shipped.
+rollback: Stop deploy writes and preserve the last verified served bundle. Restoring an endpoint that bypasses provenance requires explicit owner approval. Only expanded contract types and compatible consumer pins are published; server enforcement is pending.
 required_checks:
   - Real public OCI manifest and signed proof verification with no token or inherited tool config, plus changed-byte refusal.
   - Every named RED before its implementation; every child DEVELOPMENT gate and green CI.
@@ -75,6 +187,26 @@ proof_spike:
   artifact_digest: sha256:48e1d62ba1add116c0ebf38b86a32569cda6490fcb3ae0c7b513a7521f2753ba
   evidence: evidence/site028-script/summary.json (local only)
   boundary: Site-bundle workflow acceptance, ARM64 ABI, 512 MiB budget and server enforcement remain pending.
-commits: []
+contracts_implementation:
+  commit: 66bdb0c0545363f06137f13687084c21db9b27c5
+  publication: Pushed to main after independent review; all eight CI checks passed (ci run 38934824408, contracts run 38934824338). Workspace pins stay unchanged until coordinated consumers pass.
+  wire: Optional first-version github_repository binding in manifest/event; DeployRequest carries commit, raw artifact_sha256 and an untrusted proof object. The server constructs the sha256 algorithm prefix.
+  local_checks: 432 tests passed, zero ignored; all DEVELOPMENT checks, deny, strict TypeScript, pinned public API check, OpenSpec and review passed.
+  boundary: No server provenance enforcement ships in this contract commit. Legacy payloads stay readable; consumers still use the previously verified snapshot until their coordinated update.
+commits:
+  - repository: ratatoskr-contracts
+    sha: 66bdb0c0545363f06137f13687084c21db9b27c5
+  - repository: ratatoskr-sites
+    sha: a22a2c3f363b6d2a055cc5b50ef111ad0e027a0c
+    boundary: Compatible pin-only update; local gate and seven CI checks passed.
+  - repository: ratatoskr-channel-digests
+    sha: ab638527da008b55b4787ad37a51dc46237bd00c
+    boundary: Pin-only update; local gate and five CI checks passed.
+  - repository: ratatoskr-chatgpt
+    sha: 7dc1ef8fe208778967a4259ee8996d13469115b6
+    boundary: Pin-only update; local gate, review and five CI checks passed.
+  - repository: ratatoskr-claude
+    sha: bc07c0235cc909e48d220640014b15bb807da6db
+    boundary: Pin-only update; repeated complete local gate, review and five CI checks passed.
 pull_requests: []
-final_snapshot: Not created; this is a plan.
+final_snapshot: Not advanced; coordinated consumer and enforcement checks remain pending.
