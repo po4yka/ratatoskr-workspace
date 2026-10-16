@@ -82,6 +82,36 @@ jobs:
           GH_TOKEN: ${{ github.token }}  # gh attestation verify reads the public attestations
         run: molecule test
 
+  # Real Edge, Notes, Sites and Knowledge on a private network with the deployed bus ACL.
+  # Includes the privacy vault and synthetic device/Sync acknowledgements; no production host.
+  sites-integration:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Run the pinned sites integration profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          export RATATOSKR_TASK_NAMESPACE="sites-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          export RATATOSKR_EVIDENCE_DIR="$RUNNER_TEMP/sites-evidence"
+          for repo in platform sites notes knowledge; do
+            upper=$(printf '%s' "$repo" | tr '[:lower:]' '[:upper:]')
+            context="$GITHUB_WORKSPACE/repos/$repo"
+            git -C "$context" fetch --no-tags origin main:refs/remotes/origin/main
+            export "RATATOSKR_${upper}_CONTEXT=$context"
+            export "RATATOSKR_${upper}_REVISION=$(git -C "$context" rev-parse HEAD)"
+          done
+          bash integration/tests/site_owner_editing_profile_test.sh
+          bash integration/tests/no_unauthenticated_broker_test.sh
+          bash integration/run-site-owner-editing.sh
+
   snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -9,7 +9,7 @@ Use [the provisioning runbook](ansible/README.md) for the host and its secrets.
    one rule per hostname inside `# BEGIN ratatoskr-sites` and `# END ratatoskr-sites` in
    `/etc/cloudflared/config.yml`, before the final `http_status:404` rule. It preserves all other
    rules, validates the result with `cloudflared tunnel ingress validate`, and reloads the service
-   only when the block changes. The standard cloudflared unit has no reload action, so the handler
+   only when the block changes. The [standard cloudflared unit](https://github.com/cloudflare/cloudflared/blob/master/cmd/cloudflared/linux_service.go) has no reload action, so the handler
    uses `systemctl reload-or-restart`: a unit without reload support restarts and briefly reconnects
    the tunnel. A gateway rule outside that block is refused. The existing tunnel
    configuration and its final catch-all must exist before the playbook runs.

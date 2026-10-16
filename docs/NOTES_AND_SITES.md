@@ -1,14 +1,14 @@
 # Obsidian vaults and independent sites
 
-> Status: Proposed  
-> Last reviewed: 2026-10-13  
+> Status: Write path implemented in child repositories; composed verification pending
+> Last reviewed: 2026-10-16
 > Decisions: [ADR-0010](adr/0010-notes-and-obsidian-vault-connections.md),
 > [ADR-0011](adr/0011-independent-sites-on-the-single-host.md)  
 > Changes: `add-notes-vault-connections` (OBS-023), `add-notes-write-back` (OBS-024),
 > `add-site-publications` (SITE-025), `add-site-gateway-hosting` (SITE-026),
 > `add-site-owner-editing-and-live` (SITE-027)
 
-This document is the target architecture for two features:
+This document holds the shared architecture for two features:
 
 1. Connect Obsidian vaults to Ratatoskr, both vaults that use Obsidian Sync and vaults that exist
    only on a device, and manage their content from Ratatoskr.
@@ -16,16 +16,21 @@ This document is the target architecture for two features:
    from the vaults, lets the owner edit it, receives live updates, and reads other data from the
    system.
 
-Nothing in this document is implemented. It describes the plan. The OpenSpec changes above hold the
-requirements and the tasks. This document holds the shared vocabulary that all five changes use, so
-that the changes stay consistent with one another.
+The notes connection and write path are implemented in the pinned Notes, Platform and client
+repositories. The site services and clients also have implementations; their combined verification
+is tracked by SITE-025, SITE-026 and SITE-027. The composed scenario in
+`integration/run-site-owner-editing.sh` checks the write path with fake device and Sync peers, and
+checks site owner editing with the real services. Its completed results, not this architecture text,
+are the integration evidence. The host remains frozen; implementation does not mean deployment.
+The OpenSpec changes above hold the remaining tasks and acceptance records.
 
 ## 1. Current state
 
-On 2026-10-13 no repository in the fleet mentions Obsidian, in code, documents or Git history. No
-service writes Markdown notes to a folder or to a Git repository. The nearest feature is the
-`portable-export` operator command of `ratatoskr-chatgpt` and `ratatoskr-claude`. It writes a ZIP
-with one Markdown file per conversation, without frontmatter and without links.
+On 2026-10-16 the Notes service implements connections, indexing, revisions, ordered write
+delivery, acknowledgement and conflicts. Platform accepts writes through Edge and publishes a
+command that carries blob references and hashes. The plugin and export agent implement their
+device channels. A real Obsidian Sync server and production host operation remain separate
+acceptance checks; the workspace scenario uses an explicit fake Sync tree and fake device.
 
 The word "vault" already has a meaning in the fleet: `ratatoskr-vault` is the Git backup service.
 This document therefore calls the new domain **notes**, and calls a connected Obsidian vault a
@@ -84,14 +89,19 @@ Spike results so far (2026-10-13; evidence in `openspec/changes/add-notes-vault-
               cloudflared ── site-a.example ── static bundle + /_r/* → Edge
 ```
 
-| Repository (planned) | Path | Stack | Role |
+| Repository | Path | Stack | Role |
 |---|---|---|---|
 | `ratatoskr-notes` | `repos/notes` | Rust | Vault connections, file index, revisions, write-back, conflicts, Sync supervisor |
 | `ratatoskr-sites` | `repos/sites` | Rust | Site registry, publications, release builder, delivery API, sites gateway |
 | `ratatoskr-obsidian-plugin` | `repos/clients/obsidian-plugin` | TypeScript | Obsidian community plugin: the `plugin` channel |
 | `ratatoskr-site-sdk` | `repos/clients/site-sdk` | TypeScript | `@ratatoskr/site-sdk` and the starter site template |
 
-Existing repositories that change: `ratatoskr-contracts`, `ratatoskr-platform`,
+These components exist in the pinned repositories. SITE-025 implements selection, release
+construction, approval and the delivery API. The composed privacy scenario in
+`integration/sites-privacy/` exercises the real Notes index and anonymous delivery through Edge.
+Local runtime results and the workspace integration job are recorded separately in its changeset.
+
+Other repositories that participate: `ratatoskr-contracts`, `ratatoskr-platform`,
 `ratatoskr-knowledge`, `ratatoskr-export-agent`, `ratatoskr-web` and this workspace.
 
 A site itself is **not** a fleet repository. It is the owner's own repository that depends on
@@ -413,6 +423,10 @@ repository's CI builds and attests it. The owner deploys it with `ratatoskr-site
 verifies it on the controller and uploads it through Edge.
 
 ## 8. Order of the changes
+
+SITE-025 is implemented in the child repositories. Its fleet entries, service enrollment and
+privacy scenario exist in the workspace. This implementation status does not archive the change;
+the integration job and the final verified pins remain separate completion gates.
 
 ```
  OBS-023 add-notes-vault-connections      read path, spike first

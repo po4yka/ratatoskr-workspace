@@ -261,6 +261,19 @@ when a deploy example names a role no checked-in file creates, or a host, port o
 Re-verified at milestone 10: one login role (`postgres`, superuser), and no tenant database other
 than the templates and `template_postgis`. The safety gate that permits sharing still holds.
 
+## Notes and site bus consumers
+
+The source pins define these consumers in Platform's stream table. Edge provisions the durables;
+the owning service consumes them under its deployed NATS identity. The harness tests `bus_acl` and
+`bus_durables` compare the filters, ownership and vendored service fragments. This source evidence
+does not show that a durable exists on the frozen host.
+
+| Durable | Consumer | Filters |
+|---|---|---|
+| `ratatoskr_notes_write_requests` | Notes (`NOTES`) | `cmd.notes.file.write_requested.v1` |
+| `platform_notes_conflict_projection` | Edge (`EDGE`) | `evt.notes.conflict.>` (raised and resolved) |
+| `platform_site_events` | Edge (`EDGE`) | `evt.sites.release.published.v1`, `evt.sites.draft.changed.v1` |
+
 ## Metrics and alerting
 
 The host already runs VictoriaMetrics, vmalert, Grafana, Alertmanager and a node-exporter. Ratatoskr

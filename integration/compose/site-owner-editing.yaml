@@ -1,0 +1,179 @@
+name: ratatoskr-${RATATOSKR_TASK_NAMESPACE:?set a unique task namespace}
+
+x-ratatoskr-inputs:
+  platform_context: ${RATATOSKR_PLATFORM_CONTEXT:?set the Platform checkout}
+  platform_revision: ${RATATOSKR_PLATFORM_REVISION:?set the Platform revision}
+  sites_context: ${RATATOSKR_SITES_CONTEXT:?set the Sites checkout}
+  sites_revision: ${RATATOSKR_SITES_REVISION:?set the Sites revision}
+  notes_context: ${RATATOSKR_NOTES_CONTEXT:?set the Notes checkout}
+  notes_revision: ${RATATOSKR_NOTES_REVISION:?set the Notes revision}
+  knowledge_context: ${RATATOSKR_KNOWLEDGE_CONTEXT:?set the Knowledge checkout}
+  knowledge_revision: ${RATATOSKR_KNOWLEDGE_REVISION:?set the Knowledge revision}
+
+services:
+  # The domain listeners accept loopback peers only. All services share this task's namespace.
+  network:
+    image: nats@sha256:d4ac35882ac65aff236cd65b9d3fa4d24332c681e1a85f94eedccd3cdd65b1da
+    entrypoint: [/bin/sh, -c]
+    command: [sleep infinity]
+    ports:
+      - 127.0.0.1::8080
+      - 127.0.0.1::9464
+
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg17-bookworm@sha256:3e8b3adfd27b5707128f60956f62a793c3c9326ea8cfaf0eab7adccb5d700b21
+    network_mode: service:network
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=und-x-icu --encoding=UTF8
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U postgres -d ratatoskr && psql -h 127.0.0.1 -U postgres -d ratatoskr -Atqc 'select 1' >/dev/null"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ${RATATOSKR_PLATFORM_CONTEXT}/deploy/postgres/01-database-and-roles.sql:/docker-entrypoint-initdb.d/01-platform.sql:ro
+      - ${RATATOSKR_NOTES_CONTEXT}/deploy/postgres/role.sql:/docker-entrypoint-initdb.d/02-notes.sql:ro
+      - ${RATATOSKR_SITES_CONTEXT}/deploy/postgres/role.sql:/docker-entrypoint-initdb.d/03-sites.sql:ro
+      - ${RATATOSKR_KNOWLEDGE_CONTEXT}/deploy/postgres/role.sql:/docker-entrypoint-initdb.d/04-knowledge.sql:ro
+
+  nats:
+    image: nats@sha256:d4ac35882ac65aff236cd65b9d3fa4d24332c681e1a85f94eedccd3cdd65b1da
+    network_mode: service:network
+    command: [-c, /run/site027/nats/ratatoskr.conf]
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O- http://127.0.0.1:8222/healthz | grep -q ok"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+    volumes:
+      - nats-data:/data
+      - ${RATATOSKR_SITE027_RUNTIME_DIR:?set the private runtime directory}:/run/site027:ro
+
+  platform:
+    build:
+      context: ${RATATOSKR_PLATFORM_CONTEXT}
+      dockerfile: ${RATATOSKR_SITE027_PLATFORM_DOCKERFILE:-Dockerfile}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_PLATFORM_REVISION}
+    network_mode: service:network
+    user: "0:0"
+    command: [ratatoskr-edge]
+    environment:
+      RATATOSKR__ADMIN__BIND: 0.0.0.0:9464
+      RATATOSKR__PUBLIC__BIND: 0.0.0.0:8080
+      RATATOSKR__PUBLIC__REQUEST_TIMEOUT_SECONDS: 300
+      RATATOSKR__PUBLIC__MAX_BODY_BYTES: 104857600
+      RATATOSKR__DATABASE__URL: postgres://ratatoskr_edge@127.0.0.1:5432/ratatoskr
+      RATATOSKR__BUS__URL: nats://127.0.0.1:4222
+      RATATOSKR__BUS__NKEY_SEED_PATH: /run/site027/nats/edge.nkey
+      RATATOSKR__GATEWAY__ROUTES__NOTES__PREFIX: /v1/notes
+      RATATOSKR__GATEWAY__ROUTES__NOTES__LISTENER: 127.0.0.1:8099
+      RATATOSKR__GATEWAY__ROUTES__NOTES__CLASS: control
+      RATATOSKR__GATEWAY__ROUTES__SITES__PREFIX: /v1/sites
+      RATATOSKR__GATEWAY__ROUTES__SITES__LISTENER: 127.0.0.1:8100
+      RATATOSKR__GATEWAY__ROUTES__SITES__CLASS: control
+      RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__PREFIX: /v1/k
+      RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__LISTENER: 127.0.0.1:8091
+      RATATOSKR__GATEWAY__ROUTES__KNOWLEDGE__CLASS: stream
+    depends_on:
+      postgres: {condition: service_healthy}
+      nats: {condition: service_healthy}
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - "exec 3<>/dev/tcp/127.0.0.1/9464; printf 'GET /health/ready HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3; read -r status <&3; [[ $$status == *' 200 '* ]]"
+      interval: 1s
+      timeout: 5s
+      retries: 60
+    volumes:
+      - ${RATATOSKR_SITE027_RUNTIME_DIR}:/run/site027:ro
+
+  # Notes ships no Dockerfile. Build only its real service binary, with its committed lockfile.
+  notes:
+    build:
+      context: ${RATATOSKR_NOTES_CONTEXT}
+      dockerfile_inline: |
+        FROM rust:1.97.0-slim-bookworm@sha256:6d220bf85c74e842a79da63997af8d2e74455c0b8847d8bb3a5888572334991d AS builder
+        RUN sed -i s,http://deb.debian.org,https://deb.debian.org,g /etc/apt/sources.list.d/debian.sources && apt-get update && apt-get install -y --no-install-recommends git ca-certificates pkg-config && rm -rf /var/lib/apt/lists/*
+        WORKDIR /build
+        COPY . .
+        RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/usr/local/cargo/git --mount=type=cache,target=/build/target RUSTUP_TOOLCHAIN=1.97.0 cargo build --release --locked -p ratatoskr-notes --bin ratatoskr-notes && cp target/release/ratatoskr-notes /ratatoskr-notes
+        FROM debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+        COPY --from=builder /ratatoskr-notes /usr/local/bin/ratatoskr-notes
+        ENTRYPOINT ["/usr/local/bin/ratatoskr-notes"]
+    network_mode: service:network
+    environment:
+      RATATOSKR__DATABASE__URL: postgres://ratatoskr_notes@127.0.0.1:5432/ratatoskr
+      RATATOSKR__BUS__URL: nats://127.0.0.1:4222
+      RATATOSKR__BUS__NKEY_SEED_PATH: /run/site027/nats/notes.nkey
+      RATATOSKR__BLOBS__ROOT: /data/notes-blobs
+    depends_on:
+      platform: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      nats: {condition: service_healthy}
+    volumes:
+      - ${RATATOSKR_SITE027_RUNTIME_DIR}:/run/site027:ro
+      - notes-blobs:/data/notes-blobs
+      - notes-trees:/mnt/nvme/ratatoskr/notes
+
+  sites:
+    build:
+      context: ${RATATOSKR_SITES_CONTEXT}
+      dockerfile: ${RATATOSKR_SITE027_SITES_DOCKERFILE:-Dockerfile}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_SITES_REVISION}
+    # Disposable volume ownership differs from the host's service users; no host permission proof.
+    user: "0:0"
+    network_mode: service:network
+    environment:
+      RATATOSKR__DATABASE__URL: postgres://ratatoskr_sites@127.0.0.1:5432/ratatoskr
+      RATATOSKR__BUS__URL: nats://127.0.0.1:4222
+      RATATOSKR__BUS__NKEY_SEED_PATH: /run/site027/nats/sites.nkey
+      RATATOSKR__NOTES__BASE_URL: http://127.0.0.1:8099
+      RATATOSKR__BLOBS__ROOT: /data/sites-blobs
+      RATATOSKR__BLOBS__NOTES_ROOT: /data/notes-blobs
+      RATATOSKR__DEPLOYS__ROOT: /data/site-deploys
+    depends_on:
+      platform: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      nats: {condition: service_healthy}
+    volumes:
+      - ${RATATOSKR_SITE027_RUNTIME_DIR}:/run/site027:ro
+      - notes-blobs:/data/notes-blobs:ro
+      - sites-blobs:/data/sites-blobs
+      - site-deploys:/data/site-deploys
+
+  knowledge:
+    build:
+      context: ${RATATOSKR_KNOWLEDGE_CONTEXT}
+      dockerfile: ${RATATOSKR_SITE027_KNOWLEDGE_DOCKERFILE:-Dockerfile}
+      args:
+        RATATOSKR_GIT_SHA: ${RATATOSKR_KNOWLEDGE_REVISION}
+    user: "0:0"
+    network_mode: service:network
+    environment:
+      RATATOSKR__STORAGE__DATABASE_URL: postgres://ratatoskr_knowledge@127.0.0.1:5432/ratatoskr
+      RATATOSKR__STORAGE__BLOB_ROOT: /data/knowledge-blobs
+      RATATOSKR__BLOBS__NOTES_ROOT: /data/notes-blobs
+      RATATOSKR__INGEST__ENABLED: "false"
+      RATATOSKR__CHANNEL_RECAP__ENABLED: "false"
+    depends_on:
+      platform: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+    volumes:
+      - notes-blobs:/data/notes-blobs:ro
+      - knowledge-blobs:/data/knowledge-blobs
+
+volumes:
+  postgres-data:
+  nats-data:
+  notes-blobs:
+  notes-trees:
+  sites-blobs:
+  site-deploys:
+  knowledge-blobs:

@@ -813,3 +813,37 @@ fn wildcard_rule_accepts_only_ack_kv_direct_get_and_kv_subjects() {
         assert!(!is_allowed_wildcard(refused), "{refused} should be refused");
     }
 }
+
+/// The write durable and conflict events that Notes consumes and produces (OBS-024).
+fn notes_write_acl_gaps(stanza: &str) -> Vec<String> {
+    let publish = allow_list(stanza, "publish:");
+    [
+        format!("$JS.API.CONSUMER.INFO.{COMMANDS}.ratatoskr_notes_write_requests"),
+        format!("$JS.API.CONSUMER.MSG.NEXT.{COMMANDS}.ratatoskr_notes_write_requests"),
+        format!("$JS.ACK.{COMMANDS}.ratatoskr_notes_write_requests.>"),
+        "evt.notes.conflict.raised.v1".to_owned(),
+        "evt.notes.conflict.resolved.v1".to_owned(),
+    ]
+    .into_iter()
+    .filter(|subject| !publish.contains(subject))
+    .collect()
+}
+
+#[test]
+fn notes_stanza_allows_its_write_durable_and_conflict_events() {
+    let found = platform_stanzas();
+    let notes = found
+        .iter()
+        .find(|stanza| stanza.name == "NOTES")
+        .expect("Platform names the NOTES identity");
+    assert_eq!(notes_write_acl_gaps(&notes.text), Vec::<String>::new());
+    let dropped = notes.text.replace(
+        "\"evt.notes.conflict.raised.v1\"",
+        "\"evt.notes.conflict.dropped.v1\"",
+    );
+    assert_ne!(dropped, notes.text, "the mutation must change the stanza");
+    assert_eq!(
+        notes_write_acl_gaps(&dropped),
+        vec!["evt.notes.conflict.raised.v1"]
+    );
+}
