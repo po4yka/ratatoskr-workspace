@@ -262,8 +262,16 @@ rolls a site back.
   configuration and can be tuned after the first measurements, without changing the specs.
 - Whether the gateway later serves the web client's bundle. That stays an open decision in
   `DEPLOYMENT_TARGET.md` and does not change this design.
-- No repository binds a deploy bundle to a site (open decision of the owner). The site manifest
+- At the original implementation, no repository bound a deploy bundle to a site. The site manifest
   and its approval hold no repository, so Platform and the sites service cannot check that a bundle
   of a `site_deployer` device comes from the repository of that site; the device is bound to the
   site only. A field for it needs a contract change and a Platform change, and this change adds
   none.
+
+## Owner decision, 2026-10-16
+
+The owner chose server-side verification of signed bundle origin, bound to one approved GitHub
+repository per site. The current raw-tar server path does not enforce that decision. The separate
+change `bind-site-bundles-to-github` (SITE-028) plans the approval contract, server verification,
+SDK request, activation policy and fleet rollout. Runtime dependencies still require the explicit
+owner decision recorded there. This amendment records the decision; it does not claim implementation.

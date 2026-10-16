@@ -1,0 +1,66 @@
+id: SITE-028
+state: planned
+openspec_change: bind-site-bundles-to-github
+goal: The Sites server accepts and activates only bundles whose signed origin matches one owner-approved GitHub repository, digest, commit and trusted workflow.
+non_goals: [private registries, new server GitHub credentials, production host operations, new API majors, database migrations, unrelated contracts repairs]
+owner_decision: Server-side provenance verification approved on 2026-10-16.
+runtime_dependency_decision: Pending explicit approval of pinned gh 2.102.0 and oras 1.3.0 for public GHCR and local-proof verification. Do not install or add these runtime dependencies before approval.
+authorization: Planning and evidence only in the workspace task worktree. The previous owner authorization covers scoped commits and pushes after successful checks. Child implementation starts only after the dependency decision and a new apply request following the presented plan.
+workspace_writer:
+  worktree: .workspaces/site-finish/workspace
+  branch: finish-sites-acceptance
+  base: 059aff900f68aba3f8e1fdb22a7670b72e3528a0
+repositories:
+  - id: ratatoskr-contracts
+    role: first-version manifest approval and deploy contracts
+  - id: ratatoskr-sites
+    role: projection proof verification receipt and activation
+  - id: ratatoskr-platform
+    role: repository approval digest event and deploy proxy
+  - id: ratatoskr-site-sdk
+    role: proof and immutable digest deploy request
+  - id: ratatoskr-web
+    role: repository approval display and consent
+  - id: ratatoskr-extractor
+    role: contracts pin only
+  - id: ratatoskr-knowledge
+    role: contracts pin only
+  - id: ratatoskr-github
+    role: contracts pin only
+  - id: ratatoskr-vault
+    role: contracts pin only
+  - id: ratatoskr-x
+    role: contracts pin only
+  - id: ratatoskr-instagram
+    role: contracts pin only
+  - id: ratatoskr-threads
+    role: contracts pin only
+  - id: ratatoskr-chatgpt
+    role: contracts pin only
+  - id: ratatoskr-claude
+    role: contracts pin only
+  - id: ratatoskr-telegram
+    role: contracts pin only
+  - id: ratatoskr-channel-digests
+    role: contracts pin only
+  - id: ratatoskr-notes
+    role: contracts pin only
+  - id: ratatoskr-workspace
+    role: disposable provisioning integration and final pins
+child_worktrees: Not created; apply must record one writer, base and purpose branch for each repository before writes.
+dependency_order: contracts -> all expanded consumers at one revision -> approval producer -> SDK and Web -> integration and disposable provisioning -> verified workspace pins
+compatibility: Keep the first API version; consumers decode the optional expanded binding before producers emit it. Deploy refuses absent binding and raw tar. Old clients fail clearly without a provenance bypass.
+schema: Edit the current schema definitions in place and create fresh isolated test databases. Add no migrations or migration tooling.
+rollout: No production operation in this change. The frozen host is excluded. Merge expanded contracts and consumers first, then producers and clients; publish only tested combined pins.
+rollback: Stop deploy writes and preserve the last verified served bundle. Restoring an endpoint that bypasses provenance requires explicit owner approval. No implementation from this plan has shipped.
+required_checks:
+  - Real public OCI manifest and signed proof verification with no token or inherited tool config, plus changed-byte refusal.
+  - Every named RED before its implementation; every child DEVELOPMENT gate and green CI.
+  - Signature identity digest commit workflow runner and repository-name-reuse refusals.
+  - Approval withdrawal and rebinding races, idempotency and verified offline rollback.
+  - Bounded time memory output archive concurrency cancellation and process cleanup.
+  - ARM64 ABI and license checks for pinned runtime tools, full disposable Molecule and zero-change replay.
+  - All contracts consumers at one revision, generated types current, doctor deterministic lock and full integration.
+commits: []
+pull_requests: []
+final_snapshot: Not created; this is a plan.

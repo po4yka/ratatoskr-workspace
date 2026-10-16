@@ -1,5 +1,10 @@
 id: SITE-026
 state: implementing
+provenance_follow_up:
+  changeset: SITE-028
+  change: bind-site-bundles-to-github
+  owner_policy: Server-side signed origin verification, with one approved GitHub repository per site.
+  implementation: Planned only; the current raw-tar server path does not verify provenance.
 goal: Serve each approved site's static bundle by hostname from the single host behind cloudflared, forward the site's own API calls to Edge on the same origin, and deploy and roll back bundles that CI built and attested and that the controller and the host both verified.
 openspec_change: add-site-gateway-hosting
 depends_on:
@@ -171,8 +176,8 @@ evidence:
       resolution: The persisted disposable host was resumed; the final published child snapshot passed the full sequence below.
       scope: disposable ratatoskr-host only; no operation on the production host
     process_deviations:
-      - OBS-024 14.1 and 14.2 historical RED against pre-write-consumer pins was not observed; those tasks remain open. The new ACL characterization has a mutation proof.
-      - SITE-026 10.8 failed on the unprovisioned host after its implementation commit; the required historical test-first order was missed and the task remains open.
+      - At the first resume, OBS-024 14.1 and 14.2 historical RED was not observed and the tasks remained open. The accepted exception of 2026-10-16 below supersedes that open status. The new ACL characterization has a mutation proof.
+      - SITE-026 10.8 failed after its implementation commit; the required test-first order was missed. The accepted exception of 2026-10-16 below closes the task without changing that record.
       - Existing SITE-027 Platform 5.3 history keeps its RED amendment in the GREEN commit, as recorded in the repository history.
     excluded_acceptance:
       - No operation on the frozen production host; no DNS or Cloudflare setting changed.
@@ -208,3 +213,10 @@ evidence:
       workflow: .github/workflows/ci.yml
       policy: Check GitHub results for each published workspace commit. Local results and confirmed child CI do not assert the result of a future workspace run.
     completion: Local verification is complete at the recorded snapshot. The OpenSpec records retain the historical RED conditions and stated owner decisions; workspace CI is an external gate per published commit.
+
+accepted_test_order_exceptions_20261016:
+  owner_decision: Accept the explicit exception and preserve the record of the violation.
+  tasks: [OBS-024/14.1, OBS-024/14.2, SITE-026/10.8]
+  boundary: Retrospective RED and mutation results do not prove the original test-before-implementation order. No history was rewritten.
+  evidence: docs/ACCEPTANCE_2026-10-16.md
+  local_only: The owner requested only available local Obsidian checks. Real Sync, iOS and written support answers remain unverified.

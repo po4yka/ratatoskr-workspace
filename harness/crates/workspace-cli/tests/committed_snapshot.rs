@@ -39,7 +39,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "export-agent",
         "repos/clients/export-agent",
-        "573fedbcd67b5595026b83ca8f0e23c06290204a",
+        "e4be3b4fd54d17f85e9952097f1ded38f031d801",
     ),
     (
         "extractor",

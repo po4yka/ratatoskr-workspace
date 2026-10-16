@@ -16,9 +16,9 @@ modifies the text those two leave.
 - [ ] 1.2 `ratatoskr-notes`: the write consumer, pending writes, conflicts, write mode, `sync` delivery, the device queue, echo suppression, link rewrite and the durable check (groups 4–9). Direct to `main` after review; pinned at `e16068a` (groups 4 to 7.33 at `f394346`; 7.34, 7.35 and groups 8 and 9 to `496e9c1`, with the notes half of SITE-025 group 4 between them; the commits after `496e9c1` are SITE-027 group 4), CI green (5 of 5 check runs; 6 of 6 at `496e9c1`), locking the contracts at `2c72602` like the rest of the fleet. The two fixed sync units of 7.33 replace the unit that read its mode from a file that the notes service writes, which `release_artifact_callers.rs::every_template_unit_starts_only_an_allowed_program` refused. Output of 9.1, at `04a862c`: every command of the `DEVELOPMENT.md` list and `cargo deny` passed on macOS, and on Linux (`rust:1.97`) 175 tests passed, 0 failed and 0 were ignored. For the pinned commits, the evidence is the notes CI: the check run `gate` is green at `496e9c1` and at `e16068a`. Open: 6.7 (spike 3.3).
 - [x] 1.3 `ratatoskr-platform`: the Edge routes, the operation kinds and their authority rows, the two durables and the NATS ACL lines (group 10). Direct to `main` after review; pinned at `943bc91` (the OBS-024 work ends at `f76005e`; the later commits are SITE-025 and SITE-026), CI green (7 of 7 check runs), locking the contracts at `2c72602`. Group 10 is complete.
 - [x] 1.4 `ratatoskr-obsidian-plugin`: pull, apply and report for the `plugin` channel (group 11). Direct to `main` after review; pinned at `36bdb20` (11.1 to 11.17 at `5ed98a9`), CI green (4 of 4 check runs). Group 11 is complete.
-- [x] 1.5 `ratatoskr-export-agent`: apply and report for the `cli` channel (group 12). Direct to `main` after review; pinned at `573fedb` (12.1 to 12.14 at `0ddda71`), CI green (4 of 4 check runs). Group 12 is complete.
+- [x] 1.5 `ratatoskr-export-agent`: apply and report for the `cli` channel (group 12). Direct to `main` after review; pinned at `e4be3b4` (12.1 to 12.14 at `0ddda71`; real-CLI missing-folder follow-up after `573fedb`), CI green (4 of 4 check runs, run 38928393687). Group 12 is complete.
 - [x] 1.6 `ratatoskr-web`: the editor, the write-mode switch and the conflict view (group 13). Direct to `main` after review; pinned at `f3c7320` for 13.1 to 13.6, at `4972d43` with 13.7 and 13.8, and at `0f5f8c8` with the follow-ups 13.9 to 13.14 (the sentence of `notes.write.partially_applied`, the list of `stale_paths`, and the reason of a conflict after its operation answers), CI green (4 of 4 check runs). Group 13 is complete.
-- [ ] 1.7 `ratatoskr-workspace`, last, on `main`: the harness checks, the pins, the integration profile and the documentation (group 14). PR or pushed head: _link_
+- [x] 1.7 `ratatoskr-workspace`, last, on `main`: group 14 passed in published snapshot `059aff9`, with all eight workspace checks green (run 38919743597). On 2026-10-16 the owner accepted the explicit test-order exceptions for 14.1 and 14.2 after the retrospective checks below. No PR: direct publication under the recorded authorization. This closes group 14 only; Sync task 6.7 and the deferred contracts tasks remain open.
 
 ## 2. Planning records
 
@@ -244,8 +244,8 @@ modifies the text those two leave.
 
 ## 14. Integration (ratatoskr-workspace)
 
-- [ ] 14.1 RED: add `harness/crates/workspace-core/tests/bus_acl.rs::notes_stanza_allows_its_write_durable_and_conflict_events`. In `harness/crates/workspace-core/tests/bus_durables.rs`, grow `DOMAIN` from 25 to 26 entries with `ratatoskr_notes_write_requests` (filter `cmd.notes.file.write_requested.v1`, owner `notes`) and `PLATFORM_ONLY` from 3 to 4 entries with `platform_notes_conflict_projection`. Run `bus_acl.rs` and `bus_durables.rs` against the current pins and confirm that `notes_stanza_allows_its_write_durable_and_conflict_events`, `the_service_table_length_equals_the_durables_the_harness_lists` (Platform declares 25 rows, the harness lists 26), `platform_names_every_durable_with_its_contract_filter` and `every_owner_hard_codes_its_durable_name_and_filter` fail, because the pinned Platform and notes hold neither the stanza lines nor the durables.
-- [ ] 14.2 RED: add the integration profile scenario `notes-write-back`: write through a fake `sync` channel and a fake device; assert one revision and one `file.changed` per acknowledged write, none for a refused one, one conflict for a stale base, and a rewritten link after a rename. Run it against the current pins and confirm that it fails because the pinned notes has no write consumer.
+- [x] 14.1 RED: add `harness/crates/workspace-core/tests/bus_acl.rs::notes_stanza_allows_its_write_durable_and_conflict_events`. In `harness/crates/workspace-core/tests/bus_durables.rs`, grow `DOMAIN` from 25 to 26 entries with `ratatoskr_notes_write_requests` (filter `cmd.notes.file.write_requested.v1`, owner `notes`) and `PLATFORM_ONLY` from 3 to 4 entries with `platform_notes_conflict_projection`. Run `bus_acl.rs` and `bus_durables.rs` against the current pins and confirm that `notes_stanza_allows_its_write_durable_and_conflict_events`, `the_service_table_length_equals_the_durables_the_harness_lists` (Platform declares 25 rows, the harness lists 26), `platform_names_every_durable_with_its_contract_filter` and `every_owner_hard_codes_its_durable_name_and_filter` fail, because the pinned Platform and notes hold neither the stanza lines nor the durables.
+- [x] 14.2 RED: add the integration profile scenario `notes-write-back`: write through a fake `sync` channel and a fake device; assert one revision and one `file.changed` per acknowledged write, none for a refused one, one conflict for a stale base, and a rewritten link after a rename. Run it against the current pins and confirm that it fails because the pinned notes has no write consumer.
 - [x] 14.3 Advance the pins to the merges of 1.1–1.6 with `./ws lock generate`. No failing test first: generated files. Verify with `./ws doctor`. The pins are notes `f394346`, Platform `943bc91`, the plugin `5ed98a9`, the export agent `0ddda71` and web `4972d43`, with the rest of the fleet at contracts `2c72602` (changeset XR-021).
 - [x] 14.4 GREEN: run 14.1 and 14.2 against the advanced pins and verify that they pass, and that `cargo test -p workspace-core --test bus_durables --test bus_acl` is green.
 - [x] 14.5 Update `docs/NOTES_AND_SITES.md` from Proposed to Implemented for the write path, and add the two durables to `docs/DEPLOYMENT_TARGET.md` where it lists the bus. No test: documentation.
@@ -265,13 +265,13 @@ modifies the text those two leave.
 
 - The named NOTES write-durable/conflict ACL test passes with the proposed snapshot. Removing a
   conflict event permission makes its assertion fail. The original 14.1 failure against a snapshot
-  without the Notes write consumer was not observed in this resume, so 14.1 stays unticked.
+  without the Notes write consumer was not observed in the first resume; 14.1 was left open then.
 - The real composed profile `integration/run-site-owner-editing.sh` includes the notes-write-back
   scenario. It uses real Edge, Notes, NATS and PostgreSQL with a fake Sync tree and a fake device.
   The Sync rename and grouped link rewrite, Sync property write, refused device write and partially
   applied device rename all passed. The stale-base assertion is recorded with site owner editing below.
-- The original 14.2 RED against Notes without its write consumer was not observed. 14.2 stays
-  unticked; the final current scenario and the bus tests pass as recorded below.
+- The original 14.2 RED before implementation was not observed. At the first resume, 14.2 stayed
+  open; the final current scenario and the bus tests passed as recorded below.
   This records the missed historical ordering without claiming a new fixture failure as that RED.
 
 - 14.4 GREEN: the real composed scenario exited 0 with Platform `becf91e`, Sites `3860ddc`,
@@ -285,3 +285,24 @@ modifies the text those two leave.
   `./ws lock generate --output workspace.lock` and checked with `./ws lock check`, `./ws doctor`
   and the committed-snapshot test. The full final Molecule sequence also passed. Workspace CI
   results are checked per published commit; this record states the observed local and child gates.
+
+## Accepted test-order exceptions and local acceptance (2026-10-16)
+
+- The owner explicitly accepted an exception for 14.1 and 14.2, with a permanent record that the
+  original test-before-implementation requirement was missed. The checked boxes record this
+  acceptance; they do not assert that the original order was followed. No history was rewritten.
+- For 14.1, the missing assertions were reconstructed in a detached workspace at `57547dc`,
+  reading Platform `6df9717` and Notes `810edd8`. Four named tests failed for the intended ACL,
+  table-length and durable/filter assertions. The same tests passed with Platform `f76005e` and
+  Notes `496e9c1`. This is retrospective discrimination, not original test-first evidence.
+- For 14.2, a ready Notes `810edd8`, built from its exact source, served read/blob requests while
+  Edge accepted the write. NATS retained one pending command, delivered zero, and no revision or
+  file event was added. With current Notes `e16068a`, the same first-write probe delivered the
+  device operation; its ACK added exactly one revision and one file event. The full 11-scenario
+  current profile remains the separate GREEN proof recorded above and in workspace CI.
+- Real isolated Obsidian 1.14.4 reproduced all 14 link-rewrite recordings byte for byte. It also
+  exposed a CLI move into a missing folder. Export-agent `e4be3b4` fixes this after a new, observed
+  RED, and passes both the unit regression and a production-adapter run against the real CLI.
+- See [the acceptance record](../../../docs/ACCEPTANCE_2026-10-16.md) for commands, evidence and
+  boundaries. The owner requested local checks only. Real Sync, iOS and the support answers remain
+  unverified; this acceptance does not close them.

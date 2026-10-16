@@ -17,7 +17,7 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 - [x] 1.2 `ratatoskr-sites`: deploy receipt/store/activation, projection rewrite and gateway binary/unit (groups 4–7) are published on `main` at `3860ddc`, all seven CI checks green (run 38903420745), 188 local tests and release build passed. Pinned in workspace `927ddd2`. No PR: direct publication under the recorded owner authorization; the historical RED task records remain separate.
 - [x] 1.3 `ratatoskr-platform`: `site_deployer` pairing, deploy route class and client-IP trust (group 8), including review fixes 8.9/8.10, are published at `becf91e`, all seven CI checks green (run 38910313608). Pinned with Sites `3860ddc` in workspace `927ddd2`; the SITES fragments match. No PR: direct publication under the recorded owner authorization.
 - [x] 1.4 `ratatoskr-site-sdk`: `reusable-site-bundle.yml`, `ratatoskr-site login` and `ratatoskr-site deploy` (group 9). Direct to `main` after review; pinned at `f29520d`, CI green (4 of 4 check runs). Before 9.1, `3b10833` vendors the bundle manifest and the deploy answers of `ratatoskr-contracts` at `2c72602`, with no test: vendored files. Group 9 is complete, with the review fixes 9.6 to 9.11. Open low items of the review: the build job of `reusable-site-bundle.yml` holds `id-token: write` and `packages: write`, and `ratatoskr-site deploy` has no `--source-ref`.
-- [ ] 1.5 `ratatoskr-workspace`: functional provisioning, ingress, checks and runbook are verified in snapshot `927ddd2`; final Molecule converge, zero-change idempotence and full verify pass. The historical test-before-implementation condition of 10.8 was missed and remains open. No PR: publication follows the owner authorization; workspace CI is checked per published commit.
+- [x] 1.5 `ratatoskr-workspace`: functional provisioning, ingress, checks and runbook passed locally at `927ddd2` and in published snapshot `059aff9` (all eight workspace checks green, run 38919743597). Molecule converge, zero-change idempotence and full verify passed. On 2026-10-16 the owner accepted the explicit test-order exception for 10.8; the violation remains recorded below. No PR: direct publication under the recorded authorization.
 
 ## 2. Planning records
 
@@ -109,7 +109,7 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 - [x] 10.5 GREEN: enrol the gateway in `deploy/ansible/group_vars/all/services.json` and add the `ratatoskr-sites-bundles` group and the `/mnt/nvme/ratatoskr/sites` tree to the `host` role. Verify 10.4.
 - [x] 10.6 RED: add `harness/crates/workspace-core/tests/sites_ingress.rs` with `every_listed_hostname_has_one_rule_inside_the_block` (asserts one rule to `http://127.0.0.1:8183` per hostname of `group_vars/all/sites.json`) and `no_rule_outside_the_block_points_to_the_gateway` (asserts that no rule outside the markers names port 8183), each with a mutation case. Confirm that they fail because the template does not exist.
 - [x] 10.7 GREEN: add `group_vars/all/sites.json` (empty list) and the ingress task with the marked block and a reload handler. Verify 10.6.
-- [ ] 10.8 RED: add the Molecule verify case `sites_tree_and_ingress`: after converge with one test hostname, it asserts the owner, group and mode `2750` of the tree, the rendered block, and that a request with that `Host` to `127.0.0.1:8183` returns `sites.gateway.unknown_host`, because no approval exists. Confirm that it fails before 10.5 and 10.7 are on the branch, because the tree does not exist.
+- [x] 10.8 RED: add the Molecule verify case `sites_tree_and_ingress`: after converge with one test hostname, it asserts the owner, group and mode `2750` of the tree, the rendered block, and that a request with that `Host` to `127.0.0.1:8183` returns `sites.gateway.unknown_host`, because no approval exists. Confirm that it fails before 10.5 and 10.7 are on the branch, because the tree does not exist.
 - [x] 10.9 GREEN: converge Molecule with 10.5 and 10.7, and verify 10.8 and the idempotence phase with zero changes. Verify also that the existing `freeze_guard` case still stops the production inventory.
 
 ## 11. Documentation (ratatoskr-workspace; waits for DPL-022)
@@ -147,7 +147,7 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
 - Process deviation for 10.8: the new tagged verify case failed on the unprovisioned host after
   the provisioning implementation was committed. It proves the absent-tree failure, but it does
   not prove the required test-before-implementation order. That historical condition was missed;
-  the task remains unticked. The final functional checks required by 10.9 passed below.
+  the task was left open at the first resume. The final functional checks required by 10.9 passed below.
 
 - The exact pgvector image was transferred to the disposable host after the registry timeout.
   Artifacts were downloaded and attested. Converge installed the Sites and gateway binaries and
@@ -167,3 +167,15 @@ Molecule scenario with its `freeze_guard` case, and the harness test `deploy_inv
   The one ignored task is the deliberate role-file SQL failure, followed by its exact assertion.
   `sites_tree_and_ingress`, no-restart replay, freeze guard, pin mismatch, corrected artifact
   tamper, verbose secret scan and stop-as-one passed. No production host operation was run.
+
+## Accepted exception and provenance follow-up (2026-10-16)
+
+- The owner explicitly accepted the test-order exception for 10.8, while retaining the record
+  above. Its checked box records that acceptance. The original RED was after implementation;
+  the hostname and port mutation refusals and full Molecule GREEN do not change that fact.
+- The owner chose server-side verification of GitHub provenance, bound to one owner-approved
+  repository per site. The current server does not enforce that policy: SDK verification precedes
+  an upload of a raw tar archive. This remains an implementation gap, not a closed security gate.
+  The follow-up plan must bind the approved repository, immutable artifact digest, source commit
+  and trusted workflow, and reject unverified or foreign bundles at the server.
+- See [the acceptance record](../../../docs/ACCEPTANCE_2026-10-16.md).

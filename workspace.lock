@@ -62,7 +62,7 @@ id = "export-agent"
 path = "repos/clients/export-agent"
 remote = "https://github.com/po4yka/ratatoskr-export-agent.git"
 default_branch = "main"
-commit = "573fedbcd67b5595026b83ca8f0e23c06290204a"
+commit = "e4be3b4fd54d17f85e9952097f1ded38f031d801"
 digests = [
   { path = "Package.swift", kind = "file", sha256 = "2a8a15eb9fc615a94b848417c11ab1ba32898af7b50b06668d6ea52b590b26d1" },
   { path = "openspec/config.yaml", kind = "file", sha256 = "7e49ade6ca44cfcba854132d3083ec0c993ba78989b9c81af767f8b0fbfbd253" },
