@@ -1,0 +1,88 @@
+id: SEC-030
+state: local snapshot acceptance passed; workspace publication and CI pending
+openspec_change: upgrade-archive-zip-security
+parent: OBS-029 snapshot prerequisite
+goal: Remove the advisory-blocked ZIP dependency from the four archive readers while keeping their extraction safety.
+repositories:
+- chatgpt
+- claude
+- instagram
+- threads
+- workspace
+writer: root; one writer per repository
+worktrees: Reuse the four assigned OBS-029 child worktrees and its workspace coordinator; preserve the uncommitted contracts
+  pin changes.
+baseline_dependency: zip 8.6.0
+candidate_dependency: zip 9.0.0; MIT; Rust minimum 1.88; deflate only, defaults off
+advisories:
+- RUSTSEC-2026-0367
+- RUSTSEC-2026-0368
+- RUSTSEC-2026-0369
+verification:
+  identity: Registry name, owners, repository, checksum, license and Rust minimum checked.
+  source: 'Published source triage passed: registry checksum and MIT license verified, no build script or proc macro, no unexplained
+    network/process/environment access; include_bytes references are test fixtures. Filename accessor now returns Result<Cow<str>>
+    and needs explicit refusal mapping.'
+  approval: Explicit owner approval for zip 9.0.0 received 2026-10-17
+  local_gates: All four archive repositories passed their full local gates and independent source reviews. ChatGPT 280, Claude
+    271, Instagram 286 and Threads 211 tests; zero failed or ignored.
+  ci: All four exact selected commits passed every expected and observed CI check. See published_children.
+  candidate_graphs: The initial four ZIP 9 updates changed only ZIP version/checksum. Approved D6 then adds exactly four reviewed
+    packages in ChatGPT and Threads, with no unrelated version or edge changes.
+  policy_red: ChatGPT full gate and explicit advisory checks in Claude, Instagram and Threads each refused 8.6.0 with all
+    three IDs before production dependency edits.
+  fuzz_policy: Instagram root and fuzz full cargo-deny 0.20.2 passed without global policy relaxation; implementation and
+    acceptance-document commits passed CI.
+  workspace_local: OBS-029 full workspace gates, deterministic lock, 14 integration scenarios and original default Molecule
+    acceptance passed; owned fixture and volumes removed.
+rollout: Vet, obtain approval, update the four targeted graphs, pass full gates and review, publish, wait for CI, then join
+  OBS-029 verified pins.
+rollback: Stop pin promotion if the fixed dependency cannot pass. Do not publish a normal rollback to the vulnerable ZIP version.
+non_goals:
+- advisory suppression
+- new extraction helper
+- production deployment
+- credentials
+- product API major
+- database changes
+- unrelated registry dependency updates
+fuzz_scope_approval: 'Owner approved SEC-030 D5 on 2026-10-17: align fuzz Rustls with production 0.23.46, declare the existing
+  BSD-3-Clause, permit NCSA only for libfuzzer-sys exactly 0.4.13, and enforce full locked fuzz policy in CI.'
+legacy_name_compatibility:
+  state: implemented, reviewed and CI passed; workspace pins pending
+  scope: ChatGPT and Threads unflagged CP437 names; retain D3 semantics
+  red: "Both public inspector tests fail with actual \xE9.json versus expected \u251C\u2310.json before a decoder fix."
+  candidate: 'Reviewed before production edits: oem_cp 2.1.2 default features off, phf 0.11.3, phf_shared 0.11.3 and siphasher
+    1.0.4. Actual locked graphs preserve every old package and edge and pass full cargo-deny 0.20.2.'
+  approval: Owner approved oem_cp 2.1.2 with default features disabled on 2026-10-17.
+  native_focused: Both CP437 regressions, Unicode Path / invalid CRC and malformed UTF-8 checks passed on Rust 1.97 native
+    ARM64; both final complete gates and exact-commit CI passed.
+published_children:
+- repository: chatgpt
+  commit: 63a4506b39315749aab71d3fe3e9193fe23aa0e2
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-chatgpt/commit/63a4506b39315749aab71d3fe3e9193fe23aa0e2/checks
+- repository: claude
+  commit: fc759137a7b6fc790d9e6266a94b82d444c91bba
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-claude/commit/fc759137a7b6fc790d9e6266a94b82d444c91bba/checks
+- repository: instagram
+  commit: bd2e1096fc94af4e0c9bcf7abb5e336ec9c431e5
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-instagram/commit/bd2e1096fc94af4e0c9bcf7abb5e336ec9c431e5/checks
+- repository: threads
+  commit: 3b11fd1464b9afe721d350868a3f6fa2639aaec8
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-threads/commit/3b11fd1464b9afe721d350868a3f6fa2639aaec8/checks

@@ -430,3 +430,9 @@ accepted_test_order_exceptions_20261016:
   boundary: Retrospective RED and mutation results do not prove the original test-before-implementation order. No history was rewritten.
   evidence: docs/ACCEPTANCE_2026-10-16.md
   local_only: The owner requested only available local Obsidian checks. Real Sync, iOS and written support answers remain unverified.
+
+contracts_follow_up:
+  changeset: OBS-029
+  openspec_change: complete-notes-write-contracts
+  scope: Retained tasks 3.13-3.16, portable write paths and optional group stale_paths.
+  state: implementing; original tasks remain open until observed checks and verified snapshot publication.

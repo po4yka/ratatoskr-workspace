@@ -1,0 +1,424 @@
+id: OBS-029
+state: implementing
+openspec_change: complete-notes-write-contracts
+parent: OBS-024 tasks 3.13-3.16
+goal: Align portable write paths and optional stale group paths across contracts and their consumers.
+authorization: The owner explicitly requests OpenSpec, TDD, consumer checks, CI, verified pins, scoped commits and pushes.
+  Existing direct-to-main publication after independent review remains authorized. No production operation is included.
+workspace_writer:
+  worktree: .workspaces/obs029/workspace
+  branch: notes-write-contracts-wave
+  base: a92d758584362b95ead0350ce3edc4653a1c1b8f
+  writer: root
+child_worktree_root: .workspaces/obs029/repos
+writer: root, one writer per repository
+repositories:
+- contracts
+- platform
+- channel-digests
+- chatgpt
+- claude
+- extractor
+- github
+- instagram
+- knowledge
+- sites
+- telegram
+- threads
+- vault
+- x
+- notes
+- site-sdk
+- web
+- workspace
+allowed_paths: Notes wire contracts, their tests and fixtures, generated artifacts and API baseline; consumer contract pins
+  and locks; Platform consumer and path acceptance tests; Notes group conflict producer and tests; owning documentation; workspace
+  integration, changesets, pins and generated lock.
+dependency_order: Contracts with green CI, then the expanded strict Platform conflict consumer with green CI, then Notes event
+  emission. Pin-only consumers and generated clients can run alongside this chain. Every selected child must pass before combined
+  snapshot promotion.
+compatibility: First major only. Stricter write validation is the requested development correction. stale_paths is optional
+  and omitted when absent; old strict consumers must be updated before new events are produced.
+database: No schema change and no migration.
+privacy: stale_paths contains owner-scoped private vault path metadata; no content, credentials or broader audience is added.
+rollout: Publish reviewed children directly to main, verify exact commit CI, test their combined snapshot, then publish workspace
+  pins and verify root CI.
+rollback: Stop promotion if a gate fails. After publication, prepare a verified corrective snapshot that retains the SEC-030
+  ZIP fixes. Stop new field emission in Notes first. Keep the expanded Platform reader while the stream can replay stale_paths
+  events. Do not publish the old ZIP 8.6.0 graph as a normal rollback release.
+non_goals:
+- production deployment
+- Sync account or MFA tests
+- database changes
+- new API major
+- new dependencies
+- unrelated upgrades
+- original OBS-024 archive
+verification:
+  contracts_local:
+    state: passed
+    tests: 435
+    failed: 0
+    ignored: 0
+    checks:
+    - fetch locked
+    - fmt
+    - clippy all targets locked
+    - source size
+    - contracts check
+    - workspace tests locked
+    - deny
+    - TypeScript strict compilation
+    - pinned public API check
+    - generation determinism over 1178 files
+  schema_compatibility:
+    write_paths: Expected breaking pattern restriction, requested by the owner in OBS-024 3.13-3.16; first major under development
+      status.
+    conflict: Three compatible optional-field additions; old strict readers still require consumer-first rollout.
+  review: All 17 child source bundles have no accepted/actionable P0 finding.
+  child_ci: All 17 exact child commits passed all observed and expected checks; see published_children.
+  integration:
+    state: passed
+    profile: site-owner-editing
+    scenarios: 14
+    privacy:
+      pages: 13
+      assets: 1
+      negative_searches: 24
+    revisions:
+      PLATFORM: 83dcba6498ebaf2a3b7a97739d64b47ca47c25a8
+      SITES: 3cb379225cfa2bb5da9d0e83d94e877b835b1921
+      NOTES: ac9866961533dad955450a2eb356d834bda19501
+      KNOWLEDGE: fff1bacc63636cf27868c1ff1bcc509d4dfc9d4c
+    teardown: passed; result.json is created only after successful removal
+    evidence: evidence/obs029-contracts-final
+    deviation: Existing supported HTTPS Debian mirror override; runtime CA bundle copied from the verified builder; default
+      production profiles retained.
+    boundary:
+    - seeded primary/device sessions
+    - fake device acknowledgements
+    - fake Sync working tree
+    - seeded Knowledge search projection
+    not_exercised:
+    - Obsidian Sync network
+    - browser rendering
+    - gateway TLS
+    - production host permissions
+  final_pins: pending
+  consumer_local_environment:
+    debug_information: disabled only in local remaining consumer profiles to fit disk
+    debug_assertions: committed profile defaults; unchanged
+    ci_and_artifact_profiles: committed defaults; unchanged
+    resource_guard: stop before a check when less than 3 GiB is free
+    cleanup: only managed workspace package outputs, serialized by build-gate
+  snapshot_preparation:
+    state: passed
+    staged_child_commits: 17
+    deterministic_lock_sha256: b387699a8093cbea0cc2f8d91efede49d97716c796ebb41c8bc8bc0b607f8f87
+    lock_check: passed
+    doctor: healthy
+    scope: Only selected commit/digest fields changed; all topology and other four repository records unchanged.
+  workspace_local:
+    state: passed
+    harness_tests: 131
+    failed: 0
+    ignored: 0
+    filtered: 0
+    checks:
+    - fmt
+    - clippy workspace all targets all features locked, deny warnings
+    - full workspace all-features locked tests
+    - full dependency policy
+    - strict current OpenSpec
+    - archived OpenSpec
+    - 'site owner editing profile contract: 7 tests'
+    - 'broker authentication contract: 5 profiles'
+    - manifest check
+    - status
+    - deterministic lock, lock check and healthy doctor
+    source_size: Changed Rust snapshot test is below 850 lines; three unchanged baseline files exceed that diagnostic threshold.
+      No blanket harness file-size compliance is claimed.
+  provisioning_attempt:
+    state: Historical ENOSPC attempt; superseded by the successful full retry
+    converge: passed; 263 OK, 144 changed, zero failed or unreachable
+    idempotence: failed transferring module data; 230 OK, zero changed before ENOSPC
+    verify: not run
+    teardown: passed; owned container and two anonymous volumes removed
+    next_action: Resolved by owner-approved cache cleanup and the full successful provisioning retry recorded below
+  provisioning_resource_approval:
+    owner_decision: Remove the exact proposed old artifact cache
+    directories_removed: 27
+    logical_gib: 7.21
+    free_after_bytes: 10992623616
+    current_private_cache: preserved
+    source_and_evidence: preserved
+    processes_interrupted: none
+  provisioning:
+    state: passed
+    scenario: default; original prepare, converge, idempotence, verify and destroy
+    platform: Debian 12 ARM64 with systemd and nested Docker; local Docker Desktop only
+    workspace_lock_sha256: b387699a8093cbea0cc2f8d91efede49d97716c796ebb41c8bc8bc0b607f8f87
+    molecule_config_sha256: a4c671674d4595dd8475b89fe764d20c4dd5ed2f685ca93f9a5e8fb0346613d5
+    controller_transport: HTTP/1.1 after an observed HTTP/2 download failure; TLS, attestations, source commit, workflow and
+      checksums unchanged
+    bootstrap: Verified cached runtime image transfer and checksum-verified original cloudflared binary; original prepare
+      passed
+    recaps:
+      converge:
+      - 'ratatoskr-host             : ok=263  changed=144  unreachable=0    failed=0    skipped=22   rescued=0    ignored=0'
+      idempotence:
+      - 'ratatoskr-host             : ok=232  changed=0    unreachable=0    failed=0    skipped=52   rescued=0    ignored=0'
+      verify:
+      - 'ratatoskr-host             : ok=121  changed=15   unreachable=0    failed=0    skipped=0    rescued=0    ignored=1'
+      destroy: []
+    expected_negative: One deliberately ignored SQL no_such_function task is followed by its expected-error and absent-success-marker
+      assertions; no verify case was skipped.
+    teardown:
+      container_id: 3b0ff1632a8c9e30648f5ab93a8269c22ff44c090a7797000910bf8be3ae09ed
+      destroy: passed
+      anonymous_owned_volumes_removed:
+      - cee69f08c70340c5db367ea6919c9632e2721d7750ecf1654a3ce8d30980edfb
+      - 28a629df7e07e532465983607ac6abcc4ce1cc88389a781e4cca475589ce5a29
+    boundary: Disposable local host only. Standard fake Bot API and tunnel stand-ins remain; no real Sync, MFA, Cloudflare
+      account, DNS, production TLS or production host acceptance.
+child_worktrees:
+- repository: channel-digests
+  worktree: .workspaces/obs029/repos/channel-digests
+  branch: notes-write-contracts-channel-digests
+  base: ab638527da008b55b4787ad37a51dc46237bd00c
+  writer: root
+  role: contracts pin only
+- repository: chatgpt
+  worktree: .workspaces/obs029/repos/chatgpt
+  branch: notes-write-contracts-chatgpt
+  base: 7dc1ef8fe208778967a4259ee8996d13469115b6
+  writer: root
+  role: contracts pin and separately approved SEC-030 archive security correction
+- repository: claude
+  worktree: .workspaces/obs029/repos/claude
+  branch: notes-write-contracts-claude
+  base: bc07c0235cc909e48d220640014b15bb807da6db
+  writer: root
+  role: contracts pin and separately approved SEC-030 archive security correction
+- repository: contracts
+  worktree: .workspaces/obs029/repos/contracts
+  branch: notes-write-contracts-contracts
+  base: 7424416e97af4f18d9b8d04fbee94d576d541ef2
+  writer: root
+  role: canonical wire contracts
+- repository: extractor
+  worktree: .workspaces/obs029/repos/extractor
+  branch: notes-write-contracts-extractor
+  base: 9bbb68cad6670c72a0869c236bc26d5b91b832bc
+  writer: root
+  role: contracts pin only
+- repository: github
+  worktree: .workspaces/obs029/repos/github
+  branch: notes-write-contracts-github
+  base: a66c503f4f6a6022a023eb3a2b6307e0a985716a
+  writer: root
+  role: contracts pin only
+- repository: instagram
+  worktree: .workspaces/obs029/repos/instagram
+  branch: notes-write-contracts-instagram
+  base: dac7d4fe8d663bcb36e287b4f4cff19d94aab107
+  writer: root
+  role: contracts pin and separately approved SEC-030 archive security correction
+- repository: knowledge
+  worktree: .workspaces/obs029/repos/knowledge
+  branch: notes-write-contracts-knowledge
+  base: 0e6e447b77a38c374c7ab1a14064c5e668c02c04
+  writer: root
+  role: contracts pin only
+- repository: notes
+  worktree: .workspaces/obs029/repos/notes
+  branch: notes-write-contracts-notes
+  base: 5076346c7f66decd4a7b908155038f46c6d023ef
+  writer: root
+  role: group conflict event producer
+- repository: platform
+  worktree: .workspaces/obs029/repos/platform
+  branch: notes-write-contracts-platform
+  base: 16b502ed502dfcdcfe6ce8574d794f4a303d4dce
+  writer: root
+  role: expanded strict event consumer and path acceptance
+- repository: sites
+  worktree: .workspaces/obs029/repos/sites
+  branch: notes-write-contracts-sites
+  base: 8bcfe8b8246438ee28a96ee08a6258fb474d2407
+  writer: root
+  role: contracts pin only
+- repository: telegram
+  worktree: .workspaces/obs029/repos/telegram
+  branch: notes-write-contracts-telegram
+  base: 07160e1f6ec6eebee3463c6b4db45095ce684f76
+  writer: root
+  role: contracts pin only
+- repository: threads
+  worktree: .workspaces/obs029/repos/threads
+  branch: notes-write-contracts-threads
+  base: 9376ce9235cf41e73c56fd0d16913a1737709fac
+  writer: root
+  role: contracts pin and separately approved SEC-030 archive security correction
+- repository: vault
+  worktree: .workspaces/obs029/repos/vault
+  branch: notes-write-contracts-vault
+  base: 09232320353dc4bb467aa1ccad688706e5b3e535
+  writer: root
+  role: contracts pin only
+- repository: x
+  worktree: .workspaces/obs029/repos/x
+  branch: notes-write-contracts-x
+  base: 5c6cdd76a7f152d56dd53be70654c6a21ca0b1b0
+  writer: root
+  role: contracts pin only
+- repository: site-sdk
+  worktree: .workspaces/obs029/repos/site-sdk
+  branch: notes-write-contracts-site-sdk
+  base: f802e0ab8d4235b3b230ebd61eaa5c1668ea7610
+  writer: root
+  role: required generated contract and API snapshots
+- repository: web
+  worktree: .workspaces/obs029/repos/web
+  branch: notes-write-contracts-web
+  base: 5a83900de6ceb2c3c3632642beeb362f5a50a1eb
+  writer: root
+  role: required generated contract and API snapshots
+published_children:
+- repository: channel-digests
+  commit: 46efd8fb9e4c93abf5651bac030ee252fb997ef0
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 6
+  ci_url: https://github.com/po4yka/ratatoskr-channel-digests/commit/46efd8fb9e4c93abf5651bac030ee252fb997ef0/checks
+- repository: chatgpt
+  commit: 63a4506b39315749aab71d3fe3e9193fe23aa0e2
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-chatgpt/commit/63a4506b39315749aab71d3fe3e9193fe23aa0e2/checks
+- repository: claude
+  commit: fc759137a7b6fc790d9e6266a94b82d444c91bba
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-claude/commit/fc759137a7b6fc790d9e6266a94b82d444c91bba/checks
+- repository: contracts
+  commit: 1756034314a15d3a83d5c7d15b172da502990e98
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 9
+  ci_url: https://github.com/po4yka/ratatoskr-contracts/commit/1756034314a15d3a83d5c7d15b172da502990e98/checks
+- repository: extractor
+  commit: 4295e5a181d2f52ae2db56c26fd9ff830616eec1
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 8
+  ci_url: https://github.com/po4yka/ratatoskr-extractor/commit/4295e5a181d2f52ae2db56c26fd9ff830616eec1/checks
+- repository: github
+  commit: 22813f5dada06c31ae8df503ffc5e69bea793a8a
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-github/commit/22813f5dada06c31ae8df503ffc5e69bea793a8a/checks
+- repository: instagram
+  commit: bd2e1096fc94af4e0c9bcf7abb5e336ec9c431e5
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-instagram/commit/bd2e1096fc94af4e0c9bcf7abb5e336ec9c431e5/checks
+- repository: knowledge
+  commit: fff1bacc63636cf27868c1ff1bcc509d4dfc9d4c
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 8
+  ci_url: https://github.com/po4yka/ratatoskr-knowledge/commit/fff1bacc63636cf27868c1ff1bcc509d4dfc9d4c/checks
+- repository: notes
+  commit: ac9866961533dad955450a2eb356d834bda19501
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 6
+  ci_url: https://github.com/po4yka/ratatoskr-notes/commit/ac9866961533dad955450a2eb356d834bda19501/checks
+- repository: platform
+  commit: 83dcba6498ebaf2a3b7a97739d64b47ca47c25a8
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 8
+  ci_url: https://github.com/po4yka/ratatoskr-platform/commit/83dcba6498ebaf2a3b7a97739d64b47ca47c25a8/checks
+- repository: sites
+  commit: 3cb379225cfa2bb5da9d0e83d94e877b835b1921
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 8
+  ci_url: https://github.com/po4yka/ratatoskr-sites/commit/3cb379225cfa2bb5da9d0e83d94e877b835b1921/checks
+- repository: telegram
+  commit: c9552c8bfa64577970297ed103485a0706d936fb
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 7
+  ci_url: https://github.com/po4yka/ratatoskr-telegram/commit/c9552c8bfa64577970297ed103485a0706d936fb/checks
+- repository: threads
+  commit: 3b11fd1464b9afe721d350868a3f6fa2639aaec8
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-threads/commit/3b11fd1464b9afe721d350868a3f6fa2639aaec8/checks
+- repository: vault
+  commit: 53e8dc92bc1072f280cb7e72ec7d2436540945d4
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-vault/commit/53e8dc92bc1072f280cb7e72ec7d2436540945d4/checks
+- repository: x
+  commit: 81929848e0c3e75fe19219c6d261f2cbeaaa4336
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-x/commit/81929848e0c3e75fe19219c6d261f2cbeaaa4336/checks
+- repository: site-sdk
+  commit: 0df7963db8facd15d5713a5fa01800198539e2a6
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 5
+  ci_url: https://github.com/po4yka/ratatoskr-site-sdk/commit/0df7963db8facd15d5713a5fa01800198539e2a6/checks
+- repository: web
+  commit: 3f7da8f1a6ef368b7cf7354a17d497ef96a4bc64
+  local_gates: passed
+  independent_source_review: no accepted actionable P0 finding
+  ci: passed
+  ci_checks: 4
+  ci_url: https://github.com/po4yka/ratatoskr-web/commit/3f7da8f1a6ef368b7cf7354a17d497ef96a4bc64/checks
+publication_order_note: Notes was published after Platform CI while unrelated pin-only checks were still running. Source inspection
+  found no conflict-event reader outside Platform; Notes produces the event and Contracts defines it. This refines the initial
+  over-serial dependency description. No production deployment occurred, and all child CI remains mandatory before pins.
+security_prerequisite:
+  id: SEC-030
+  change: upgrade-archive-zip-security
+  state: All four final child commits passed full gates, independent review and CI; combined local snapshot acceptance passed,
+    workspace publication pending
+  affected:
+  - chatgpt
+  - claude
+  - instagram
+  - threads
+  reason: cargo-deny refuses existing zip 8.6.0 for RUSTSEC-2026-0367, RUSTSEC-2026-0368 and RUSTSEC-2026-0369
+  pin_promotion: Local integration, deterministic lock, workspace gates and disposable provisioning passed; publish the snapshot
+    and require root CI.
+  approved_legacy_decoder: 'SEC-030 D6: oem_cp 2.1.2, default features disabled, only ChatGPT and Threads; four reviewed new
+    packages with existing dependency versions and edges preserved.'

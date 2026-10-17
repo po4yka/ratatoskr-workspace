@@ -294,7 +294,7 @@ dependency_order:
   - [ratatoskr-platform, ratatoskr-extractor, ratatoskr-knowledge, ratatoskr-channel-digests, ratatoskr-github, ratatoskr-vault, ratatoskr-x, ratatoskr-instagram, ratatoskr-threads, ratatoskr-chatgpt, ratatoskr-claude, ratatoskr-telegram, ratatoskr-browser-extension, ratatoskr-export-agent]
   - ratatoskr-workspace
 contracts:
-  contracts_sha: 66bdb0c0545363f06137f13687084c21db9b27c5
+  contracts_sha: 1756034314a15d3a83d5c7d15b172da502990e98
   contracts_sha_history: "Round 1 to Round 4 named ad16855c4e7f3d52cd118274faa3b8f3ab4da576; Round 5 names d98967b7b7ee80442c93ef4657140068955c8f61 (the one wave-1 commit of Round 5: knowledge.deletion_acknowledged and platform.stream_erasure_requested, additive); OBS-023 moves the fleet to a9289e27bcf53f496b5917889580965d97ff2358 (ratatoskr-notes-contracts and the notes identifiers, additive), so that ratatoskr-notes can join the snapshot; OBS-024 and SITE-025 to SITE-027 move the fleet to 2c726027da79e0e899ad482afead0a2000b03e61 (the notes write request and conflict events, and the sites contracts crate, additive), so that the notes and Platform pins of OBS-024 and ratatoskr-sites can join the snapshot: every Rust repository locks it, each at its pushed main with CI green"
   change: additive only; no existing wire shape changes
   new_or_extended:
@@ -2068,3 +2068,5 @@ contracts_2c72602:
     - "32a65ae2bd2dd4b5f039fc5048ef0c5db607fd26 build: pin site-sdk at a3a9215 and record SITE-025 group 7"
 
 site028_contract_pin_2026_10_17: Contracts 66bdb0c0545363f06137f13687084c21db9b27c5 replaces the prior expanded revision after every selected consumer passed local gates and hosted CI. SITE-028 records the compatible snapshot.
+
+obs029_contract_pin_2026_10_17: OBS-029 advances the canonical contracts source to 1756034314a15d3a83d5c7d15b172da502990e98 after every selected consumer passed its local gate and exact-commit CI. The complete-notes-write-contracts change records portable write paths and optional stale group paths; no database schema or first-major version changes.

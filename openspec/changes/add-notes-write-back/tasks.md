@@ -6,9 +6,9 @@ Dependency order. The owner chose direct commits to `main` after an independent 
 pull requests, so each item records the pushed commit that the workspace pins and the state of its
 CI there (the check runs of that commit, read with `gh api`). An item closes only when every task of
 its groups is ticked. The section "Deferred to the next contracts revision" holds the contracts
-tasks 3.13 to 3.16, with their numbers kept. No item owns them, because they wait for a move of the
-whole fleet to a new contracts revision (`contracts_pin.rs`). Before this change is archived, they
-are done or moved to the change that makes that move. Archive this change only after `add-notes-vault-connections` (OBS-023) is
+tasks 3.13 to 3.16, with their numbers kept. OBS-029 (`complete-notes-write-contracts`) now owns their implementation and the move of the
+whole fleet to one contracts revision (`contracts_pin.rs`). The numbers stay here for traceability;
+they close only after that wave records its observed checks and verified snapshot. Archive this change only after `add-notes-vault-connections` (OBS-023) is
 archived, and OBS-023 only after `xr-021-fleet-round-5`, because the `fleet-bus-topology` delta
 modifies the text those two leave.
 

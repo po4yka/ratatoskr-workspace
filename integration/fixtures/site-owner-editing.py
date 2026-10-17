@@ -421,6 +421,16 @@ def notes_write_back():
     passed('notes_write_back_sync_property_is_indexed_after_ack')
     # A refused device write creates neither a new revision nor a file.changed event.
     device_cid = connection({'A.md': b'# A\n'}, 'device-refusal-fixture')
+    accepted_before = sql("select json_build_array((select count(*) from operations.operations where kind='notes.file.write'),(select count(*) from operations.outbox where subject='cmd.notes.file.write_requested.v1'))")
+    for field in ['path', 'target_path']:
+        for unsafe in ['Notes./x.md', '.obsidian./app.json', 'Notes /x.md', 'A:B.md', 'Notes/B:C.md']:
+            operation = {'path': 'A.md', 'base_hash': digest(b'# A\n'), 'target_path': 'B.md'}
+            operation[field] = unsafe
+            answer = call('/v1/notes/connections/' + device_cid + '/writes', 'POST',
+                          {'operation': {'rename': operation}}, token=OWNER_TOKEN, expected=(400,))
+            assert answer['code'] == 'platform.request.invalid', answer
+    assert sql("select json_build_array((select count(*) from operations.operations where kind='notes.file.write'),(select count(*) from operations.outbox where subject='cmd.notes.file.write_requested.v1'))") == accepted_before, 'an unsafe path created an operation or command'
+    passed('notes_write_back_portable_paths_refused_before_enqueue')
     blob = upload(device_cid, b'# changed\n')
     before = counts(device_cid)
     op = write(device_cid, {'update': {'path': 'A.md', 'base_hash': digest(b'# A\n'), 'blob': blob}})
@@ -449,6 +459,16 @@ def notes_write_back():
     assert counts(device_cid) == [before[0]+1, before[1]+2]
     assert sql(f"select count(*) from notes.outbox where event_type='notes.conflict.raised.v1' and payload->'payload'->>'connection_id'='{device_cid}'") == '1'
     passed('notes_write_back_grouped_rename_partial_application_has_one_conflict')
+    conflict_event = json.loads(sql(f"select payload->'payload' from notes.outbox where event_type='notes.conflict.raised.v1' and payload->'payload'->>'operation_id'='{rename}'"))
+    assert conflict_event['path'] == 'Y.md' and conflict_event['stale_paths'] == ['Y.md'], conflict_event
+    conflict_id = conflict_event['conflict_id']
+    read = call('/v1/notes/conflicts/' + conflict_id, token=OWNER_TOKEN)
+    assert read['stale_paths'] == conflict_event['stale_paths'], read
+    eventually(lambda: any(result['result_kind'] == 'notes.conflict.raised' and
+                           result['target'] == 'notes_conflict:' + conflict_id
+                           for result in call('/v1/operations/' + rename, token=OWNER_TOKEN)['results']),
+               'Platform consumes the expanded group conflict event')
+    passed('notes_write_back_group_stale_paths_reach_platform')
 
 
 if __name__ == '__main__':
