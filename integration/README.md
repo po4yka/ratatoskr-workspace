@@ -205,3 +205,9 @@ Run it manually with the approved tools on PATH, or absolute `RATATOSKR_GH_BIN` 
 `RATATOSKR_ORAS_BIN` paths. It needs public GHCR and Sigstore network access. It downloads only
 metadata and proof, and publishes nothing. This is a capability probe on a service artifact,
 not acceptance of the site-bundle workflow, production verifier, ARM64 ABI or memory budget.
+
+The scenario HTTP client retries only unexpected 429 responses, at most four attempts. It keeps
+the same request body and idempotency key, waits for numeric `Retry-After` (at least one second
+when missing or invalid), and checks its remaining retry budget. The same opener handles SSE
+handshakes. Expected 429 and other refusals are returned to the assertions without retry. The
+loopback HTTP tests run with the profile contract check; they do not replace the real profile.

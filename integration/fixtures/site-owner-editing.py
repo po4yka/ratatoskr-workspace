@@ -47,6 +47,28 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def open_response(request, expected=(200,), timeout=150):
+    """Retry only rate refusal, with a fixed attempt bound and the same write identity."""
+    deadline = time.monotonic() + timeout
+    for attempt in range(4):
+        remaining = deadline - time.monotonic()
+        assert remaining > 0, 'HTTP retry budget exhausted'
+        try:
+            response = urllib.request.urlopen(request, timeout=remaining)
+        except urllib.error.HTTPError as error:
+            response = error
+        if response.status != 429 or 429 in expected or attempt == 3:
+            return response
+        retry_after = response.headers.get('Retry-After', '1')
+        response.close()
+        try:
+            delay = max(1, int(retry_after))
+        except ValueError:
+            delay = 1
+        assert delay < deadline - time.monotonic(), 'HTTP retry budget exhausted'
+        time.sleep(delay)
+
+
 def call(path, method='GET', body=None, token=None, cookie=None, expected=(200,), raw=False, site_origin=False):
     headers = {}
     if token:
@@ -64,14 +86,12 @@ def call(path, method='GET', body=None, token=None, cookie=None, expected=(200,)
     if method != 'GET':
         headers['Idempotency-Key'] = str(uuid7())
     request = urllib.request.Request(BASE + path, data=body, headers=headers, method=method)
-    try:
-        response = urllib.request.urlopen(request, timeout=150)
-    except urllib.error.HTTPError as error:
-        response = error
-    data = response.read()
-    assert response.status in expected, (method, path, response.status, data.decode(errors='replace'))
+    with open_response(request, expected) as response:
+        data = response.read()
+        status, response_headers = response.status, response.headers
+    assert status in expected, (method, path, status, data.decode(errors='replace'))
     if raw:
-        return data, response.headers
+        return data, response_headers
     return json.loads(data) if data else {}
 
 
@@ -155,7 +175,8 @@ class Events:
                 if cookie:
                     headers['Cookie'] = cookie
                 request = urllib.request.Request(BASE + SITE + '/events', headers=headers)
-                self.response = urllib.request.urlopen(request, timeout=120)
+                self.response = open_response(request, timeout=120)
+                assert self.response.status == 200, ('SSE handshake', self.response.status)
                 self.connected.set()
                 data = []
                 while not self.stop:
@@ -166,6 +187,8 @@ class Events:
                         self.items.put(json.loads('\n'.join(data)))
                         data = []
             except Exception as error:  # Carry reader errors to the assertion thread.
+                if self.response is not None:
+                    self.response.close()
                 if not self.stop:
                     self.error = repr(error)
                 self.connected.set()

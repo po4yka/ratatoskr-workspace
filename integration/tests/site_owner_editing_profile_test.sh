@@ -28,4 +28,5 @@ done
 rg -q -F 'mem_limit: 512m' "$profile" || fail 'Sites memory bound is absent'
 rg -q -F 'memswap_limit: 512m' "$profile" || fail 'Sites swap is not disabled'
 rg -q -F 'prepare-site-verifier.py' "$runner" || fail 'missing checksum-checked tool preparation'
+python3 "$root/integration/tests/site_owner_editing_http_test.py"
 printf 'site owner editing profile contract: PASS\n'

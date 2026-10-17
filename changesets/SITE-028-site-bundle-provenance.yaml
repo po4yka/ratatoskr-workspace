@@ -1,5 +1,5 @@
 id: SITE-028
-state: local-snapshot-verified-awaiting-workspace-ci
+state: ci-client-recovery-awaiting-workspace-ci
 openspec_change: bind-site-bundles-to-github
 goal: The Sites server accepts and activates only bundles whose signed origin matches one owner-approved GitHub repository, digest, commit and trusted workflow.
 non_goals: [private registries, new server GitHub credentials, production host operations, new API majors, database migrations, unrelated contracts repairs]
@@ -432,3 +432,25 @@ final_disposable_host_acceptance_2026_10_17:
   services: All nine enrolled processes passed readiness, rerun kept their start times, target stop-start worked, and verbose output contained no generated test password.
   teardown: The owned ratatoskr-host container was removed; unrelated containers were kept.
   publication_boundary: Local compatible snapshot is verified; wait for all eight hosted workspace checks before marking 1.18 and 7.6 complete.
+
+ci_runtime_recovery_2026_10_17:
+  failed_workspace: b1463390468cdcfb23c98b04c78e028407ad21b2
+  ci: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39007769198/job/117323634513
+  observed: Seven hosted checks passed, including Molecule. The real bundle, write-back, privacy, consent and conflict cases passed before device polling exhausted its 90-second wait on actor-rate 429.
+  cause: The fixture retried every half second without rate-refusal backoff. It also opened SSE through a separate path with no recovery.
+  scope: Fix only the scenario HTTP client; retain server quotas, grants, errors, body bounds and every runtime assertion. No child pin or production code change.
+  red: Seven assertion failures across five ordinary HTTP tests, then one SSE-handshake 429 assertion failure before that path changed.
+  green: Seven real loopback HTTP test methods pass, including stable write identity, numeric or fallback delay, bounded attempts, budget refusal and non-retried expected errors/SSE denial.
+  acceptance_boundary: The loopback fault server is unit evidence only; require the full real pinned profile, source review and new hosted workspace CI before closure.
+
+http_recovery_local_acceptance_2026_10_17:
+  unit_tests: Seven passed, zero ignored, after observed ordinary-request and SSE RED failures.
+  real_profile: All 12 scenarios passed again against the same four exact published child pins. Owned stack teardown passed.
+  memory_max_bytes: 536870912
+  memory_swap_max_bytes: 0
+  memory_peak_bytes: 129658880
+  boundary: Source review and new workspace CI are still required. The failed b146339 CI is preserved, not relabelled as a success.
+
+http_recovery_review_2026_10_17:
+  source: Final structured P0 review clean at 0.99 after the seven-method test suite and full real profile passed.
+  next: Publish the fixture-only correction and require all eight hosted checks before closing 8.2, 8.4, 1.18 and 7.6.

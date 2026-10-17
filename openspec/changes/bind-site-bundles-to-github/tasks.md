@@ -74,6 +74,14 @@ commit. Pin-only items have no failing test first because they change generated 
 - [x] 7.5 Reconcile the active `site-bundles` and `site-manifest` deltas with the enforced policy, and update runbooks and SITE-028. No failing test first: specification and documentation. Verify strict OpenSpec validation and no contradictory raw-tar acceptance requirement.
 - [ ] 7.6 Advance pins only after every child CI is green. No failing test first: generated snapshot. Verify lock determinism, doctor, full harness gates, integration, Molecule, clean baselines and final workspace CI; record rollout, rollback and exact commits in SITE-028.
 
+## 8. CI rate-limit recovery
+
+- [x] 8.1 RED: add a real loopback HTTP test for the scenario client. A 429 followed by 200 must wait at least the numeric Retry-After (one second when absent), retain the same request body and idempotency key, and succeed. Persistent 429 must stop after a bounded number of attempts; an expected 429 and other errors must not retry. Observe the current immediate assertion failure before implementation.
+- [ ] 8.2 GREEN: add bounded 429 recovery to the fixture HTTP client and run it from the existing profile contract test. Keep server limits and all runtime assertions. Verify the HTTP tests, real pinned profile, source review and hosted workspace CI.
+
+- [x] 8.3 RED: the same loopback 429/200 sequence must permit the real SSE reader handshake after backoff. Observe its current HTTPError assertion before sharing the transport path.
+- [ ] 8.4 GREEN: use the bounded response opener for both ordinary requests and SSE handshakes. Preserve streaming bodies, expected errors and all five HTTP tests; run the full real profile and CI.
+
 ## Workflow follow-up
 
 - Archive only after the old active Sites deltas are reconciled and every tracked item is complete.
@@ -325,3 +333,21 @@ No functional acceptance, CI or snapshot gate is waived.
   stopped/restarted through the target. The anonymous bounded fetch, genuine offline proof,
   changed-byte refusal, freeze guard, mismatched-pin guard, artifact tamper and secret-output
   checks passed. No production host was contacted. Tasks 1.18 and 7.6 await hosted workspace CI.
+
+- Workspace `b146339` passed seven hosted checks, including full Molecule, but sites-integration
+  failed after eight scenario passes: device polling received actor-limit 429 and retried every
+  0.5 seconds for 90 seconds. The fixture ignored backoff. Preserve the failed CI run; 1.18 and
+  7.6 remain open. Follow-up 8.1/8.2 repairs client behavior without changing server limits.
+
+- 8.1 observed seven assertion failures across the five HTTP test methods before the fix:
+  a real loopback 429 was returned instead of retried; persistent 429 made one request instead
+  of four. The already-expected 429/403 behavior passed. No compile/setup error was counted.
+
+- 8.3 observed only the SSE backoff case fail with the intended HTTPError 429; the five
+  ordinary-request tests passed. The added denied-SSE boundary also passed before sharing the
+  opener. No new test-order exception is needed for these integration-client fixes.
+
+- Both transport paths now pass all seven HTTP test methods, including explicit denial of a
+  403 SSE handshake. The real published-pin profile passed all 12 scenarios and teardown again.
+  The original failed CI is retained; 8.2/8.4 and 1.18/7.6 remain open until source review and
+  the new hosted workspace checks succeed. There are now 52 tasks in this change.

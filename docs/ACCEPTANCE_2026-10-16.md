@@ -130,3 +130,10 @@ Full Molecule then passed against the new pins, including zero-change idempotenc
 and destroy. Nine service processes passed readiness and target stop/start; replay changed no
 start time. Anonymous bounded fetch, offline proof/refusal, artifact tamper, freeze/pin guards and
 secret-output checks passed. One intentional SQL error was followed by explicit refusal assertions.
+
+The first workspace CI (`b146339`) passed seven jobs, including Molecule, but its runtime profile
+failed after eight scenario passes when device polling repeatedly received actor-rate 429. The
+fixture did not back off. The follow-up keeps the deployed limits and adds bounded recovery to
+ordinary HTTP and SSE handshakes with stable write identity. Seven loopback transport tests passed
+after observed RED, then all 12 real pinned scenarios passed again with successful teardown.
+New hosted CI remains required before SITE-028 closure.
