@@ -1,7 +1,7 @@
 ## 1. Implementation by repository
 
 - [x] 1.1 `export-agent`: run the approved existing local Keychain check and CLI-backed acceptance at the exact pinned source; record command, test count, failures and cleanup. No new RED: acceptance of existing behavior. If a child fix is needed, add its local OpenSpec and a RED/GREEN pair before code, then require full gates, review and CI before pins.
-- [ ] 1.2 `workspace`: publish the reviewed acceptance record after local checks and wait for every expected and observed CI check. Use the owner-authorized scoped commit and push workflow. Record exact child SHAs, pin decision and retained deferrals. No RED: documentation and snapshot metadata.
+- [x] 1.2 `workspace`: publish the reviewed acceptance record after local checks and wait for every expected and observed CI check. Use the owner-authorized scoped commit and push workflow. Record exact child SHAs, pin decision and retained deferrals. No RED: documentation and snapshot metadata.
 
 ## 2. Local acceptance
 
@@ -15,4 +15,4 @@
 ## 3. Verification and publication
 
 - [x] 3.1 Run applicable workspace checks, strict current and archived OpenSpec, deterministic lock, manifest, doctor and final diff review. Check all baseline submodules and protected user files. No RED: validation only.
-- [ ] 3.2 Publish the scoped record, wait for exact-commit CI, then update the primary checkout and verify its lock, pins and cleanliness. Keep OBS-024 6.7 and aggregate 1.2 open until real Sync evidence exists. No RED: publication metadata.
+- [x] 3.2 Publish the scoped record, wait for exact-commit CI, then update the primary checkout and verify its lock, pins and cleanliness. Keep OBS-024 6.7 and aggregate 1.2 open until real Sync evidence exists. No RED: publication metadata.

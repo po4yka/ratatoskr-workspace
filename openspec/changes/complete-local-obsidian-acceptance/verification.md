@@ -51,6 +51,12 @@ Shared builds later reduced free space to about 270 MiB. After empty lsof checks
 
 The current 21 child pins and committed lock are unchanged. The deterministic lock, manifest, doctor and status checks passed against those real baseline checkouts. All 48 current OpenSpec items pass strict validation. Workspace publication and exact-commit CI remain open at this point.
 
-## Review and publication gate
+## Review before publication
 
-Strict validation passed for all 48 current OpenSpec items and all 19 archived changes. The deterministic lock, manifest, doctor and status checks passed. The final scoped diff passed whitespace checks. The independent autoreview --mode local pass reported no P0 findings and its secret scan was clean. Publication and all eight exact-commit workspace CI checks remain pending.
+Strict validation passed for all 48 current OpenSpec items and all 19 archived changes. The deterministic lock, manifest, doctor and status checks passed. The final scoped diff passed whitespace checks. The independent autoreview --mode local pass reported no P0 findings and its secret scan was clean. At review time, publication and all eight exact-commit workspace CI checks were pending.
+
+## Verified publication
+
+Commit cb3a4e9e465b64940b01391fe556d6586de4a1b7 was pushed to main. All eight expected and observed checks completed successfully: dependency policy, OpenSpec, Sites integration, snapshot, release-artifact self-test, workflow audit, fleet invariants and Molecule. Exact job links are in the OBS-031 changeset. The primary checkout was fast-forwarded to this commit. Lock generation was repeated twice and matched the committed lock byte for byte; lock check, manifest check, doctor and status all passed. All 21 baseline submodules retained their exact detached pins and were clean. Both protected user files retained their recorded hashes.
+
+OBS-031 is complete at this verified snapshot. No product source or child commit changed, so no new pin can be promoted. OBS-024 6.7 and aggregate 1.2 remain open for real Sync evidence. The status-only follow-up is also subject to full exact-commit CI and final primary verification before handoff. No archived change was modified.

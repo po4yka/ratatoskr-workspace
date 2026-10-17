@@ -1,5 +1,5 @@
 id: OBS-031
-state: local acceptance and review complete; publication and CI pending
+state: complete
 openspec_change: complete-local-obsidian-acceptance
 parent: OBS-024 remaining local acceptance; OBS-023 dependent live checks remain deferred
 goal: Resolve available local CLI and Keychain evidence gaps without Sync or MFA.
@@ -61,7 +61,39 @@ verification:
     evidence: evidence/obs031-local-acceptance/workspace-checks.json
     lock_sha256: b387699a8093cbea0cc2f8d91efede49d97716c796ebb41c8bc8bc0b607f8f87
     lock_deterministic: true
-  publication: pending
+  publication:
+    state: passed
+    verified_commit: cb3a4e9e465b64940b01391fe556d6586de4a1b7
+    expected_checks: 8
+    observed_checks: 8
+    all_checks_successful: true
+    primary_checkout: Fast-forwarded to the verified commit; lock, manifest, doctor, status and all 21 baseline pins passed.
+    final_record: This status-only follow-up must also pass its own exact-commit CI before final handoff.
+    checks:
+    - name: "deny"
+      conclusion: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39067856048/job/117499134539
+    - name: "fleet / invariants"
+      conclusion: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39067856028/job/117499134576
+    - name: "molecule"
+      conclusion: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39067856048/job/117499134340
+    - name: "openspec / specs"
+      conclusion: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39067855937/job/117499134017
+    - name: "release-artifact-selftest / artifact"
+      conclusion: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39067856048/job/117499134586
+    - name: "sites-integration"
+      conclusion: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39067856048/job/117499134501
+    - name: "snapshot"
+      conclusion: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39067856048/job/117499134529
+    - name: "zizmor / audit"
+      conclusion: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39067855915/job/117499133607
   headless_parser:
     state: passed; static only
     version: 0.0.14
@@ -137,3 +169,10 @@ review:
   state: passed; no accepted or actionable findings
   secret_scan: clean
   evidence: /tmp/ratatoskr-obs031-review.json
+
+completion:
+  verified_snapshot: cb3a4e9e465b64940b01391fe556d6586de4a1b7
+  child_commits_changed: false
+  workspace_pins_changed: false
+  primary_verification: evidence/obs031-local-acceptance/primary-first-checks.json
+  remaining_parent_tasks: OBS-024 6.7 and aggregate 1.2 remain open; real Sync is excluded from this wave.
