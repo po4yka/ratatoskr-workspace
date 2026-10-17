@@ -108,6 +108,12 @@ def eventually(fn, description, seconds=90):
     raise AssertionError('Timed out: ' + description + '; last=' + str(last))
 
 
+def operation_has_conflict(operation_id, conflict_id):
+    return any(result['result_kind'] == 'notes.conflict.raised' and
+               result['target'] == 'notes_conflict:' + conflict_id
+               for result in call('/v1/operations/' + operation_id, token=OWNER_TOKEN).get('results', []))
+
+
 def passed(name):
     RESULTS.append(name)
     print(name + ': PASS', flush=True)
@@ -464,9 +470,7 @@ def notes_write_back():
     conflict_id = conflict_event['conflict_id']
     read = call('/v1/notes/conflicts/' + conflict_id, token=OWNER_TOKEN)
     assert read['stale_paths'] == conflict_event['stale_paths'], read
-    eventually(lambda: any(result['result_kind'] == 'notes.conflict.raised' and
-                           result['target'] == 'notes_conflict:' + conflict_id
-                           for result in call('/v1/operations/' + rename, token=OWNER_TOKEN)['results']),
+    eventually(lambda: operation_has_conflict(rename, conflict_id),
                'Platform consumes the expanded group conflict event')
     passed('notes_write_back_group_stale_paths_reach_platform')
 

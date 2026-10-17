@@ -27,12 +27,14 @@ class ClientBackoff(unittest.TestCase):
             def reply(self):
                 data = self.rfile.read(int(self.headers.get('Content-Length', '0')))
                 case.requests.append((data, self.headers.get('Idempotency-Key')))
-                status, retry = case.responses.pop(0)
+                response = case.responses.pop(0)
+                status, retry = response[:2]
+                payload = response[2] if len(response) == 3 else {'status': status}
                 self.send_response(status)
                 if retry is not None:
                     self.send_header('Retry-After', retry)
                 self.end_headers()
-                self.wfile.write(json.dumps({'status': status}).encode())
+                self.wfile.write(json.dumps(payload).encode())
 
             def log_message(self, *args):
                 pass
@@ -55,6 +57,26 @@ class ClientBackoff(unittest.TestCase):
         self.server.shutdown()
         self.server.server_close()
         self.thread.join()
+
+    def test_conflict_poll_waits_for_the_exact_projected_result(self):
+        self.responses = [(200, None, payload) for payload in [
+            {}, {'results': []},
+            {'results': [{'result_kind': 'notes.conflict.raised', 'target': 'notes_conflict:other'}]},
+            {'results': [{'result_kind': 'notes.file.changed', 'target': 'notes_conflict:wanted'}]},
+            {'results': [{'result_kind': 'notes.conflict.raised', 'target': 'notes_conflict:wanted'}]},
+        ]]
+        self.assertTrue(self.client.eventually(
+            lambda: self.client.operation_has_conflict('operation', 'wanted'), 'conflict projection'))
+        self.assertEqual(len(self.requests), 5)
+        self.assertEqual(self.sleep.call_count, 4)
+
+    def test_malformed_conflict_result_is_not_pending(self):
+        self.responses = [(200, None, {'results': [{'result_kind': 'notes.conflict.raised'}]})]
+        with self.assertRaises(KeyError):
+            self.client.eventually(
+                lambda: self.client.operation_has_conflict('operation', 'wanted'), 'malformed result')
+        self.assertEqual(len(self.requests), 1)
+        self.sleep.assert_not_called()
 
     def test_retry_after_keeps_write_identity(self):
         self.responses = [(429, '7'), (200, None)]

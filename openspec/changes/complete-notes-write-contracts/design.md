@@ -16,6 +16,8 @@ Non-goals: real Sync/MFA tests, production deployment, database changes, unrelat
 4. Inspect generated client snapshots by their declared input set. Refresh only copies whose inputs or source-pin policy require it. Platform publishes the new write-path schema in OpenAPI. Sites publishes raw contract references at its Cargo pin, so the SDK must refresh its contracts lock and both API descriptions together. Refresh the Web Platform snapshot as the direct write client. Mobile uses the unchanged GitHub subset; Plugin and Export Agent keep their independent device-operation shapes. Existing Web conflict lookup and Plugin/Export Agent file-name guards remain acceptance checks; no real Sync account is available.
 5. Use task worktrees under `.workspaces/obs029/`, with root as the only writer for each repository. Pin the exact CI-green commits. Root OpenSpec uses the nearest local root in the isolated workspace, as confirmed by `context --json`; the registered primary store remains untouched until verified publication.
 
+6. The operation read API can omit an empty `results` list while Platform applies the event. The integration poll must treat that response as pending and still require the exact conflict kind and target. Keep malformed result items visible as errors. Extract the existing predicate without changing behavior, then run an HTTP regression with an omitted list before the fix. Repeat the real profile and full CI after the fix.
+
 ## Risks / Trade-offs
 
 - Tightened validation refuses formerly accepted names → adapters already refuse those names; test each write path and target, and preserve valid hidden names, dots and internal spaces. This is a first-major development correction explicitly requested in OBS-024.

@@ -181,6 +181,16 @@ verification:
       - 28a629df7e07e532465983607ac6abcc4ce1cc88389a781e4cca475589ce5a29
     boundary: Disposable local host only. Standard fake Bot API and tunnel stand-ins remain; no real Sync, MFA, Cloudflare
       account, DNS, production TLS or production host acceptance.
+  projection_timing_correction:
+    first_snapshot: 230b3184696014847dbb79964f156dde412471e0
+    first_ci: '7 of 8 passed; Sites fixture failed with KeyError: results before asynchronous projection'
+    behavior: An omitted results list remains pending; require the exact conflict kind and target; malformed result items
+      still fail.
+    tdd: Existing 7 HTTP tests passed before and after behavior-preserving extraction; new regression failed with KeyError
+      before the fix; all 9 HTTP tests and profile contract passed after the fix.
+    review: Independent source review passed with no accepted/actionable P0 findings.
+    local_retry: Queued under build-gate; preserve the earlier 14-scenario acceptance as historical evidence.
+    publication: Corrective commit and all required CI pending; primary baseline remains unchanged.
 child_worktrees:
 - repository: channel-digests
   worktree: .workspaces/obs029/repos/channel-digests

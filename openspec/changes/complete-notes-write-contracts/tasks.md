@@ -49,3 +49,9 @@
 - [x] 6.2 Stage task-root gitlinks to successful child commits, update the XR-021 contracts source and committed-snapshot expectations, generate workspace.lock twice and compare bytes. Pin and generated configuration have no separate RED; retain the contracts drift guard.
 - [x] 6.3 Run workspace fmt, clippy, all tests, deny, doctor, lock check, strict current and archived OpenSpec, and applicable disposable provisioning acceptance. Inspect the final diff and independent source reviews before publication.
 - [ ] 6.4 Publish the verified workspace snapshot and wait for every required CI check. Record full SHAs, rollout/rollback and the final snapshot; update OBS-024 3.13–3.16 only with observed evidence, keep unrelated deferrals open, and verify clean baseline submodules and protected user files.
+
+## 7. CI projection timing correction
+
+- [x] 7.1 Extract the operation-result poll predicate without behavior changes and run the existing HTTP tests. This refactor has no new RED.
+- [x] 7.2 RED: add an HTTP regression that returns an omitted list, an empty list, unrelated results, then the exact conflict result. Observe failure because the pending response omits `results`.
+- [ ] 7.3 GREEN: keep polling when `results` is absent; preserve exact conflict matching and malformed-item failure. Run all HTTP/profile contract tests and the real combined profile, review, publish and wait for all workspace CI.

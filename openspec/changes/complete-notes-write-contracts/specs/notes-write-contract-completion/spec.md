@@ -50,3 +50,8 @@ Every strict event consumer SHALL accept the optional list before Notes starts t
 
 - **WHEN** workspace validation reads the committed child pointers and lock
 - **THEN** the contracts pin guard, committed snapshot tests, lock check and integration profile pass for those exact commits
+
+#### Scenario: Platform has not projected the conflict result yet
+
+- **WHEN** the operation read response omits an empty `results` list before the conflict event applies
+- **THEN** the integration check keeps polling until the exact conflict kind and target appear within its time limit
