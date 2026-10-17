@@ -65,7 +65,7 @@ def call(path, method='GET', body=None, token=None, cookie=None, expected=(200,)
         headers['Idempotency-Key'] = str(uuid7())
     request = urllib.request.Request(BASE + path, data=body, headers=headers, method=method)
     try:
-        response = urllib.request.urlopen(request, timeout=20)
+        response = urllib.request.urlopen(request, timeout=150)
     except urllib.error.HTTPError as error:
         response = error
     data = response.read()
@@ -222,6 +222,64 @@ owner_context,document_id,title,lead,body,updated_at) values('{search}','{source
     return ids
 
 
+def verified_bundle_repository_boundary():
+    """Use a real workflow-signed SDK artifact; mutations must never store or activate it."""
+    fixture = Path(__file__).resolve().parents[1] / 'fixtures/site028-real-proof'
+    identity = json.loads((fixture / 'identity.json').read_text())
+    proof = json.loads((fixture / 'proof.json').read_text())
+    path = '/v1/sites/provenance-fixture'
+    binding = {'repository': 'po4yka/ratatoskr-site-sdk', 'repository_id': '1420131953'}
+    manifest = ('site_id = "provenance-fixture"\nhostname = "provenance.example.test"\n'
+                'publications = ["bundle"]\ncapabilities = ["pages.read"]\n[github_repository]\n'
+                'repository = "po4yka/ratatoskr-site-sdk"\nrepository_id = "1420131953"\n').encode()
+    call(path + '/manifest', 'PUT', manifest, token=OWNER_TOKEN, expected=(200, 201))
+    approval = call(path + '/manifest/approval', 'POST', {'manifest_sha256': digest(manifest)},
+                    token=OWNER_TOKEN, expected=(200, 201, 202))
+    assert approval['github_repository'] == binding, approval
+    eventually(lambda: sql("select state from sites.approval_projection where site_id='provenance-fixture'") == 'approved', 'repository approval projection')
+    request = {'commit': identity['commit'], 'artifact_sha256': identity['artifact_digest'].removeprefix('sha256:'),
+               'attestation_bundle': proof}
+    target = '/data/site-deploys/provenance-fixture/bundles/' + request['commit']
+
+    def absent():
+        result = subprocess.run(COMPOSE + ['exec', '-T', 'sites', 'test', '!', '-e', target], check=False)
+        assert result.returncode == 0, 'a refused proof stored a deploy'
+
+    unsigned = dict(request, attestation_bundle={})
+    call(path + '/deploys', 'POST', unsigned, token=OWNER_TOKEN, expected=(422,))
+    absent()
+    changed = dict(request, artifact_sha256='a' * 64)
+    call(path + '/deploys', 'POST', changed, token=OWNER_TOKEN, expected=(422,))
+    absent()
+    foreign = manifest.replace(b'repository_id = "1420131953"', b'repository_id = "999999"')
+    call(path + '/manifest', 'PUT', foreign, token=OWNER_TOKEN, expected=(200, 201))
+    call(path + '/manifest/approval', 'POST', {'manifest_sha256': digest(foreign)}, token=OWNER_TOKEN, expected=(200, 201, 202))
+    eventually(lambda: sql("select github_repository->>'repository_id' from sites.approval_projection where site_id='provenance-fixture'") == '999999', 'foreign repository approval')
+    call(path + '/deploys', 'POST', request, token=OWNER_TOKEN, expected=(422,))
+    absent()
+    call(path + '/manifest', 'PUT', manifest, token=OWNER_TOKEN, expected=(200, 201))
+    call(path + '/deploys', 'POST', request, token=OWNER_TOKEN, expected=(404, 409, 422))
+    absent()
+    call(path + '/manifest/approval', 'POST', {'manifest_sha256': digest(manifest)}, token=OWNER_TOKEN, expected=(200, 201, 202))
+    eventually(lambda: sql("select github_repository->>'repository_id' from sites.approval_projection where site_id='provenance-fixture'") == '1420131953', 'restored repository approval')
+    stored = call(path + '/deploys', 'POST', request, token=OWNER_TOKEN)
+    assert stored['created'] is True, stored
+    retry = call(path + '/deploys', 'POST', request, token=OWNER_TOKEN)
+    assert retry['created'] is False, retry
+    active = call(path + '/deploys/' + request['commit'] + '/activate', 'POST', token=OWNER_TOKEN)
+    assert active['current_commit'] == request['commit'], active
+    measured = subprocess.check_output(COMPOSE + ['exec', '-T', 'sites', 'sh', '-ec',
+        'cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.swap.max /sys/fs/cgroup/memory.peak'], text=True).splitlines()
+    maximum, swap, peak = map(int, measured)
+    assert maximum == 512 * 1024 * 1024 and swap == 0, measured
+    assert 0 < peak <= maximum, measured
+    EVIDENCE.joinpath('verifier-memory.json').write_text(json.dumps({
+        'memory_max_bytes': maximum, 'memory_swap_max_bytes': swap, 'memory_peak_bytes': peak,
+        'scope': 'Sites service and its actual gh/oras children in one disposable ARM64 container',
+    }, indent=2) + '\n')
+    passed('verified_bundle_repository_boundary')
+
+
 def main():
     eventually(lambda: call('/v1/status'), 'Edge startup', seconds=120)
     # The shipped grants run only after Edge has created its schema.
@@ -230,6 +288,7 @@ def main():
     for schema in ['notes', 'sites', 'knowledge']:
         eventually(lambda s=schema: sql(f"select exists(select 1 from information_schema.schemata where schema_name='{s}')") == 't', schema + ' schema')
     seed()
+    verified_bundle_repository_boundary()
     eventually(lambda: call('/v1/notes/connections', token=OWNER_TOKEN), 'Notes API ready')
     notes_write_back()
     privacy_path = Path(__file__).resolve().parents[1] / 'sites-privacy/scenario.py'
@@ -242,7 +301,8 @@ def main():
     old, new = b'# Start\nold text\n', b'# Start\nnew text\n'
     cid = connection({'Start.md': old}, 'site-fixture')
     manifest = ('site_id = "site-a"\nhostname = "' + HOST + '"\npublications = ["garden"]\n'
-                'capabilities = ["pages.read", "live.release", "draft.read", "notes.edit", "library.read", "knowledge.search"]\n').encode()
+                'capabilities = ["pages.read", "live.release", "draft.read", "notes.edit", "library.read", "knowledge.search"]\n'
+                '[github_repository]\nrepository = "po4yka/ratatoskr-site-sdk"\nrepository_id = "1420131953"\n').encode()
     call(SITE + '/manifest', 'PUT', manifest, token=OWNER_TOKEN, expected=(200, 201))
     call(SITE + '/publications/garden', 'PUT', {'connection_id': cid, 'mode': 'all', 'release_mode': 'manual',
          'included_folders': [], 'excluded_folders': [], 'included_tags': [], 'frontmatter_allow': []}, token=OWNER_TOKEN, expected=(200, 201))

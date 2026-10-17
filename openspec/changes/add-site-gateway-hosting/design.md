@@ -86,26 +86,27 @@ Alternatives:
 - **The gateway asks the sites domain API.** Every cache miss would cross a loopback hop to a
   process that can be restarting. Rejected.
 
-### D3. Deploy: the owner verifies on the controller and uploads through Edge
+### D3. Deploy: controller feedback and server verification through Edge
 
-The flow:
+SITE-028 supersedes the original controller-only verification decision. The flow below records
+the new contract; its final publication and workspace pins stay tracked by SITE-028.
 
 ```text
 site repo CI ── reusable-site-bundle.yml ──► ghcr.io/<owner>/<site repo>:sha-<commit> + attestation
 controller:  ratatoskr-site deploy --site <id> --commit <sha>
                oras pull → gh attestation verify --repo <owner>/<site repo> → sha256 check
-               POST /v1/sites/<id>/deploys   (Edge, class deploy, transfer body budget;
+               POST /v1/sites/<id>/deploys   (JSON digest + proof, at most 1 MiB;
                                              site_deployer device or primary owner session)
-host:        ratatoskr-sites receipt: re-check every digest and path rule, write bundles/<commit>,
+host:        verify signature/repository/workflow → fetch exact OCI digest → check every file,
+               write bundles/<commit> with server provenance,
                then POST /v1/sites/<id>/deploys/<commit>/activate switches current and previous
 ```
 
 Both deploy routes have the new class `deploy`. Edge accepts a primary session with the live
 `platform.owner` grant, or a registered device of the new kind `site_deployer` that was paired for
 that site. A new class keeps `management` primary session only; widening `management` to devices
-would let a deployer device reach every management route of every site. The upload body streams
-under the `transfer` budget of Platform ADR-0015, which is
-a body budget and not an authorisation class.
+would let a deployer device reach every management route of every site. The JSON body is bounded to 1 MiB. The transfer deadline remains a request budget, not an
+authorisation class. Raw tar is refused by the deploy route.
 
 The deploy command authenticates as a `site_deployer` device. The owner creates a pairing code from
 a primary session with the expected kind `site_deployer` and one site id (Platform ADR-0016), and
@@ -116,17 +117,18 @@ activate routes of that site. The owner lists and revokes the device with the ex
 lifecycle routes. Platform's `identity.registered_devices` kind check gains `site_deployer`, and
 the device row records its one site. The schema definition is edited in place.
 
-The host checks the manifest and the digests again, because it is the component that stores the
-bytes (Platform ADR-0015, "Uploads traverse edge to per-service receipts"). The attestation is
-checked on the controller only, the same split as DPL-022. Activation is a separate call, so the
-owner can upload ahead and switch later. The deploy command activates by default.
+The host independently verifies the signed artifact against the repository and immutable numeric
+ID in the current owner approval. It checks the requested source commit and exact trusted workflow
+revision, then validates the fetched archive and every file. Activation rechecks current approval
+and the local server-written proof without network. The deploy command activates by default.
 
 Alternatives:
 - **The Ansible playbook installs bundles, like binaries.** Each site release would need SSH and a
   full playbook run, and site repositories are not in `workspace.lock`, so the pins could not
   describe them. Rejected. The playbook still provisions the gateway itself.
-- **The sites service pulls from GHCR and verifies on the Pi.** The Pi would need network access to
-  GHCR and a Sigstore trust root, which DPL-022 keeps off the host on purpose. Rejected.
+- **Server verification.** Originally rejected by this change. The owner selected it in SITE-028
+  and approved pinned gh/oras and server-controlled roots for public GHCR. Service binary delivery
+  keeps the separate DPL-022 controller verification model.
 - **The site's CI pushes to Edge with a deploy token.** A long-lived credential would sit in the
   site repository's CI secrets, and a compromise of that CI would publish to the public host.
   Rejected for version 1.
@@ -271,7 +273,8 @@ rolls a site back.
 ## Owner decision, 2026-10-16
 
 The owner chose server-side verification of signed bundle origin, bound to one approved GitHub
-repository per site. The current raw-tar server path does not enforce that decision. The separate
-change `bind-site-bundles-to-github` (SITE-028) plans the approval contract, server verification,
-SDK request, activation policy and fleet rollout. Runtime dependencies still require the explicit
-owner decision recorded there. This amendment records the decision; it does not claim implementation.
+repository per site. The original raw-tar server path did not enforce that decision. The separate
+change `bind-site-bundles-to-github` (SITE-028) implements the approval contract, server verification,
+SDK request, activation policy and fleet rollout. The owner approved gh/oras and the narrow nix signal dependency there. The child commits and CI, exact
+pinned-stack checks and final workspace acceptance are recorded separately in SITE-028.
+This amendment does not claim a deployed host.

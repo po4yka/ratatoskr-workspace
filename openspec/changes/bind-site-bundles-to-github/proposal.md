@@ -2,7 +2,7 @@
 
 ## Why
 
-A site approval currently binds no GitHub repository, and the Sites server accepts a tar archive
+At change start, a site approval bound no GitHub repository, and the Sites server accepted a tar archive
 without checking its signed origin. The owner chose server verification so a paired deployer cannot
 substitute a foreign or unsigned bundle.
 
@@ -54,7 +54,8 @@ check for other generated consumers before changing contracts. No repository imp
 Outside scope: real Obsidian Sync/iOS, support terms, live production provisioning, private GitHub
 repositories, new API major versions, database migrations and unrelated historical contracts tasks.
 
-Nothing in this proposal has shipped. During implementation, consumers accept the new optional
+The child implementation is published. SITE-028 records its commits and checks; workspace pin
+promotion and final acceptance are tracked there separately. During implementation, consumers accept the new optional
 binding before producers emit it, then enforcement requires it and rejects raw tar. Existing sites
 without a binding cannot accept a new deploy after enforcement. No parallel major API is added.
 Rollback stops deploy writes and restores the prior verified snapshot as a set; restoring the old

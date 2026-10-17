@@ -90,7 +90,43 @@ No account secret was used in these fixtures.
 - OBS-023 3.5 still needs the physical iOS and protected credential-store checks.
 - OBS-023 3.4 and ADR-0010 require the five written support answers in the existing terms spike.
   A public maintainer statement does not replace those answers. No support message was sent.
-- GitHub binding needs the cross-repository contract and runtime verifier work. The approved policy
-  alone does not make the current raw-tar endpoint enforce it.
+- GitHub binding is implemented in the published coordinated child commits. The formal pinned
+  runtime profile and full Molecule passed; workspace hosted CI remains tracked in SITE-028.
 - The existing opt-in Keychain test and twelve unanswered CLI metadata commands remain unverified.
-- OBS-024 contracts tasks 3.13–3.16 still wait for a coordinated fleet contracts revision.
+- OBS-024 contracts tasks 3.13–3.16 remain separate work: strict write-path suffix/colon rules
+  and optional conflict `stale_paths`. SITE-028 coordinates a new contracts revision but does not
+  implement those changes. They remain unticked.
+
+
+## SITE-028 continuation, 2026-10-17
+
+The owner also accepted a separate TDD-order exception for SITE-028 4.1, 4.5 and 4.7. Component RED
+is recorded for 4.1, but full server-store RED before implementation is not evidenced. The final
+approval recheck and server queue/cancellation implementation preceded their planned server RED.
+This record remains; successful acceptance does not reconstruct the missing order.
+
+Local Sites acceptance passed 219 tests, with zero ignored; the corrected valid-publication fixture
+then passed all 28 deploy component/real-proof tests again. The exact proposed Platform/Sites/Notes/
+Knowledge set passed 12 runtime scenarios, including genuine signed store/retry/activation through
+Edge and the existing privacy corpus (13 pages, one asset, 24 negative searches). Its combined
+Sites/gh/oras cgroup peak was 129880064 bytes under 536870912, with swap disabled. Native execution
+on a 16 KiB kernel is not claimed. Independent P0 reviews passed for the affected components.
+
+Initial published Sites CI correctly returned readiness 503 when its old ARM64 smoke fixture
+omitted the verifier. The corrected fixture requires that refusal, then readiness 200 with the
+approved checked tools and roots under the image's real non-root user, and both clean shutdowns.
+The local Debian 12 ARM64 replay passed. Final child CI, workspace pins and snapshot acceptance
+remain tracked in [SITE-028](../changesets/SITE-028-site-bundle-provenance.yaml). The production host
+remains frozen; the real Sync/MFA/iOS deferrals above are unchanged.
+
+The formal published-pin profile now passed the same 12 scenarios with Sites `8bcfe8b`, Platform
+`16b502e`, Notes `5076346` and Knowledge `0e6e447`. Its measured combined Sites/tool peak was
+151896064 bytes under the 536870912-byte limit, with swap disabled. Successful teardown completed
+before the result was published. All 17 selected child commits passed 98 hosted checks before
+those task pins moved; the workspace then passed 131 tests with zero ignored, format, Clippy,
+dependency policy, doctor, lock-check and a byte-identical second lock generation.
+
+Full Molecule then passed against the new pins, including zero-change idempotence, verification
+and destroy. Nine service processes passed readiness and target stop/start; replay changed no
+start time. Anonymous bounded fetch, offline proof/refusal, artifact tamper, freeze/pin guards and
+secret-output checks passed. One intentional SQL error was followed by explicit refusal assertions.

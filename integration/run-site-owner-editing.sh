@@ -40,7 +40,7 @@ from pathlib import Path
 import sys
 source = Path(sys.argv[1]).read_text()
 source = source.replace('RUN apt-get update', 'RUN sed -i s,http://deb.debian.org,https://deb.debian.org,g /etc/apt/sources.list.d/debian.sources && apt-get update')
-source = source.replace('cargo build --release', 'RUSTUP_TOOLCHAIN=1.97.0 cargo build --release')
+source = source.replace('cargo build --release', 'CARGO_BUILD_JOBS=2 RUSTUP_TOOLCHAIN=1.97.0 cargo build --release')
 lines = source.splitlines()
 result = []
 for line in lines:
@@ -77,6 +77,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 if [[ ${1:-} == --validate ]]; then printf 'site owner editing Compose validation: PASS\n'; exit 0; fi
+python3 "$root/integration/lib/prepare-site-verifier.py" "$runtime/verifier"
 for service in notes platform sites knowledge; do
   if [[ ${RATATOSKR_SITE027_APT_HTTPS:-0} == 1 && "$service" != notes ]]; then
     upper=$(printf '%s' "$service" | tr '[:lower:]' '[:upper:]')

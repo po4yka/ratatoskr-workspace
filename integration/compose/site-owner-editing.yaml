@@ -102,7 +102,7 @@ services:
         RUN sed -i s,http://deb.debian.org,https://deb.debian.org,g /etc/apt/sources.list.d/debian.sources && apt-get update && apt-get install -y --no-install-recommends git ca-certificates pkg-config && rm -rf /var/lib/apt/lists/*
         WORKDIR /build
         COPY . .
-        RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/usr/local/cargo/git --mount=type=cache,target=/build/target RUSTUP_TOOLCHAIN=1.97.0 cargo build --release --locked -p ratatoskr-notes --bin ratatoskr-notes && cp target/release/ratatoskr-notes /ratatoskr-notes
+        RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/usr/local/cargo/git --mount=type=cache,target=/build/target CARGO_BUILD_JOBS=2 RUSTUP_TOOLCHAIN=1.97.0 cargo build --release --locked -p ratatoskr-notes --bin ratatoskr-notes && cp target/release/ratatoskr-notes /ratatoskr-notes
         FROM debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
         COPY --from=builder /ratatoskr-notes /usr/local/bin/ratatoskr-notes
         ENTRYPOINT ["/usr/local/bin/ratatoskr-notes"]
@@ -129,6 +129,18 @@ services:
         RATATOSKR_GIT_SHA: ${RATATOSKR_SITES_REVISION}
     # Disposable volume ownership differs from the host's service users; no host permission proof.
     user: "0:0"
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1
+    pids_limit: 128
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        install -d -m 0755 /usr/lib/ratatoskr-sites/verifier
+        install -m 0755 /run/site027/verifier/gh /usr/lib/ratatoskr-sites/verifier/gh
+        install -m 0755 /run/site027/verifier/oras /usr/lib/ratatoskr-sites/verifier/oras
+        install -m 0644 /run/site027/verifier/trusted-root.jsonl /usr/lib/ratatoskr-sites/verifier/trusted-root.jsonl
+        exec /usr/local/bin/ratatoskr-sites
     network_mode: service:network
     environment:
       RATATOSKR__DATABASE__URL: postgres://ratatoskr_sites@127.0.0.1:5432/ratatoskr
@@ -138,6 +150,10 @@ services:
       RATATOSKR__BLOBS__ROOT: /data/sites-blobs
       RATATOSKR__BLOBS__NOTES_ROOT: /data/notes-blobs
       RATATOSKR__DEPLOYS__ROOT: /data/site-deploys
+      RATATOSKR__DEPLOYS__VERIFIER__GH_PATH: /usr/lib/ratatoskr-sites/verifier/gh
+      RATATOSKR__DEPLOYS__VERIFIER__ORAS_PATH: /usr/lib/ratatoskr-sites/verifier/oras
+      RATATOSKR__DEPLOYS__VERIFIER__TRUSTED_ROOT_PATH: /usr/lib/ratatoskr-sites/verifier/trusted-root.jsonl
+      RATATOSKR__DEPLOYS__VERIFIER__SIGNER_COMMIT: 89331e6aa0b845c3565c1d9785b0dd5038e2de81
     depends_on:
       platform: {condition: service_healthy}
       postgres: {condition: service_healthy}

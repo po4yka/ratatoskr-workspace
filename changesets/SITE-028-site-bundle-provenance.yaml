@@ -1,5 +1,5 @@
 id: SITE-028
-state: implementing
+state: local-snapshot-verified-awaiting-workspace-ci
 openspec_change: bind-site-bundles-to-github
 goal: The Sites server accepts and activates only bundles whose signed origin matches one owner-approved GitHub repository, digest, commit and trusted workflow.
 non_goals: [private registries, new server GitHub credentials, production host operations, new API majors, database migrations, unrelated contracts repairs]
@@ -172,10 +172,10 @@ dependency_order: contracts -> all expanded consumers at one revision -> approva
 compatibility: Keep the first API version; consumers decode the optional expanded binding before producers emit it. Deploy refuses absent binding and raw tar. Old clients fail clearly without a provenance bypass.
 schema: Edit the current schema definitions in place and create fresh isolated test databases. Add no migrations or migration tooling.
 rollout: No production operation in this change. The frozen host is excluded. Merge expanded contracts and consumers first, then producers and clients; publish only tested combined pins.
-rollback: Stop deploy writes and preserve the last verified served bundle. Restoring an endpoint that bypasses provenance requires explicit owner approval. Only expanded contract types and compatible consumer pins are published; server enforcement is pending.
+rollback: Stop deploy writes and preserve the last verified served bundle. Restoring an endpoint that bypasses provenance requires explicit owner approval. Keep the last verified bundle served while deploy writes are stopped. Restore a compatible snapshot as a set; do not silently restore the raw-tar route.
 required_checks:
   - Real public OCI manifest and signed proof verification with no token or inherited tool config, plus changed-byte refusal.
-  - Every named RED before its implementation; every child DEVELOPMENT gate and green CI.
+  - Every functional acceptance check, each child DEVELOPMENT gate and green CI. Preserve the explicit owner exceptions for the three missing RED-order records.
   - Signature identity digest commit workflow runner and repository-name-reuse refusals.
   - Approval withdrawal and rebinding races, idempotency and verified offline rollback.
   - Bounded time memory output archive concurrency cancellation and process cleanup.
@@ -239,13 +239,13 @@ commits:
     sha: 9661c6b5ecb3f8e174b42f6685b7bf663557941f
     boundary: Expanded contract pin and genuine public signed fixture; five CI checks passed. New deploy client remains local.
 pull_requests: []
-final_snapshot: Not advanced; coordinated consumer and enforcement checks remain pending.
+final_snapshot: Task snapshot pins are updated after all 17 selected child suites passed; lock and full harness gates and the formal 12-scenario profile pass. Full Molecule including zero-change idempotence, verify and destroy passed. Workspace publication and hosted workspace CI remain required.
 
 apply_order_violation:
-  tasks: ["4.5", "4.7"]
-  status: Awaiting separate owner decision; draft stays unpublished and task stays open.
-  fact: The final locked approval recheck and server job queue/cancellation cleanup were drafted before the planned server-level RED tests.
-  boundary: The accepted historical exception for OBS-024 and SITE-026 does not cover this draft.
+  tasks: ["4.1", "4.5", "4.7"]
+  status: Owner accepted the explicit exception on 2026-10-17; preserve the missing RED-order evidence and proceed with publication, CI and final pins.
+  fact: The final locked approval recheck and job queue/cancellation cleanup preceded their planned server RED. For 4.1, component-first RED is observed but full server-store RED before implementation is not evidenced.
+  boundary: The earlier OBS-024 and SITE-026 exception was separate. The explicit SITE-028 exception below now covers these three order gaps.
 
 fixture_writer:
   repository: ratatoskr-site-sdk
@@ -258,6 +258,7 @@ fixture_writer:
   dependencies: Published expanded contracts and SDK pin. Calls the reviewed reusable workflow at its immutable revision.
 
 verifier_component_evidence:
+  record_type: Historical component checkpoint before server and client rollout; final acceptance below supersedes its pending boundary.
   real_fixture_source: 009afe32df0d5e10aaef79ae3e6bd6ecb3a989c9
   trusted_workflow: 89331e6aa0b845c3565c1d9785b0dd5038e2de81
   artifact: ghcr.io/po4yka/ratatoskr-site-sdk@sha256:d88bfae6f5ec3af637568587d6077674f1893b176a2015c111e083bad602b4a5
@@ -271,8 +272,163 @@ verifier_component_evidence:
 
 platform_local_commit:
   sha: 16b502ed502dfcdcfe6ce8574d794f4a303d4dce
-  status: Committed locally after full gate and clean independent review; not pushed until Sites enforcement is ready.
-  web_generated_api: Local Web draft now pins the exact API bytes of this local commit. Web is not published.
-server_draft_gate:
-  result: Full Sites test run observed 195 passed, seven failed, zero ignored.
-  failures: Legacy raw-tar deploy_routes and unsealed activation happy paths need replacement with verified-request coverage. Do not claim the server gate passed.
+  status: Published on main after the full gate and clean independent review; hosted CI is tracked in the final acceptance record.
+  web_generated_api: Published Web 5a83900de6ceb2c3c3632642beeb362f5a50a1eb pins these exact API bytes and passed all four hosted checks.
+historical_server_draft_gate:
+  result: The earlier draft observed 195 passed, seven failed, zero ignored.
+  failures: Legacy raw-tar routes and unsealed activation paths failed before test adaptation. See the newer local checkpoint below; this failed run is retained as history.
+
+continuation_2026_10_17:
+  record_type: Historical checkpoint before the owner exception; later final acceptance supersedes its pending status.
+  sites_real_tests: 218 passed, zero failed, zero ignored; genuine signatures and actual gh/oras.
+  sites_gate: DEVELOPMENT, deny, strict OpenSpec and all-feature Clippy passed before the final permission refinement.
+  sites_review: Independent P0 review clean at 0.96 before that refinement; repeat after the fix.
+  tdd_boundary: 4.5 and 4.7 stay open and unpublished until the separate owner decision. Later regression RED/GREEN does not repair the prior order violation.
+  sdk_local: f802e0ab8d4235b3b230ebd61eaa5c1668ea7610
+  web_local: 5a83900de6ceb2c3c3632642beeb362f5a50a1eb
+  integration_red: Previous verified images rejected github_repository as unknown (422). The owned stack was removed. The profile test then failed on missing GH_PATH before adapter changes.
+  integration_scope: Draft Linux images, real public proofs, 512 MiB and swap disabled; combined GREEN remains pending.
+
+sites_local_commit:
+  sha: 3de8650f30f0ccde2832056452b604e605d1adba
+  status: Published implementation commit after the explicit owner exception. The CI-only follow-up is 8bcfe8b8246438ee28a96ee08a6258fb474d2407; final acceptance is recorded below.
+  validation: DEVELOPMENT gate and deny passed; final all-feature Clippy, 219 tests, release build, strict OpenSpec and source-size checks passed. The valid-publications fixture correction passed all 28 deploy tests again.
+  review: Final independent P0 review clean at 0.90.
+  regressions: Metrics absent before implementation; staging 0755 before 0700; publication 02750 before 0750 compatible with RestrictSUIDSGID=yes. Each new regression observed RED then GREEN.
+proposed_stack_first_green:
+  scenario_count: 12
+  privacy: 13 pages, one asset, 24 negative searches.
+  memory_max_bytes: 536870912
+  memory_swap_max_bytes: 0
+  memory_peak_bytes: 130572288
+  boundary: Actual Sites and gh/oras through Edge; older compatible Notes/Knowledge images. Exact clean SITE-028 matrix repeat is in progress. Not final pin or CI acceptance.
+  fixture_correction: Initial empty-publications manifest was invalid; fixture now names bundle. Service validation was kept.
+workspace_continuation_gate:
+  record_type: Historical checkpoint before final publication and pin promotion.
+  tests: 131 passed, zero ignored.
+  doctor: Healthy; primary baseline submodules clean.
+  specs: 45 active items valid under OpenSpec 1.10.0.
+  review: Independent P0 review clean at 0.97.
+  publication: Feature pins remain unchanged; hold the server and dependent client rollout for the owner decision, then require all child CI and final snapshot gates.
+
+exact_proposed_stack_green:
+  sites: 3de8650f30f0ccde2832056452b604e605d1adba
+  platform: 16b502ed502dfcdcfe6ce8574d794f4a303d4dce
+  notes: 5076346c7f66decd4a7b908155038f46c6d023ef
+  knowledge: 0e6e447b77a38c374c7ab1a14064c5e668c02c04
+  scenarios: 12 passed; owned stack and volumes removed.
+  memory_max_bytes: 536870912
+  memory_swap_max_bytes: 0
+  memory_peak_bytes: 129880064
+  boundary: Exact clean proposed commits, not published pins. Child CI, final snapshot gates and Molecule remain after the owner decision and rollout.
+
+owner_tdd_exception_2026_10_17:
+  tasks: ["4.1", "4.5", "4.7"]
+  decision: The owner explicitly accepted the SITE-028 TDD-order exception with the gap record preserved and authorized push, successful CI, final integration and pin promotion.
+  retained_gap: 4.1 has component-first RED but no evidenced full server-store RED before implementation; the final approval and queue/cancellation implementation preceded the planned 4.5/4.7 server RED.
+  acceptance: No functional gate is waived. Keep genuine signature, negative policy, race, cancellation, resource, child CI and final snapshot checks.
+
+ci_smoke_correction:
+  previous_sites: 3de8650f30f0ccde2832056452b604e605d1adba
+  failure: ARM64 smoke supplied no verifier and incorrectly expected readiness 200. The server correctly returned 503.
+  fix: Test 503 without policy, then 200 with checksummed approved ARM64 tools and reviewed roots at read-only root-owned paths; keep the actual non-root image user, 512 MiB/no swap and both clean shutdown checks.
+  local_result: Real Debian 12 ARM64 Docker artifact smoke passed; shellcheck and YAML passed; independent P0 review clean at 0.98.
+  boundary: CI fixture only. Server logic and trust policy are unchanged. Wait for the new commit CI before pins.
+
+published_children_2026_10_17:
+  acceptance: All 17 exact selected commits passed their own local gates, independent review and all 98 hosted checks before task snapshot pins moved.
+  repositories:
+    - repository: ratatoskr-contracts
+      sha: 66bdb0c0545363f06137f13687084c21db9b27c5
+      ci_checks: 8
+      ci: https://github.com/po4yka/ratatoskr-contracts/commit/66bdb0c0545363f06137f13687084c21db9b27c5/checks
+    - repository: ratatoskr-channel-digests
+      sha: ab638527da008b55b4787ad37a51dc46237bd00c
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-channel-digests/commit/ab638527da008b55b4787ad37a51dc46237bd00c/checks
+    - repository: ratatoskr-chatgpt
+      sha: 7dc1ef8fe208778967a4259ee8996d13469115b6
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-chatgpt/commit/7dc1ef8fe208778967a4259ee8996d13469115b6/checks
+    - repository: ratatoskr-claude
+      sha: bc07c0235cc909e48d220640014b15bb807da6db
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-claude/commit/bc07c0235cc909e48d220640014b15bb807da6db/checks
+    - repository: ratatoskr-extractor
+      sha: 9bbb68cad6670c72a0869c236bc26d5b91b832bc
+      ci_checks: 8
+      ci: https://github.com/po4yka/ratatoskr-extractor/commit/9bbb68cad6670c72a0869c236bc26d5b91b832bc/checks
+    - repository: ratatoskr-github
+      sha: a66c503f4f6a6022a023eb3a2b6307e0a985716a
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-github/commit/a66c503f4f6a6022a023eb3a2b6307e0a985716a/checks
+    - repository: ratatoskr-instagram
+      sha: dac7d4fe8d663bcb36e287b4f4cff19d94aab107
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-instagram/commit/dac7d4fe8d663bcb36e287b4f4cff19d94aab107/checks
+    - repository: ratatoskr-knowledge
+      sha: 0e6e447b77a38c374c7ab1a14064c5e668c02c04
+      ci_checks: 7
+      ci: https://github.com/po4yka/ratatoskr-knowledge/commit/0e6e447b77a38c374c7ab1a14064c5e668c02c04/checks
+    - repository: ratatoskr-notes
+      sha: 5076346c7f66decd4a7b908155038f46c6d023ef
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-notes/commit/5076346c7f66decd4a7b908155038f46c6d023ef/checks
+    - repository: ratatoskr-telegram
+      sha: 07160e1f6ec6eebee3463c6b4db45095ce684f76
+      ci_checks: 7
+      ci: https://github.com/po4yka/ratatoskr-telegram/commit/07160e1f6ec6eebee3463c6b4db45095ce684f76/checks
+    - repository: ratatoskr-threads
+      sha: 9376ce9235cf41e73c56fd0d16913a1737709fac
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-threads/commit/9376ce9235cf41e73c56fd0d16913a1737709fac/checks
+    - repository: ratatoskr-vault
+      sha: 09232320353dc4bb467aa1ccad688706e5b3e535
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-vault/commit/09232320353dc4bb467aa1ccad688706e5b3e535/checks
+    - repository: ratatoskr-x
+      sha: 5c6cdd76a7f152d56dd53be70654c6a21ca0b1b0
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-x/commit/5c6cdd76a7f152d56dd53be70654c6a21ca0b1b0/checks
+    - repository: ratatoskr-sites
+      sha: 8bcfe8b8246438ee28a96ee08a6258fb474d2407
+      ci_checks: 7
+      ci: https://github.com/po4yka/ratatoskr-sites/commit/8bcfe8b8246438ee28a96ee08a6258fb474d2407/checks
+    - repository: ratatoskr-platform
+      sha: 16b502ed502dfcdcfe6ce8574d794f4a303d4dce
+      ci_checks: 7
+      ci: https://github.com/po4yka/ratatoskr-platform/commit/16b502ed502dfcdcfe6ce8574d794f4a303d4dce/checks
+    - repository: ratatoskr-site-sdk
+      sha: f802e0ab8d4235b3b230ebd61eaa5c1668ea7610
+      ci_checks: 5
+      ci: https://github.com/po4yka/ratatoskr-site-sdk/commit/f802e0ab8d4235b3b230ebd61eaa5c1668ea7610/checks
+    - repository: ratatoskr-web
+      sha: 5a83900de6ceb2c3c3632642beeb362f5a50a1eb
+      ci_checks: 4
+      ci: https://github.com/po4yka/ratatoskr-web/commit/5a83900de6ceb2c3c3632642beeb362f5a50a1eb/checks
+  sites_followup: The selected Sites commit changes CI and docs only after implementation 3de8650f30f0ccde2832056452b604e605d1adba; its ARM64 verifier smoke passed.
+
+formal_pinned_acceptance_2026_10_17:
+  profile: integration/run-site-owner-editing.sh
+  scenarios: 12 passed, including genuine signed store-retry-activation, invalid-origin refusals, privacy, write-back and SSE.
+  inputs: Exact published Sites 8bcfe8b, Platform 16b502e, Notes 5076346 and Knowledge 0e6e447; full SHAs are in workspace.lock and the published children record.
+  teardown: Owned containers, network and volumes removed before result.json was published.
+  privacy: 13 pages, one asset, 24 negative searches.
+  memory_max_bytes: 536870912
+  memory_swap_max_bytes: 0
+  memory_peak_bytes: 151896064
+  local_build_deviation: HTTPS Debian mirror, runtime CA bundle from the verified builder, installed Rust 1.97.0 and two Cargo jobs; child source and locks unchanged.
+  harness: 131 passed, zero failed, zero ignored; format, Clippy, deny, doctor and lock-check passed.
+  lock_sha256: d3e0607edf1dd6fe83a9d139a6e5604490ede39557a73c3d5be25231f1d84b2a
+  deterministic_lock: Second generation was byte-identical.
+  review: Integration-source P0 helper clean at 0.98. Aggregate helper refused gitlinks without child source; independent child reviews, 98 hosted checks and pin-lock validation cover the dependency boundary.
+  boundary: Full Molecule also passed. Workspace hosted CI remains separate; no production operation or real Sync/MFA/iOS acceptance.
+
+final_disposable_host_acceptance_2026_10_17:
+  steps: Create and prepare, then converge, idempotence, verify and destroy all exited zero against the selected published pins.
+  idempotence: 232 ok, changed 0, unreachable 0, failed 0.
+  verify: 121 ok, failed 0, skipped 0. One deliberately failing role.sql fixture was caught and separately asserted; it is not an unverified ignored failure.
+  verifier: Fixed root-owned approved ARM64 tools, anonymous immutable fetch in 512 MiB with no swap, genuine offline signature and changed-byte refusal passed.
+  services: All nine enrolled processes passed readiness, rerun kept their start times, target stop-start worked, and verbose output contained no generated test password.
+  teardown: The owned ratatoskr-host container was removed; unrelated containers were kept.
+  publication_boundary: Local compatible snapshot is verified; wait for all eight hosted workspace checks before marking 1.18 and 7.6 complete.

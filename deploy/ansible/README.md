@@ -91,8 +91,9 @@ swap disabled. It fetches the immutable archive without credentials, then verifi
 proof with network traffic and network address families disabled. The changed-manifest case
 must fail. `integration/fixtures/site028-real-proof/README.md` records the source of the evidence.
 
-SITE-028 server enforcement, service configuration and the final coordinated pins are still in
-progress. The frozen production host remains excluded by preflight.
+SITE-028 server enforcement and service configuration are published with the coordinated child
+commits. Its changeset records exact snapshot pins, local acceptance and hosted CI as separate
+gates. The frozen production host remains excluded by preflight.
 
 ## Testing it
 

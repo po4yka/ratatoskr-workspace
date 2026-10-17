@@ -151,6 +151,10 @@ Set a unique `RATATOSKR_TASK_NAMESPACE`, plus `RATATOSKR_<REPO>_CONTEXT` and
 the context's clean HEAD and belong to its `origin/main`. The runner refuses an existing Compose
 project of that name. `--validate` renders the profile and does not start services. A normal run
 builds one service at a time and removes only its own project and volumes on exit.
+The profile prepares gh 2.102.0 and oras 1.3.0 from the reviewed runtime manifest, verifies both
+archive and binary SHA-256 values, and installs them with the reviewed trust root at fixed
+root-owned paths inside the disposable Sites container. It uses public GHCR without a token.
+Sites and its tool children share a 512 MiB limit, no swap, one CPU and 128 tasks.
 
 The HTTP scenario signs in through the consent protocol, checks a stale edit conflict, then checks
 that a current edit becomes one revision and one event only after the fake device acknowledges it.
@@ -170,9 +174,18 @@ keys and their own volumes; the Molecule checks cover service users and host gro
 `RATATOSKR_SITE027_APT_HTTPS=1` is an explicit build workaround for networks that refuse Debian's
 HTTP mirror. It makes private copies of the pinned child Dockerfiles, changes the mirror scheme to
 HTTPS, copies the builder's verified CA bundle before runtime package installation, and selects the
-already installed Rust 1.97.0 toolchain without downloading optional components. It changes no child
+already installed Rust 1.97.0 toolchain without downloading optional components. Release builds
+use two Cargo jobs. The Notes fixture uses the same job bound. It changes no child
 source or lockfile and weakens no TLS or package verification. Evidence records this deviation in
 `build-deviations.txt`. `result.json` records the exact revisions, assertions and fixture boundaries.
+
+The same run checks a genuine SDK bundle signed by the pinned reusable workflow. It refuses
+unsigned proof, a changed artifact digest, a foreign immutable repository ID and stale approval,
+then stores, retries and activates the exact valid artifact through Edge. It records the combined
+Sites/tool cgroup peak and limits in `verifier-memory.json`. This run uses a disposable root user;
+Molecule checks the service users, installed tool ownership and host permissions separately.
+The fixture is public source `009afe32df0d5e10aaef79ae3e6bd6ecb3a989c9`, with signed evidence committed
+under `integration/fixtures/site028-real-proof/`. The registry artifact remains an external input.
 
 The same run includes [the SITE-025 privacy scenario](sites-privacy/README.md). It uploads the
 committed privacy vault through Notes and requests the first release through Edge. Anonymous

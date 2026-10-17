@@ -54,9 +54,9 @@ A site repository that uses the reusable bundle workflow of `ratatoskr-site-sdk`
 - **WHEN** `packages/site-sdk/test/bundle-manifest.test.ts` "fails when the manifest commit differs from GITHUB_SHA" builds a manifest for a commit other than the one being built
 - **THEN** the step fails and nothing is published
 
-### Requirement: The deploy command verifies before it uploads
+### Requirement: The deploy command verifies before it submits proof
 
-`ratatoskr-site deploy` SHALL pull the artifact, verify its attestation against the site repository, and check every file against the manifest, all on the machine where it runs, before it uploads any byte to Ratatoskr. It SHALL refuse a bundle whose manifest site id differs from the site named in the command.
+`ratatoskr-site deploy` SHALL pull the artifact, verify its attestation against the site repository, and check every file against the manifest, all on the machine where it runs, before it submits the immutable digest and attestation proof to Ratatoskr. The client SHALL send only `commit`, `artifact_sha256` and `attestation_bundle` as JSON. The server SHALL independently enforce the approved repository identity and pinned workflow policy defined by `bind-site-bundles-to-github`; client checks SHALL NOT be authority. Raw tar SHALL NOT be accepted at the HTTP deploy route. It SHALL refuse a bundle whose manifest site id differs from the site named in the command.
 
 #### Scenario: An artifact was changed after publication
 
@@ -93,7 +93,7 @@ A device of kind `site_deployer` SHALL be paired only through a pairing code tha
 
 ### Requirement: A deploy is idempotent on site and commit
 
-A deploy SHALL be idempotent on the pair of site id and commit. A second upload of a commit that is already stored SHALL return the existing deploy and store nothing.
+A deploy SHALL be idempotent on the site id, commit and verified artifact identity. Every retry SHALL verify proof again. A retry with the same identity SHALL return the existing deploy without replacing its server-written proof; a different artifact digest for the same stored commit SHALL return a conflict. Low-level archive receipt tests do not prove HTTP provenance enforcement.
 
 #### Scenario: The same commit is deployed twice
 
@@ -102,16 +102,16 @@ A deploy SHALL be idempotent on the pair of site id and commit. A second upload 
 
 ### Requirement: Activation switches the current deploy atomically
 
-Activating a deploy SHALL make it the site's current deploy in one atomic step. A request that the gateway serves SHALL see either the complete previous deploy or the complete new deploy, never a mix. The previous deploy SHALL stay stored, so that activating it again needs no download.
+Activating a deploy SHALL make it the site's current deploy in one atomic step. A request that the gateway serves SHALL see either the complete previous deploy or the complete new deploy, never a mix. The previous deploy SHALL stay stored, so that activating it again needs no download. Activation SHALL require its server-written provenance record to match the current approved repository and current policy. A legacy unsealed directory SHALL NOT activate.
 
 #### Scenario: Requests run while a deploy is activated
 
-- **WHEN** `crates/deploys/tests/activation.rs::activation_switches_current_and_previous_atomically` runs readers that resolve `current` in a loop while commit `b` is activated over commit `a`
+- **WHEN** `crates/deploys/tests/unit/activation.rs::activation_switches_current_and_previous_atomically` runs readers that resolve `current` in a loop while commit `b` is activated over commit `a`
 - **THEN** each reader sees a complete directory of `a` or of `b`, and `previous` points to `a` afterwards
 
 #### Scenario: The owner rolls back
 
-- **WHEN** `crates/deploys/tests/activation.rs::activating_previous_needs_no_download` activates the deploy of commit `a` after commit `b` was current
+- **WHEN** `crates/deploys/tests/unit/activation.rs::activating_previous_needs_no_download` activates the deploy of commit `a` after commit `b` was current
 - **THEN** `current` points to `a` and the sites service makes no outbound request
 
 ### Requirement: Old deploys are retained within a bound
@@ -120,5 +120,5 @@ The sites service SHALL keep the current deploy and at least the previous one fo
 
 #### Scenario: A sixth deploy arrives with a retention count of five
 
-- **WHEN** `crates/deploys/tests/activation.rs::retention_keeps_current_and_previous` activates a sixth deploy on a site with five stored deploys and a retention count of five
+- **WHEN** `crates/deploys/tests/unit/activation.rs::retention_keeps_current_and_previous` activates a sixth deploy on a site with five stored deploys and a retention count of five
 - **THEN** the oldest deploy that is neither current nor previous is removed, and five remain

@@ -2,12 +2,13 @@
 
 ## Context
 
-See `proposal.md`. The current first-version `SiteManifest` and `SiteApprovalChanged` contain no
-repository binding. SDK `src/cli/deploy.ts` verifies the OCI digest on the client and then uploads
-raw tar. Sites `DeployStore::receive` checks file bytes and approval state but sees no signed origin.
+See `proposal.md`. At change start, the first-version `SiteManifest` and `SiteApprovalChanged` contained no
+repository binding. SDK `src/cli/deploy.ts` verified the OCI digest on the client and then uploaded
+raw tar. Sites `DeployStore::receive` checked file bytes and approval state but saw no signed origin.
 The service unit has `MemoryHigh=384M` and `MemoryMax=512M` on the single shared host.
 
-This is a plan. No runtime tool, credential, API or database change is made by these artifacts.
+The child implementation and disposable-host tooling are published. SITE-028 records acceptance
+and pin promotion. No production host was changed and no server credential was added.
 
 ## Goals / Non-Goals
 

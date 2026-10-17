@@ -22,4 +22,10 @@ for step in consent_sign_in edit_conflicted edit_completed manual_release_retain
 done
 [[ -f "$root/integration/sites-privacy/scenario.py" ]] || fail 'missing real privacy scenario'
 rg -q -F 'sites-integration:' "$root/.github/workflows/ci.yml" || fail 'missing workspace sites integration job'
+for key in GH_PATH ORAS_PATH TRUSTED_ROOT_PATH SIGNER_COMMIT; do
+  rg -q -F "RATATOSKR__DEPLOYS__VERIFIER__${key}" "$profile" || fail "missing verifier $key"
+done
+rg -q -F 'mem_limit: 512m' "$profile" || fail 'Sites memory bound is absent'
+rg -q -F 'memswap_limit: 512m' "$profile" || fail 'Sites swap is not disabled'
+rg -q -F 'prepare-site-verifier.py' "$runner" || fail 'missing checksum-checked tool preparation'
 printf 'site owner editing profile contract: PASS\n'

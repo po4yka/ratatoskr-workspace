@@ -7,23 +7,23 @@ and green CI for each item in SITE-028; use a PR link if a PR is used. Contracts
 No item is complete until its own DEVELOPMENT gate passes and the workspace pins the verified
 commit. Pin-only items have no failing test first because they change generated dependency state.
 
-- [ ] 1.1 `ratatoskr-contracts`: first-version types, fixtures, schemas and generated clients. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.2 `ratatoskr-sites`: approval projection, verifier, receipt and activation. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.3 `ratatoskr-platform`: approval digest/event and deploy proxy. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.4 `ratatoskr-site-sdk`: proof download, immutable deploy request and workflow pin. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.5 `ratatoskr-web`: repository binding approval UI. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.6 `ratatoskr-extractor`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.7 `ratatoskr-knowledge`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.8 `ratatoskr-github`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.9 `ratatoskr-vault`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.10 `ratatoskr-x`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.11 `ratatoskr-instagram`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.12 `ratatoskr-threads`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.13 `ratatoskr-chatgpt`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.14 `ratatoskr-claude`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.15 `ratatoskr-telegram`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.16 `ratatoskr-channel-digests`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.17 `ratatoskr-notes`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.1 `ratatoskr-contracts`: first-version types, fixtures, schemas and generated clients. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.2 `ratatoskr-sites`: approval projection, verifier, receipt and activation. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.3 `ratatoskr-platform`: approval digest/event and deploy proxy. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.4 `ratatoskr-site-sdk`: proof download, immutable deploy request and workflow pin. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.5 `ratatoskr-web`: repository binding approval UI. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.6 `ratatoskr-extractor`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.7 `ratatoskr-knowledge`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.8 `ratatoskr-github`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.9 `ratatoskr-vault`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.10 `ratatoskr-x`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.11 `ratatoskr-instagram`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.12 `ratatoskr-threads`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.13 `ratatoskr-chatgpt`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.14 `ratatoskr-claude`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.15 `ratatoskr-telegram`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.16 `ratatoskr-channel-digests`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.17 `ratatoskr-notes`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
 - [ ] 1.18 `ratatoskr-workspace`: provisioning, integration, documentation and final verified pins. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
 
 ## 2. Decision and real proof spike
@@ -36,42 +36,42 @@ commit. Pin-only items have no failing test first because they change generated 
 
 - [x] 3.1 RED: add `crates/sites-contracts/tests/github_binding.rs::repository_identity_is_bound` and `::deploy_request_is_digest_only`. Assert canonical name/numeric ID round-trip and refusal of malformed identities, host/URL/tag overrides and missing required proof. Run against the prior contract with valid signatures/stubs as needed; confirm assertion failures, not compilation failures.
 - [x] 3.2 GREEN: add the first-version repository binding and immutable deploy request, schemas, fixtures and generated types. Verify 3.1, the contracts DEVELOPMENT gate and public API baselines.
-- [ ] 3.3 Update the contracts commit in every consumer and the workspace pin guard source. No failing test first: generated lock/pin state. Verify each pin-only repository's gate and CI, SDK/Web generated drift, and `contracts_pin.rs`; record every SHA in SITE-028.
+- [x] 3.3 Update the contracts commit in every consumer and the workspace pin guard source. No failing test first: generated lock/pin state. Verify each pin-only repository's gate and CI, SDK/Web generated drift, and `contracts_pin.rs`; record every SHA in SITE-028.
 - [x] 3.4 Document the new first-version fields and producer/consumer rules beside the contract. No failing test first: documentation. Verify schemas, fixtures and the described event/body agree.
 
 ## 4. Sites enforcement
 
-- [ ] 4.1 RED: add `crates/deploys/tests/provenance.rs::only_the_approved_build_can_be_stored`, table-driven for foreign repository/name reuse, signature, issuer, digest, commit, workflow path/revision and self-hosted runner. Valid proof stores; each invalid case leaves no deploy. Observe intended failures before verifier implementation.
-- [ ] 4.2 GREEN: implement bounded proof verification and exact manifest/layer receipt. Verify 4.1 and existing receipt/path/file tests; use real signed evidence for the positive acceptance, with fakes only for fault injection.
+- [x] 4.1 RED (owner exception accepted 2026-10-17; pre-implementation server RED is not claimed): add `crates/deploys/tests/provenance.rs::only_the_approved_build_can_be_stored`, table-driven for foreign repository/name reuse, signature, issuer, digest, commit, workflow path/revision and self-hosted runner. Valid proof stores; each invalid case leaves no deploy. Observe intended failures before verifier implementation.
+- [x] 4.2 GREEN: implement bounded proof verification and exact manifest/layer receipt. Verify 4.1 and existing receipt/path/file tests; use real signed evidence for the positive acceptance, with fakes only for fault injection.
 - [x] 4.3 RED: add `services/sites/tests/deploy_provenance.rs::raw_tar_and_owner_cannot_bypass_provenance`. Assert raw tar and unsigned owner requests refuse before storage, and unauthorized sessions still refuse. Observe the missing refusal on the prior server.
-- [ ] 4.4 GREEN: require the new deploy request for all caller kinds. Verify 4.3 and the existing deploy authority tests.
-- [ ] 4.5 RED: add `crates/deploys/tests/provenance_races.rs::withdrawal_during_verify_stores_nothing`, `::rebind_refuses_old_activation`, `::same_commit_other_digest_conflicts` and `::concurrent_receipts_cannot_replace_proof`. Block verification to change approval deterministically; assert no visible directory or changed links. Confirm intended failures.
-- [ ] 4.6 GREEN: persist verified provenance and serialize the final authority/idempotency boundary with activation. Verify 4.5, same-identity retry and verified rollback without network. Edit current schema in place; create fresh test databases.
-- [ ] 4.7 RED: add `services/sites/tests/provenance_limits.rs::timeout_kills_and_reaps_children`, `::cancel_cleans_staging`, `::oversized_output_is_refused`, `::foreign_url_never_connects` and `::capacity_is_bounded`. Assert process/staging cleanup and no stored deploy on each failure. Confirm intended failures.
-- [ ] 4.8 GREEN: apply D5 bounds, fixed tool/config paths, no shell or inherited credentials, checked output and stable errors. Verify 4.7 and shutdown behavior; run every Sites DEVELOPMENT command, independent review and CI.
-- [ ] 4.9 Document proof storage, errors and operational bounds in the Sites docs. No failing test first: documentation. Verify the documented public behavior against the tests above.
+- [x] 4.4 GREEN: require the new deploy request for all caller kinds. Verify 4.3 and the existing deploy authority tests.
+- [x] 4.5 RED (owner exception accepted 2026-10-17; pre-implementation server RED is not claimed): add `crates/deploys/src/real_store_tests.rs::withdrawal_during_verify_stores_nothing`, `::rebind_refuses_old_activation`, `::same_commit_other_digest_conflicts` and `::concurrent_receipts_cannot_replace_proof`. Block verification to change approval deterministically; assert no visible directory or changed links. Confirm intended failures.
+- [x] 4.6 GREEN: persist verified provenance and serialize the final authority/idempotency boundary with activation. Verify 4.5, same-identity retry and verified rollback without network. Edit current schema in place; create fresh test databases.
+- [x] 4.7 RED (owner exception accepted 2026-10-17; pre-implementation server RED is not claimed): add `services/sites/tests/provenance_limits.rs::timeout_kills_and_reaps_children`, `::cancel_cleans_staging`, `::oversized_output_is_refused`, `::foreign_url_never_connects` and `::capacity_is_bounded`. Assert process/staging cleanup and no stored deploy on each failure. Confirm intended failures.
+- [x] 4.8 GREEN: apply D5 bounds, fixed tool/config paths, no shell or inherited credentials, checked output and stable errors. Verify 4.7 and shutdown behavior; run every Sites DEVELOPMENT command, independent review and CI.
+- [x] 4.9 Document proof storage, errors and operational bounds in the Sites docs. No failing test first: documentation. Verify the documented public behavior against the tests above.
 
 ## 5. Platform approval and proxy
 
 - [x] 5.1 RED: add `crates/public-api/tests/site_approvals.rs::approval_event_covers_the_repository` and `::new_approval_requires_repository_binding`, with the existing `::stale_digest_is_refused` case. Assert the digest/event carries the canonical identity and a changed binding cannot use the old approval. Confirm intended failures.
 - [x] 5.2 GREEN: require the binding for new approvals and emit the expanded approval event; update the existing first-version schema in place. Verify 5.1 and approval withdrawal tests.
 - [x] 5.3 RED: add `crates/public-api/tests/sites_deploy_routes.rs::digest_request_keeps_deploy_authority` and `::provenance_body_is_bounded_before_proxying`. Assert exact request forwarding and existing per-site grants, body limits and content type. Confirm the old raw-body proxy fails those assertions.
-- [ ] 5.4 GREEN: forward the bounded JSON/proof without weakening identity or route guards. Verify 5.3, every Platform DEVELOPMENT command, independent review and CI; document the route in the same repository.
+- [x] 5.4 GREEN: forward the bounded JSON/proof without weakening identity or route guards. Verify 5.3, every Platform DEVELOPMENT command, independent review and CI; document the route in the same repository.
 
 ## 6. SDK and Web
 
 - [x] 6.1 RED: add `tests/deploy-provenance.test.ts` cases "sends the immutable digest and proof", "rejects a missing proof before login" and "cannot override the approved origin". Assert the exact server body and zero requests for invalid input. Confirm intended failures.
-- [ ] 6.2 GREEN: send the new request, retain client checks and pin the trusted workflow revision; document the command. Verify 6.1, SDK DEVELOPMENT gate, review and CI.
+- [x] 6.2 GREEN: send the new request, retain client checks and pin the trusted workflow revision; document the command. Verify 6.1, SDK DEVELOPMENT gate, review and CI.
 - [x] 6.3 RED: add `src/features/sites/repository-approval.test.tsx` cases "shows repository name and immutable id" and "requires approval again when binding changes". Assert the owner-visible identity and disabled old approval. Confirm intended failures.
-- [ ] 6.4 GREEN: show and approve the binding, with generated types from the same contracts commit. Verify 6.3, Web DEVELOPMENT gate, rendered desktop/mobile states, keyboard/error behavior, review and CI.
+- [x] 6.4 GREEN: show and approve the binding, with generated types from the same contracts commit. Verify 6.3, Web DEVELOPMENT gate, rendered desktop/mobile states, keyboard/error behavior, review and CI.
 
 ## 7. Workspace integration and provisioning
 
 - [x] 7.1 RED: add `harness/crates/workspace-core/tests/sites_verifier_tools.rs::runtime_tools_are_pinned_and_confined` and the Molecule `sites_verifier` case. Assert pinned root-owned ARM64-compatible tools, no credential inheritance and successful real proof verification within 512 MiB. Confirm missing-tool or policy assertions fail on the previous disposable host.
 - [x] 7.2 GREEN: provision the approved tool versions and server-owned trust root on the disposable host. Verify 7.1, zero-change idempotence and full Molecule. No operation on the frozen production host.
-- [ ] 7.3 RED: extend `integration/tests/site_owner_editing.py` with `verified_bundle_repository_boundary`: send foreign, unsigned, changed-digest and stale-approval requests, then valid real signed evidence. Assert refusals leave no deploy and only the valid request activates. Confirm intended failures before integration adapters change.
-- [ ] 7.4 GREEN: use the coordinated pins and real proof fixture; verify 7.3, existing privacy/write scenarios, withdrawal, rebinding, idempotency, cancellation and offline verified rollback. A synthetic signature is not acceptance evidence.
-- [ ] 7.5 Reconcile the active `site-bundles` and `site-manifest` deltas with the enforced policy, and update runbooks and SITE-028. No failing test first: specification and documentation. Verify strict OpenSpec validation and no contradictory raw-tar acceptance requirement.
+- [x] 7.3 RED: extend `integration/fixtures/site-owner-editing.py` with `verified_bundle_repository_boundary`: send foreign, unsigned, changed-digest and stale-approval requests, then valid real signed evidence. Assert refusals leave no deploy and only the valid request activates. Confirm intended failures before integration adapters change.
+- [x] 7.4 GREEN: use the coordinated pins and real proof fixture; verify 7.3, existing privacy/write scenarios, withdrawal, rebinding, idempotency, cancellation and offline verified rollback. A synthetic signature is not acceptance evidence.
+- [x] 7.5 Reconcile the active `site-bundles` and `site-manifest` deltas with the enforced policy, and update runbooks and SITE-028. No failing test first: specification and documentation. Verify strict OpenSpec validation and no contradictory raw-tar acceptance requirement.
 - [ ] 7.6 Advance pins only after every child CI is green. No failing test first: generated snapshot. Verify lock determinism, doctor, full harness gates, integration, Molecule, clean baselines and final workspace CI; record rollout, rollback and exact commits in SITE-028.
 
 ## Workflow follow-up
@@ -210,3 +210,118 @@ commit. Pin-only items have no failing test first because they change generated 
   and wrapping were applied. The checks cover each cell against its card, page width, keyboard
   approval, stale-digest feedback, missing binding and Axe. All 338 unit tests passed before
   this layout-only fix; final full Web checks and publication remain pending.
+
+
+## Apply continuation, 2026-10-17
+
+- Sites all-feature acceptance passed 218 tests, zero failed and zero ignored, including genuine
+  public SDK signatures, store/retry/activation, changed identities/signatures, rollback without
+  tool paths, bounded admission, cancellation, tracked activation shutdown and approval epoch ABA.
+  This does not change the recorded 4.5/4.7 order violation or close either task.
+- The normal Sites DEVELOPMENT gate, deny, strict OpenSpec and all-feature Clippy passed. An
+  independent P0 review returned clean (0.96). A subsequent runtime permission refinement is
+  in progress and requires focused revalidation and renewed review before publication.
+- The metrics test failed on absent counters before implementation, then passed through the real
+  operator router. Counters have six fixed outcome labels and no request-derived label.
+- Receipt staging exposed mode 0755 instead of 0700 before its fix; the new private-staging test
+  passed after implementation. Final published access must also respect RestrictSUIDSGID=yes;
+  this refinement is tracked separately and must not weaken the service unit.
+- New integration RED ran the previously verified Platform/Sites/Notes/Knowledge images. The
+  first binding manifest returned 422 for unknown github_repository, instead of success. The
+  disposable stack and volumes were removed. The new profile regression also failed because
+  GH_PATH was absent before verifier preparation/configuration and memory bounds were added.
+- Platform 16b502ed, SDK f802e0ab and Web 5a83900d are local commits after their full gates and
+  clean independent reviews. Web passed 338 unit cases and 48 browser cases, with no serious or
+  critical Axe issue on the changed approval states; the UI audit scored 80/100. Their behavior
+  commits remain unpublished until Sites enforcement is ready.
+- No Sync, MFA, cloud-vault or iOS test is claimed. The frozen production host was not contacted.
+
+- Final local Sites checkpoint: `3de8650f30f0ccde2832056452b604e605d1adba`, clean writer tree,
+  not pushed. After the permission regression failed on mode 02750 instead of 0750, the fix passed
+  both focused tests, all-feature Clippy, the full 219-test suite and release build. The normal
+  DEVELOPMENT/deny gate had also passed; strict OpenSpec and source-size checks pass. Final
+  independent P0 review is clean (0.90). The valid-publications fixture correction then passed all
+  28 deploy unit/real-proof cases again. No test is ignored.
+- A local proposed-stack run passed 12 runtime scenarios through real Edge, including unsigned,
+  foreign-ID, changed-digest and stale-approval refusal, valid store/retry/activation, existing
+  write-back legs and the privacy corpus (13 pages, one asset, 24 negative searches). Sites and
+  its actual gh/oras children reached 130572288 bytes under a 536870912-byte cgroup, with swap zero.
+  That first GREEN used the older compatible Notes/Knowledge images. A repeat with the exact
+  clean SITE-028 commits is in progress; do not call the first run a final pinned snapshot.
+- The first proposed-stack attempt failed correctly on a new fixture with no publication IDs.
+  The fixture now names bundle; service validation was not changed. The initial failure remains
+  in ignored evidence. Server unit fixtures now use the same valid manifest shape.
+- Workspace repeated all 131 tests with zero ignored, doctor is healthy, all 45 active OpenSpec
+  items pass, and the new shell profile checks pass. Independent P0 workspace review is clean
+  (0.97). The primary checkout and every baseline submodule remain clean except the owner's
+  untracked session log. No feature pin or server/client feature commit has been pushed.
+- Provisioning already renders the pinned child environment example unchanged before applying
+  settings. The new verifier keys are in that example; no second configuration renderer or new
+  secret is needed. Final pin/Molecule checks must confirm the example and runtime policy agree.
+
+- The repeat on exact clean commits passed all 12 scenarios and removed its owned stack/volumes:
+  Sites 3de8650, Platform 16b502ed, Notes 5076346, Knowledge 0e6e447. The combined service/tool
+  peak was 129880064 bytes, maximum 536870912, swap maximum zero. These are proposed commits;
+  the formal published-pin runner, final Molecule and workspace CI remain required after rollout.
+- Final RED-history audit: 4.1 has observed component-first RED for metadata policy and exact OCI
+  receipt, but no observed full server-store RED before the combined implementation. Keep the
+  original 4.1 task open rather than relabel component evidence as that server-level evidence.
+  The final owner question must cover this missing order evidence as well as the known 4.5/4.7
+  violations. Acceptance strength is unchanged: genuine crypto, server store and full runtime
+  checks have passed. The component RED logs are retained separately.
+
+
+## Owner exception accepted, 2026-10-17
+
+The owner accepted the explicit TDD-order exception for SITE-028 4.1, 4.5 and 4.7 and asked to
+continue publication, successful CI, integration and final pin promotion. The original gap record
+above is retained. Checked RED tasks carry that exception rather than claiming test-first order.
+No functional acceptance, CI or snapshot gate is waived.
+
+- Sites first publication at 3de8650 exposed an obsolete ARM64 CI fixture: it supplied no verifier
+  yet expected readiness 200. The actual job returned readiness 503, as required. The smoke fix
+  keeps that negative assertion, adds the real pinned root-owned tools and immutable checked root
+  snapshot, then requires readiness 200 and two clean stops as the image's non-root user within
+  512 MiB, no swap. It passed inside the disposable Debian 12 ARM64 host. Shellcheck, YAML and
+  independent P0 review pass (0.98). No server policy or readiness check was weakened.
+- SDK f802e0ab has all five CI checks green. Sites, Platform and Web publication is recorded;
+  final pin advancement still waits for every selected child CI to be green.
+
+- Web 5a83900d now has all four CI checks green. Its local rendered desktop/mobile, keyboard,
+  stale-approval, missing-binding, overflow and Axe acceptance remains recorded above.
+- The accepted 4.1 evidence is implemented across `provenance.rs` policy cases,
+  `bundle_verifier.rs` exact OCI cases, `real_proof_tests.rs` genuine crypto cases and
+  `real_store_tests.rs` server storage. The original full-store RED order is not claimed.
+  For 4.7, process group/output cases live in `verification_process.rs`, server admission and
+  cleanup in `real_store_tests.rs`, and JSON/foreign-transport refusal in `deploy_provenance.rs`.
+  The filename changes do not waive any behavior or turn post-implementation GREEN into RED.
+
+- Published acceptance: Sites `8bcfe8b8246438ee28a96ee08a6258fb474d2407` and Platform
+  `16b502ed502dfcdcfe6ce8574d794f4a303d4dce` each passed all seven hosted checks, including
+  ARM64 smoke and attested release publication. SDK has five green checks and Web has four.
+  The full selected set has 17 green child suites before workspace pin promotion.
+- Final integration-source review used the structured autoreview helper with its default P0
+  threshold. It reported no findings, confidence 0.98. Pin/lock validation follows separately.
+
+- The promoted task snapshot passed all 131 harness tests, zero ignored, including the
+  contracts pin guard and committed-snapshot acceptance. The old expected-pin table failed first
+  on its prior Channel Digests SHA, then passed after its 17 SHA constants were aligned.
+  Lock generation, a second byte-identical generation, lock-check, doctor, format and Clippy pass.
+
+- Formal pinned profile `integration/run-site-owner-editing.sh` passed all 12 scenarios against
+  Sites `8bcfe8b`, Platform `16b502e`, Notes `5076346` and Knowledge `0e6e447`. The result is
+  published only after successful teardown. Real Sites plus gh/oras peaked at 151896064 bytes
+  under 536870912, with swap disabled. Privacy retained 13 pages, one asset and 24 negative searches.
+  Device/Sync acknowledgements and Knowledge input rows remain declared fixtures. The Sites
+  real-store tests separately cover withdrawal/rebinding races, cancellation and offline rollback.
+- The aggregate structured helper refuses gitlinks because child source is outside its bundle.
+  It did not produce a review result for that aggregate. Integration-source review is clean
+  at 0.98; each selected child has its own clean review and CI. The pin table and lock are
+  checked by the complete 131-test harness, deterministic generation and direct diff review.
+
+- Final pinned Molecule passed converge, idempotence (`changed=0`), all verify cases and destroy.
+  Verify had zero skipped cases; its one intentional SQL failure was explicitly asserted as a
+  refusal with no success marker. Nine service processes were ready, unchanged on replay and
+  stopped/restarted through the target. The anonymous bounded fetch, genuine offline proof,
+  changed-byte refusal, freeze guard, mismatched-pin guard, artifact tamper and secret-output
+  checks passed. No production host was contacted. Tasks 1.18 and 7.6 await hosted workspace CI.

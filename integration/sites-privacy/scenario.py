@@ -18,7 +18,8 @@ def run(call, connection, eventually, digest, owner_token, sites_context):
     site = '/v1/sites/privacy-fixture'
     manifest = (b'site_id = "privacy-fixture"\nhostname = "privacy.example.test"\n'
                 b'publications = ["privacy"]\n'
-                b'capabilities = ["pages.read", "assets.read", "search.publication"]\n')
+                b'capabilities = ["pages.read", "assets.read", "search.publication"]\n'
+                b'[github_repository]\nrepository = "po4yka/ratatoskr-site-sdk"\nrepository_id = "1420131953"\n')
     call(site + '/manifest', 'PUT', manifest, token=owner_token, expected=(200, 201))
     call(site + '/publications/privacy', 'PUT', {
         'connection_id': cid, 'mode': 'all', 'release_mode': 'manual',

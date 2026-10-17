@@ -253,6 +253,14 @@ Rules:
     limits.
   - Anonymous SSE has a limit per client (default 4) under a limit per site (default 64).
   - `ratatoskr-site deploy` authenticates as a registered device of the kind `site_deployer`.
+  - SITE-028 adds a repository name and immutable numeric GitHub repository ID to the manifest and
+    approval. The deploy route accepts an immutable digest and signed proof as JSON. Sites checks
+    that proof against the approved repository and pinned workflow before it fetches and stores the
+    archive. The same checks apply to an owner session. Raw tar cannot bypass them. Each stored
+    deploy has a server-written `verification.json` outside public files. Activation checks that
+    record against current approval and policy, including an offline rollback.
+    [SITE-028](../changesets/SITE-028-site-bundle-provenance.yaml) records the published child
+    commits, disposable runtime checks and final snapshot acceptance. The production host remains frozen.
 
 ## 7. Shared names
 

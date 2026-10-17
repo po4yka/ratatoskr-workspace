@@ -19,22 +19,22 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "channel-digests",
         "repos/integrations/channel-digests",
-        "08cf71e6677d120c9887286272ee352a9243006e",
+        "ab638527da008b55b4787ad37a51dc46237bd00c",
     ),
     (
         "chatgpt",
         "repos/ai-archive/chatgpt",
-        "1101452f2f4137d6c8805b0db5cca575e7834bc1",
+        "7dc1ef8fe208778967a4259ee8996d13469115b6",
     ),
     (
         "claude",
         "repos/ai-archive/claude",
-        "a71701a45bd7db842926f41be23274adf429dd0e",
+        "bc07c0235cc909e48d220640014b15bb807da6db",
     ),
     (
         "contracts",
         "repos/contracts",
-        "2c726027da79e0e899ad482afead0a2000b03e61",
+        "66bdb0c0545363f06137f13687084c21db9b27c5",
     ),
     (
         "export-agent",
@@ -44,22 +44,22 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "extractor",
         "repos/extractor",
-        "d1b7b012cbc9906509ad0a1fd22d3d735a43717e",
+        "9bbb68cad6670c72a0869c236bc26d5b91b832bc",
     ),
     (
         "github",
         "repos/github",
-        "59bdddd8cb1a1f238c0b72765f76ce7adc1f8c8a",
+        "a66c503f4f6a6022a023eb3a2b6307e0a985716a",
     ),
     (
         "instagram",
         "repos/social/instagram",
-        "3f32997b954a952e420963e7f8e8067dccaa1ef3",
+        "dac7d4fe8d663bcb36e287b4f4cff19d94aab107",
     ),
     (
         "knowledge",
         "repos/knowledge",
-        "9ce88f423889b005341f1a472012d4034f40896d",
+        "0e6e447b77a38c374c7ab1a14064c5e668c02c04",
     ),
     (
         "mobile",
@@ -69,7 +69,7 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "notes",
         "repos/notes",
-        "e16068aed6d9a33acb4eaf90485d00b3a2ec2331",
+        "5076346c7f66decd4a7b908155038f46c6d023ef",
     ),
     (
         "obsidian-plugin",
@@ -79,42 +79,42 @@ const EXPECTED_PINS: [(&str, &str, &str); 21] = [
     (
         "platform",
         "repos/platform",
-        "becf91ebae27c9c1352336da679c7352426aabe0",
+        "16b502ed502dfcdcfe6ce8574d794f4a303d4dce",
     ),
     (
         "site-sdk",
         "repos/clients/site-sdk",
-        "f29520de29724e63bea55a140671af40b2b2ee42",
+        "f802e0ab8d4235b3b230ebd61eaa5c1668ea7610",
     ),
     (
         "sites",
         "repos/sites",
-        "3860ddca89a7a7851c623bd6186e390e0ce85f29",
+        "8bcfe8b8246438ee28a96ee08a6258fb474d2407",
     ),
     (
         "telegram",
         "repos/integrations/telegram",
-        "0c424cc5c5858f1b212722923039c7f393b296a6",
+        "07160e1f6ec6eebee3463c6b4db45095ce684f76",
     ),
     (
         "threads",
         "repos/social/threads",
-        "20c3a9a276e97e1ce6bc9a1cc9ecbfa6b84b037b",
+        "9376ce9235cf41e73c56fd0d16913a1737709fac",
     ),
     (
         "vault",
         "repos/vault",
-        "469ffef9616864b808766df8d0168f04acbb84ca",
+        "09232320353dc4bb467aa1ccad688706e5b3e535",
     ),
     (
         "web",
         "repos/clients/web",
-        "0f5f8c8e6d9edc3cba5e354c7dcb749d204f223f",
+        "5a83900de6ceb2c3c3632642beeb362f5a50a1eb",
     ),
     (
         "x",
         "repos/social/x",
-        "7de8f43a45edb75c4a7a13928983e857874ca400",
+        "5c6cdd76a7f152d56dd53be70654c6a21ca0b1b0",
     ),
 ];
 

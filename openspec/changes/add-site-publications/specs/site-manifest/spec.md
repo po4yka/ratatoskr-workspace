@@ -13,7 +13,9 @@ capabilities, hostname and publications are in force for a site.
 A site manifest SHALL be a TOML file named `ratatoskr-site.toml` that validates against the contract
 schema `sites/site-manifest.v1`. It SHALL hold the site id (lower-case ASCII letters, digits and
 `-`, 3 to 40 characters), exactly one hostname, one or more publication ids, and a list of requested
-capabilities. A manifest with an unknown key, an unknown capability name or a second hostname SHALL
+capabilities. The optional `github_repository` object SHALL contain only the canonical GitHub
+repository name and its immutable numeric repository ID. Legacy manifests can omit it, but a new
+owner approval SHALL require it under `bind-site-bundles-to-github`. A manifest with an unknown key, an unknown capability name or a second hostname SHALL
 be refused with the class `sites.manifest_invalid`, and the refusal SHALL name the key or the value.
 
 #### Scenario: An unknown capability is refused
@@ -64,7 +66,7 @@ The only store of site approvals SHALL be Platform's `identity.site_approvals`, 
 bound to the approved manifest digest. Edge SHALL serve `POST` (approve) and `DELETE` (withdraw)
 `/v1/sites/{site}/manifest/approval` itself, only to a primary session with `platform.owner`. Each
 change SHALL publish one `evt.platform.site_approval.changed.v1` (site id, digest, approved
-capabilities, hostname, state `approved` or `withdrawn`).
+capabilities, hostname, GitHub repository binding, state `approved` or `withdrawn`).
 
 #### Scenario: An approval is stored in Platform and announced once
 
