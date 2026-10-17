@@ -1,5 +1,5 @@
 id: SEC-030
-state: local snapshot acceptance passed; workspace publication and CI pending
+state: complete
 openspec_change: upgrade-archive-zip-security
 parent: OBS-029 snapshot prerequisite
 goal: Remove the advisory-blocked ZIP dependency from the four archive readers while keeping their extraction safety.
@@ -35,6 +35,15 @@ verification:
     acceptance-document commits passed CI.
   workspace_local: OBS-029 full workspace gates, deterministic lock, 14 integration scenarios and original default Molecule
     acceptance passed; owned fixture and volumes removed.
+  workspace_snapshot:
+    state: passed
+    commit: 282fc0c34edf72c23df78ac362bfcb97dcf8a999
+    ci: All expected and observed checks passed
+    ci_checks: 8
+    ci_url: https://github.com/po4yka/ratatoskr-workspace/commit/282fc0c34edf72c23df78ac362bfcb97dcf8a999/checks
+    lock_sha256: b387699a8093cbea0cc2f8d91efede49d97716c796ebb41c8bc8bc0b607f8f87
+    publication: Owner-authorized scoped direct main publication; no production operation
+    retained_gap: Real Obsidian Sync/MFA remains deferred by the owner; OBS-024 6.7 stays open
 rollout: Vet, obtain approval, update the four targeted graphs, pass full gates and review, publish, wait for CI, then join
   OBS-029 verified pins.
 rollback: Stop pin promotion if the fixed dependency cannot pass. Do not publish a normal rollback to the vulnerable ZIP version.
@@ -49,7 +58,8 @@ non_goals:
 fuzz_scope_approval: 'Owner approved SEC-030 D5 on 2026-10-17: align fuzz Rustls with production 0.23.46, declare the existing
   BSD-3-Clause, permit NCSA only for libfuzzer-sys exactly 0.4.13, and enforce full locked fuzz policy in CI.'
 legacy_name_compatibility:
-  state: implemented, reviewed and CI passed; workspace pins pending
+  state: complete; full local gates, source reviews, child CI, combined integration, provisioning and published workspace
+    CI passed
   scope: ChatGPT and Threads unflagged CP437 names; retain D3 semantics
   red: "Both public inspector tests fail with actual \xE9.json versus expected \u251C\u2310.json before a decoder fix."
   candidate: 'Reviewed before production edits: oem_cp 2.1.2 default features off, phf 0.11.3, phf_shared 0.11.3 and siphasher

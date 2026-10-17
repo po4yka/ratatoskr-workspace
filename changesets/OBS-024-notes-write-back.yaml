@@ -435,4 +435,6 @@ contracts_follow_up:
   changeset: OBS-029
   openspec_change: complete-notes-write-contracts
   scope: Retained tasks 3.13-3.16, portable write paths and optional group stale_paths.
-  state: implementing; original tasks remain open until observed checks and verified snapshot publication.
+  state: complete; tasks 3.13-3.16 passed their observed TDD, consumer, integration, provisioning and publication checks.
+  workspace_snapshot: 282fc0c34edf72c23df78ac362bfcb97dcf8a999
+  ci: https://github.com/po4yka/ratatoskr-workspace/commit/282fc0c34edf72c23df78ac362bfcb97dcf8a999/checks

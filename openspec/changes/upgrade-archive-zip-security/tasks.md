@@ -40,4 +40,4 @@ If a reader already refuses that fixture, its regression starts green because no
 ## 5. Snapshot acceptance
 
 - [x] 5.1 Join the four CI-green commits into OBS-029. Run its combined integration and provisioning checks, deterministic lock checks and full workspace gates. Pin and generated metadata have no separate RED.
-- [ ] 5.2 Publish the verified workspace and record successful CI, exact revisions and the security follow-up result.
+- [x] 5.2 Publish the verified workspace and record successful CI, exact revisions and the security follow-up result.

@@ -21,7 +21,7 @@
 - [x] 2.15 `notes`: publish the scoped reviewed change after its required local checks, record the full commit and successful CI in OBS-029. The owner authorizes direct main publication; no PR is required. Behavior uses section 4.
 - [x] 2.16 `site-sdk`: refresh the generated snapshots required by the new Sites and Platform descriptions, run its whole gate and independent review, publish and record successful CI. Generated copies and locks have no separate RED.
 - [x] 2.17 `web`: refresh the Platform description and generated types, run its whole gate and independent review, publish and record successful CI. Generated copies and locks have no separate RED.
-- [ ] 2.18 `workspace`: publish the scoped reviewed change after its required local checks, record the full commit and successful CI in OBS-029. The owner authorizes direct main publication; no PR is required. Workspace promotion uses section 6.
+- [x] 2.18 `workspace`: publish the scoped reviewed change after its required local checks, record the full commit and successful CI in OBS-029. The owner authorizes direct main publication; no PR is required. Workspace promotion uses section 6.
 
 ## 3. Contracts TDD (retained OBS-024 numbers)
 
@@ -48,10 +48,10 @@
 - [x] 6.1 Prove the combined proposed commits pass the disposable Notes/Platform/Sites integration profile, including command refusal and conflict propagation; record the exact revisions and teardown result.
 - [x] 6.2 Stage task-root gitlinks to successful child commits, update the XR-021 contracts source and committed-snapshot expectations, generate workspace.lock twice and compare bytes. Pin and generated configuration have no separate RED; retain the contracts drift guard.
 - [x] 6.3 Run workspace fmt, clippy, all tests, deny, doctor, lock check, strict current and archived OpenSpec, and applicable disposable provisioning acceptance. Inspect the final diff and independent source reviews before publication.
-- [ ] 6.4 Publish the verified workspace snapshot and wait for every required CI check. Record full SHAs, rollout/rollback and the final snapshot; update OBS-024 3.13–3.16 only with observed evidence, keep unrelated deferrals open, and verify clean baseline submodules and protected user files.
+- [x] 6.4 Publish the verified workspace snapshot and wait for every required CI check. Record full SHAs, rollout/rollback and the final snapshot; update OBS-024 3.13–3.16 only with observed evidence, keep unrelated deferrals open, and verify clean baseline submodules and protected user files.
 
 ## 7. CI projection timing correction
 
 - [x] 7.1 Extract the operation-result poll predicate without behavior changes and run the existing HTTP tests. This refactor has no new RED.
 - [x] 7.2 RED: add an HTTP regression that returns an omitted list, an empty list, unrelated results, then the exact conflict result. Observe failure because the pending response omits `results`.
-- [ ] 7.3 GREEN: keep polling when `results` is absent; preserve exact conflict matching and malformed-item failure. Run all HTTP/profile contract tests and the real combined profile, review, publish and wait for all workspace CI.
+- [x] 7.3 GREEN: keep polling when `results` is absent; preserve exact conflict matching and malformed-item failure. Run all HTTP/profile contract tests and the real combined profile, review, publish and wait for all workspace CI.

@@ -1,5 +1,5 @@
 id: OBS-029
-state: implementing
+state: complete
 openspec_change: complete-notes-write-contracts
 parent: OBS-024 tasks 3.13-3.16
 goal: Align portable write paths and optional stale group paths across contracts and their consumers.
@@ -91,7 +91,7 @@ verification:
       NOTES: ac9866961533dad955450a2eb356d834bda19501
       KNOWLEDGE: fff1bacc63636cf27868c1ff1bcc509d4dfc9d4c
     teardown: passed; result.json is created only after successful removal
-    evidence: evidence/obs029-contracts-final
+    evidence: evidence/obs029-contracts-poll-fix
     deviation: Existing supported HTTPS Debian mirror override; runtime CA bundle copied from the verified builder; default
       production profiles retained.
     boundary:
@@ -104,7 +104,16 @@ verification:
     - browser rendering
     - gateway TLS
     - production host permissions
-  final_pins: pending
+    prior_evidence: evidence/obs029-contracts-final; retained before the CI timing correction
+  final_pins:
+    state: passed
+    commit: 282fc0c34edf72c23df78ac362bfcb97dcf8a999
+    ci: All expected and observed checks passed
+    ci_checks: 8
+    ci_url: https://github.com/po4yka/ratatoskr-workspace/commit/282fc0c34edf72c23df78ac362bfcb97dcf8a999/checks
+    lock_sha256: b387699a8093cbea0cc2f8d91efede49d97716c796ebb41c8bc8bc0b607f8f87
+    publication: Owner-authorized scoped direct main publication; no production operation
+    retained_gap: Real Obsidian Sync/MFA remains deferred by the owner; OBS-024 6.7 stays open
   consumer_local_environment:
     debug_information: disabled only in local remaining consumer profiles to fit disk
     debug_assertions: committed profile defaults; unchanged
@@ -189,8 +198,10 @@ verification:
     tdd: Existing 7 HTTP tests passed before and after behavior-preserving extraction; new regression failed with KeyError
       before the fix; all 9 HTTP tests and profile contract passed after the fix.
     review: Independent source review passed with no accepted/actionable P0 findings.
-    local_retry: Queued under build-gate; preserve the earlier 14-scenario acceptance as historical evidence.
-    publication: Corrective commit and all required CI pending; primary baseline remains unchanged.
+    local_retry: 'Passed all 14 scenarios on the exact same four child revisions after the fix; successful teardown. Evidence:
+      evidence/obs029-contracts-poll-fix'
+    publication: Corrective snapshot 282fc0c34edf72c23df78ac362bfcb97dcf8a999 passed every expected and observed CI check.
+      First failed snapshot remains recorded.
 child_worktrees:
 - repository: channel-digests
   worktree: .workspaces/obs029/repos/channel-digests
@@ -420,15 +431,15 @@ publication_order_note: Notes was published after Platform CI while unrelated pi
 security_prerequisite:
   id: SEC-030
   change: upgrade-archive-zip-security
-  state: All four final child commits passed full gates, independent review and CI; combined local snapshot acceptance passed,
-    workspace publication pending
+  state: complete; all four exact child commits and the combined published workspace snapshot passed required checks
   affected:
   - chatgpt
   - claude
   - instagram
   - threads
   reason: cargo-deny refuses existing zip 8.6.0 for RUSTSEC-2026-0367, RUSTSEC-2026-0368 and RUSTSEC-2026-0369
-  pin_promotion: Local integration, deterministic lock, workspace gates and disposable provisioning passed; publish the snapshot
-    and require root CI.
+  pin_promotion: Verified pins published to workspace main with successful CI.
   approved_legacy_decoder: 'SEC-030 D6: oem_cp 2.1.2, default features disabled, only ChatGPT and Threads; four reviewed new
     packages with existing dependency versions and edges preserved.'
+completion: OBS-024 3.13-3.16 is complete through OBS-029 with observed test-before-implementation evidence. Original OBS-024
+  remains active for its independent deferred work.
