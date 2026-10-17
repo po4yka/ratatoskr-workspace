@@ -1,5 +1,5 @@
 id: SITE-028
-state: ci-client-recovery-awaiting-workspace-ci
+state: complete
 openspec_change: bind-site-bundles-to-github
 goal: The Sites server accepts and activates only bundles whose signed origin matches one owner-approved GitHub repository, digest, commit and trusted workflow.
 non_goals: [private registries, new server GitHub credentials, production host operations, new API majors, database migrations, unrelated contracts repairs]
@@ -239,7 +239,13 @@ commits:
     sha: 9661c6b5ecb3f8e174b42f6685b7bf663557941f
     boundary: Expanded contract pin and genuine public signed fixture; five CI checks passed. New deploy client remains local.
 pull_requests: []
-final_snapshot: Task snapshot pins are updated after all 17 selected child suites passed; lock and full harness gates and the formal 12-scenario profile pass. Full Molecule including zero-change idempotence, verify and destroy passed. Workspace publication and hosted workspace CI remain required.
+final_snapshot:
+  verified_workspace_commit: 49380f8989138a5de9faff0701240b076cc960a9
+  pin_introduction_commit: b1463390468cdcfb23c98b04c78e028407ad21b2
+  workspace_ci: All eight checks passed for the corrected exact snapshot. The initial failed CI is retained.
+  lock_sha256: d3e0607edf1dd6fe83a9d139a6e5604490ede39557a73c3d5be25231f1d84b2a
+  child_commits: The 17 exact promoted commits are listed under published_children_2026_10_17 and in workspace.lock.
+  production: No operation; the host remains frozen.
 
 apply_order_violation:
   tasks: ["4.1", "4.5", "4.7"]
@@ -422,7 +428,7 @@ formal_pinned_acceptance_2026_10_17:
   lock_sha256: d3e0607edf1dd6fe83a9d139a6e5604490ede39557a73c3d5be25231f1d84b2a
   deterministic_lock: Second generation was byte-identical.
   review: Integration-source P0 helper clean at 0.98. Aggregate helper refused gitlinks without child source; independent child reviews, 98 hosted checks and pin-lock validation cover the dependency boundary.
-  boundary: Full Molecule also passed. Workspace hosted CI remains separate; no production operation or real Sync/MFA/iOS acceptance.
+  boundary: Full Molecule and all eight hosted workspace checks passed; no production operation or real Sync/MFA/iOS acceptance.
 
 final_disposable_host_acceptance_2026_10_17:
   steps: Create and prepare, then converge, idempotence, verify and destroy all exited zero against the selected published pins.
@@ -431,7 +437,7 @@ final_disposable_host_acceptance_2026_10_17:
   verifier: Fixed root-owned approved ARM64 tools, anonymous immutable fetch in 512 MiB with no swap, genuine offline signature and changed-byte refusal passed.
   services: All nine enrolled processes passed readiness, rerun kept their start times, target stop-start worked, and verbose output contained no generated test password.
   teardown: The owned ratatoskr-host container was removed; unrelated containers were kept.
-  publication_boundary: Local compatible snapshot is verified; wait for all eight hosted workspace checks before marking 1.18 and 7.6 complete.
+  publication_boundary: Verified snapshot 49380f8989138a5de9faff0701240b076cc960a9 passed all eight hosted checks before the remaining tasks were closed.
 
 ci_runtime_recovery_2026_10_17:
   failed_workspace: b1463390468cdcfb23c98b04c78e028407ad21b2
@@ -449,8 +455,38 @@ http_recovery_local_acceptance_2026_10_17:
   memory_max_bytes: 536870912
   memory_swap_max_bytes: 0
   memory_peak_bytes: 129658880
-  boundary: Source review and new workspace CI are still required. The failed b146339 CI is preserved, not relabelled as a success.
+  boundary: Source review and all eight new hosted checks passed. The failed b146339 CI is preserved, not relabelled as a success.
 
 http_recovery_review_2026_10_17:
   source: Final structured P0 review clean at 0.99 after the seven-method test suite and full real profile passed.
-  next: Publish the fixture-only correction and require all eight hosted checks before closing 8.2, 8.4, 1.18 and 7.6.
+  closure: The fixture-only correction passed all eight hosted checks before 8.2, 8.4, 1.18 and 7.6 were closed.
+
+hosted_snapshot_acceptance_2026_10_17:
+  workspace_commit: 49380f8989138a5de9faff0701240b076cc960a9
+  result: All eight hosted checks succeeded; all 52 SITE-028 tasks are complete.
+  checks:
+    - name: zizmor / audit
+      result: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39009718444/job/117329433611
+    - name: sites-integration
+      result: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39009718359/job/117329433439
+    - name: release-artifact-selftest / artifact
+      result: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39009718359/job/117329433372
+    - name: fleet / invariants
+      result: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39009718372/job/117329433346
+    - name: molecule
+      result: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39009718359/job/117329433336
+    - name: deny
+      result: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39009718359/job/117329433319
+    - name: snapshot
+      result: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39009718359/job/117329433248
+    - name: openspec / specs
+      result: success
+      url: https://github.com/po4yka/ratatoskr-workspace/actions/runs/39009718365/job/117329433093
+  scope: Published pins and source are verified. Real Sync/MFA/iOS, native 16 KiB execution, support answers and OBS-024 3.13-3.16 remain separate acceptance or implementation work.

@@ -90,8 +90,6 @@ No account secret was used in these fixtures.
 - OBS-023 3.5 still needs the physical iOS and protected credential-store checks.
 - OBS-023 3.4 and ADR-0010 require the five written support answers in the existing terms spike.
   A public maintainer statement does not replace those answers. No support message was sent.
-- GitHub binding is implemented in the published coordinated child commits. The formal pinned
-  runtime profile and full Molecule passed; workspace hosted CI remains tracked in SITE-028.
 - The existing opt-in Keychain test and twelve unanswered CLI metadata commands remain unverified.
 - OBS-024 contracts tasks 3.13–3.16 remain separate work: strict write-path suffix/colon rules
   and optional conflict `stale_paths`. SITE-028 coordinates a new contracts revision but does not
@@ -136,4 +134,9 @@ failed after eight scenario passes when device polling repeatedly received actor
 fixture did not back off. The follow-up keeps the deployed limits and adds bounded recovery to
 ordinary HTTP and SSE handshakes with stable write identity. Seven loopback transport tests passed
 after observed RED, then all 12 real pinned scenarios passed again with successful teardown.
-New hosted CI remains required before SITE-028 closure.
+At that checkpoint, new hosted CI was still required; the final result follows.
+
+GitHub bundle binding is closed by SITE-028. Corrected snapshot `49380f8989138a5de9faff0701240b076cc960a9`
+passed all eight hosted workspace checks. All 52 tasks are complete. The failed first CI, TDD
+exceptions and separate live Obsidian, CLI metadata, support and OBS-024 contract gaps remain
+explicit above; no production deployment or native 16 KiB-kernel run is claimed.

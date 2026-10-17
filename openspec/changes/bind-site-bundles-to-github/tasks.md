@@ -24,7 +24,7 @@ commit. Pin-only items have no failing test first because they change generated 
 - [x] 1.15 `ratatoskr-telegram`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
 - [x] 1.16 `ratatoskr-channel-digests`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
 - [x] 1.17 `ratatoskr-notes`: contracts revision only; no behaviour change. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
-- [ ] 1.18 `ratatoskr-workspace`: provisioning, integration, documentation and final verified pins. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
+- [x] 1.18 `ratatoskr-workspace`: provisioning, integration, documentation and final verified pins. Verify the repository gate, independent review where required, green CI and recorded main commit before its final pin.
 
 ## 2. Decision and real proof spike
 
@@ -72,15 +72,15 @@ commit. Pin-only items have no failing test first because they change generated 
 - [x] 7.3 RED: extend `integration/fixtures/site-owner-editing.py` with `verified_bundle_repository_boundary`: send foreign, unsigned, changed-digest and stale-approval requests, then valid real signed evidence. Assert refusals leave no deploy and only the valid request activates. Confirm intended failures before integration adapters change.
 - [x] 7.4 GREEN: use the coordinated pins and real proof fixture; verify 7.3, existing privacy/write scenarios, withdrawal, rebinding, idempotency, cancellation and offline verified rollback. A synthetic signature is not acceptance evidence.
 - [x] 7.5 Reconcile the active `site-bundles` and `site-manifest` deltas with the enforced policy, and update runbooks and SITE-028. No failing test first: specification and documentation. Verify strict OpenSpec validation and no contradictory raw-tar acceptance requirement.
-- [ ] 7.6 Advance pins only after every child CI is green. No failing test first: generated snapshot. Verify lock determinism, doctor, full harness gates, integration, Molecule, clean baselines and final workspace CI; record rollout, rollback and exact commits in SITE-028.
+- [x] 7.6 Advance pins only after every child CI is green. No failing test first: generated snapshot. Verify lock determinism, doctor, full harness gates, integration, Molecule, clean baselines and final workspace CI; record rollout, rollback and exact commits in SITE-028.
 
 ## 8. CI rate-limit recovery
 
 - [x] 8.1 RED: add a real loopback HTTP test for the scenario client. A 429 followed by 200 must wait at least the numeric Retry-After (one second when absent), retain the same request body and idempotency key, and succeed. Persistent 429 must stop after a bounded number of attempts; an expected 429 and other errors must not retry. Observe the current immediate assertion failure before implementation.
-- [ ] 8.2 GREEN: add bounded 429 recovery to the fixture HTTP client and run it from the existing profile contract test. Keep server limits and all runtime assertions. Verify the HTTP tests, real pinned profile, source review and hosted workspace CI.
+- [x] 8.2 GREEN: add bounded 429 recovery to the fixture HTTP client and run it from the existing profile contract test. Keep server limits and all runtime assertions. Verify the HTTP tests, real pinned profile, source review and hosted workspace CI.
 
 - [x] 8.3 RED: the same loopback 429/200 sequence must permit the real SSE reader handshake after backoff. Observe its current HTTPError assertion before sharing the transport path.
-- [ ] 8.4 GREEN: use the bounded response opener for both ordinary requests and SSE handshakes. Preserve streaming bodies, expected errors and all five HTTP tests; run the full real profile and CI.
+- [x] 8.4 GREEN: use the bounded response opener for both ordinary requests and SSE handshakes. Preserve streaming bodies, expected errors and all five HTTP tests; run the full real profile and CI.
 
 ## Workflow follow-up
 
@@ -351,3 +351,8 @@ No functional acceptance, CI or snapshot gate is waived.
   403 SSE handshake. The real published-pin profile passed all 12 scenarios and teardown again.
   The original failed CI is retained; 8.2/8.4 and 1.18/7.6 remain open until source review and
   the new hosted workspace checks succeed. There are now 52 tasks in this change.
+
+- Verified workspace snapshot `49380f8989138a5de9faff0701240b076cc960a9` passed all eight hosted checks after the
+  bounded HTTP/SSE backoff correction. This closes 1.18, 7.6, 8.2 and 8.4 after observed
+  CI. All 52 tasks are complete. The failed b146339 run, three accepted TDD-order gaps
+  and separate live Obsidian and historical contract deferrals remain explicit.
