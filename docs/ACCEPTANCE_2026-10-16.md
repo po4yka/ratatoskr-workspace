@@ -82,7 +82,7 @@ Export-agent logs remain under `/tmp/ratatoskr-obsidian-move-{red,green}.log`,
 `/tmp/ratatoskr-export-move-parent-review.{txt,json}`. These local files are not CI artifacts.
 No account secret was used in these fixtures.
 
-## Open acceptance
+## Open acceptance recorded on 2026-10-16
 
 - OBS-023 3.1/3.3 and OBS-024 6.7 need an isolated real Sync account, MFA, an empty encrypted vault
   and the stated duration/resource checks. The owner deferred this environment; local fixtures
@@ -140,3 +140,14 @@ GitHub bundle binding is closed by SITE-028. Corrected snapshot `49380f8989138a5
 passed all eight hosted workspace checks. All 52 tasks are complete. The failed first CI, TDD
 exceptions and separate live Obsidian, CLI metadata, support and OBS-024 contract gaps remain
 explicit above; no production deployment or native 16 KiB-kernel run is claimed.
+
+
+## OBS-031 local continuation, 2026-10-18
+
+The remaining desktop gaps from the historical list above are now checked. Obsidian engine and installer 1.14.4 answered all twelve missing metadata commands; four positive controls also matched the recorded engine data. No blank stdout was treated as success. The production Export Agent adapter moved a prepared note into a new nested folder through the real CLI, preserved its bytes and reported the correct applied hash. The Notes queue/result peer alone was synthetic.
+
+The real macOS Keychain round-trip and delete test ran with the owner-approved UUID service and fixture values. It passed without a skip and confirmed absence after deletion. The full unchanged Export Agent passed all six DEVELOPMENT commands and all 307 tests with zero failures or skipped tests. SwiftLint retained 16 baseline warnings and zero serious violations. The pinned Headless 0.0.14 archive matched the deployment lock integrity, and static inspection confirmed both Notes units use supported mode/conflict/configuration options. No Headless account or Sync session was used.
+
+The local harness setup failures remain recorded in OBS-031. They do not establish product RED history. The final checks used normal core plugins, Sync/Publish disabled, and explicit source-file readiness. No product implementation changed and no new test-order exception was used. Results and boundaries are in changesets/OBS-031-local-obsidian-acceptance.yaml and the verification record of complete-local-obsidian-acceptance.
+
+OBS-029 already closed contracts tasks 3.13–3.16. OBS-024 still has only real Sync task 6.7 and its aggregate Notes item 1.2 open. The linked OBS-023 real Sync/MFA, resource, recorded-session, physical iOS and written-support checks stay open. Local desktop evidence cannot close them. All 21 child pins stay at the existing verified commits because no child implementation changed. Workspace publication and its CI are recorded after they complete.

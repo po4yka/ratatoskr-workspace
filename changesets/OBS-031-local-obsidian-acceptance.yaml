@@ -1,0 +1,139 @@
+id: OBS-031
+state: local acceptance and review complete; publication and CI pending
+openspec_change: complete-local-obsidian-acceptance
+parent: OBS-024 remaining local acceptance; OBS-023 dependent live checks remain deferred
+goal: Resolve available local CLI and Keychain evidence gaps without Sync or MFA.
+authorization: Owner requests OpenSpec, TDD for confirmed defects, local checks, CI, scoped commits and pushes. Owner separately
+  approved the existing Keychain test with fixture values.
+workspace_writer:
+  worktree: .workspaces/obs031/workspace
+  branch: obs024-local-acceptance
+  base: d1963abf88ff2134d141d2210b95a47d814e9aa7
+  writer: root
+acceptance_subject:
+  repository: export-agent
+  worktree: .workspaces/obs031/repos/export-agent
+  branch: obs024-local-acceptance
+  base: e4be3b4fd54d17f85e9952097f1ded38f031d801
+  writer: root
+  role: Read-only production source and existing local tests unless a confirmed defect receives its own plan and RED.
+dependency_order: Existing Export Agent checks first; any confirmed child fix must pass CI before a workspace pin.
+compatibility: No product, contract, dependency or database change planned.
+rollout: Record observed local results, publish scoped workspace changes, require all exact-commit CI, then fast-forward primary.
+rollback: Additive record correction; no runtime release planned. A confirmed product fix needs its own rollback before implementation.
+pin_policy: Keep exact current pins unless a reviewed, tested and CI-green child fix is required. Never advance an unchanged
+  pin for metadata only.
+retained_open:
+- 'OBS-024 6.7 and aggregate 1.2: real Sync propagation and races'
+- OBS-023 real Sync/MFA, 24-hour resources, expired-token and recorded-session checks
+- OBS-023 physical iOS protected storage
+- OBS-023 five written support answers; no message authorized
+verification:
+  local_cli:
+    state: passed
+    version: 1.14.4 (installer 1.14.4)
+    previously_unanswered: 12
+    positive_controls: 4
+    comparisons: 16
+    mismatches: 0
+    blank_stdout_accepted: false
+    fixture_bytes_unchanged: true
+    evidence: evidence/obs031-local-acceptance/metadata-result.json; earlier successful receipt retained under cli-attempt-3
+  keychain:
+    state: passed
+    tests: 1
+    failures: 0
+    skipped: 0
+    source_commit: e4be3b4fd54d17f85e9952097f1ded38f031d801
+    evidence: evidence/obs031-local-acceptance/keychain-result.json
+    cleanup: The existing test removed its UUID-service fixture record and asserted a subsequent load returned nil.
+  adapter:
+    state: passed
+    production_source: e4be3b4fd54d17f85e9952097f1ded38f031d801
+    source_changed: false
+    outcome: applied
+    sha256: 0350a00dd19b4809e0206f9938312dc8eaae945207ef8dea3e7609491000cee4
+    evidence: evidence/obs031-local-acceptance/cli-acceptance.json and cli-native-receipts
+    boundary: Real signed desktop CLI and production adapter; only Notes queue/result peer is synthetic. Normal first-party
+      core plugins, Sync/Publish disabled; source was read through CLI before the operation.
+  workspace:
+    state: passed; strict current 48 and archived 19 OpenSpec checks and final review passed
+    evidence: evidence/obs031-local-acceptance/workspace-checks.json
+    lock_sha256: b387699a8093cbea0cc2f8d91efede49d97716c796ebb41c8bc8bc0b607f8f87
+    lock_deterministic: true
+  publication: pending
+  headless_parser:
+    state: passed; static only
+    version: 0.0.14
+    evidence: evidence/obs031-local-acceptance/headless-parser-comparison.json
+    result: Both current Notes modes and conflict/config/device/path flags match the integrity-pinned published parser. Empty
+      configs disables configuration categories in the filter.
+    boundary: Static syntax evidence only. No Node runtime, account, Sync propagation, races, journal or resource acceptance.
+    notes_source_commit: ac9866961533dad955450a2eb356d834bda19501
+  export_agent_gates:
+    state: passed
+    source_commit: e4be3b4fd54d17f85e9952097f1ded38f031d801
+    commands: 6
+    tests: 307
+    failures: 0
+    skipped: 0
+    keychain: Executed with owner-approved fixture-only integration enabled.
+    swiftlint: 16 baseline warnings, zero serious violations; no source or policy changed.
+    evidence: evidence/obs031-local-acceptance/export-gates.json
+  local_summary:
+    state: passed
+    product_source: e4be3b4fd54d17f85e9952097f1ded38f031d801
+    product_source_changed: false
+    metadata_comparisons: 16
+    previously_unanswered_resolved: 12
+    positive_controls: 4
+    native_move_outcome: applied
+    native_move_sha256: 0350a00dd19b4809e0206f9938312dc8eaae945207ef8dea3e7609491000cee4
+    original_fixture_files_unchanged: true
+    owned_app_processes_remaining: []
+    test_count: 307
+    test_failures: 0
+    test_skips: 0
+    source_gates: 6
+    historical_setup_attempts: Retained under cli-attempt-1, cli-attempt-2, cli-attempt-3 and /tmp logs; not product RED.
+    artifact_sha256:
+      RealCliAcceptance.swift: d6c959e40149261dd963fd96d8328438cdaf3604b5ec6382c0a2f77bc835b7d6
+      ReceiptRunner.swift: 17f9830fa0774465779a73c9a0e12167bfd1149d45eda276a1b7310e3659b933
+      real-adapter-acceptance: 4c873af2269f3085cb14e9228b9aaaba4e0cf2a9bb856c8570836b3959b816e5
+      real-obsidian-cli: be0ad43f38a1c5ed971e8d680d0226e7c574fb2a3373f5996353a0f9d2ff85b5
+topology_note: The fresh child checkout was first placed under the baseline by a relative worktree path. It was moved with
+  git worktree move to the assigned absolute task path before any implementation edit; no baseline tracked file changed.
+open_task_inventory:
+  OBS-024:
+    '6.7': Real Sync pull-only/bidirectional propagation, watcher ACK and races; needs OBS-023 3.3.
+    '1.2': Aggregate Notes item; held open by 6.7 only.
+  OBS-023:
+    '1.2': Aggregate Notes item; real Sync-dependent checks remain.
+    '1.8': Aggregate workspace item; recorded Sync integration remains.
+    '3.1': MFA test account, encrypted vault, 24-hour ARM64 resource run.
+    '3.3': Real local/remote races and the recorded pull-only session.
+    '3.4': Five written support answers; no message is authorized.
+    '3.5': Physical iOS events and protected storage; desktop evidence is separate.
+    '5.11': Real login exit status and MFA refusal behavior.
+    6.5/6.6: Replay the real session from 3.3; a synthetic replacement cannot close it.
+    '6.23': Real continuous Sync memory plus 50 percent budget.
+    6.24/6.25: Real expired/revoked token journal line and retry-duration behavior.
+    '6.26': Real Headless directory mode changes in its working tree.
+    15.1/15.2: Recorded Sync service fixture and its combined connect integration.
+  local_acceptance_only:
+  - Twelve unanswered metadata CLI responses
+  - Approved existing macOS Keychain round-trip and delete
+  - Production write adapter recheck against a real isolated desktop CLI
+repositories:
+- workspace
+cleanup: Owned GUI stopped and installer detached. Completed own intermediates/release products and previously approved inactive
+  sccache shards cleared; needed debug libraries, source and evidence retained.
+pin_result: No child implementation changed. Keep all 21 current child commits and the byte-identical lock; no artificial
+  child commit or pin advance.
+
+review:
+  command: autoreview --mode local
+  scope: P0; staged documentation and coordination record
+  state: passed; no accepted or actionable findings
+  secret_scan: clean
+  evidence: /tmp/ratatoskr-obs031-review.json
