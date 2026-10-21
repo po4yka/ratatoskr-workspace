@@ -1,10 +1,12 @@
 ## Context
 
-See proposal.md. Workspace main is `d1963abf88ff2134d141d2210b95a47d814e9aa7`; Export Agent is `e4be3b4fd54d17f85e9952097f1ded38f031d801`. OBS-024 only has 6.7 and its aggregate 1.2 open. OBS-029 closed the separate contracts work. Old CLI records retain twelve empty responses. The owner approved the existing Keychain test with fake values on 2026-10-17.
+> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. OBS-023 tasks 3.4 (written support answers) and 3.5 (physical iOS) remain separate open work.
+
+See proposal.md. The initial workspace snapshot was `d1963abf88ff2134d141d2210b95a47d814e9aa7`; Export Agent is `e4be3b4fd54d17f85e9952097f1ded38f031d801`. At that snapshot, OBS-024 retained 6.7 and aggregate 1.2. The owner acceptance decision above supersedes that status. OBS-029 closed the separate contracts work. Old CLI records retain twelve empty responses. The owner approved the existing Keychain test with fake values on 2026-10-17.
 
 ## Goals / Non-Goals
 
-Goal: give each remaining local acceptance gap observed evidence or an exact local blocker. Preserve the real Sync boundary and the historical TDD exceptions.
+Goal: give each remaining local acceptance gap observed evidence or an exact local blocker. Keep the historical evidence limits and TDD exceptions. Apply the owner decision of 2026-10-21 to remove real Sync acceptance gates.
 
 Non-goals: new product behavior without a reproduced defect, personal vault or account access, Sync/MFA, iOS, support mail and production operations.
 

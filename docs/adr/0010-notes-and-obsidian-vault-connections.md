@@ -126,8 +126,9 @@ Development status rules apply: no migrations, one version.
 
 ## Validation
 
-- The OBS-023 spike on the target hardware: login with MFA, end-to-end encryption, `--continuous`
-  uptime and memory, `pull-only` mode, and a concurrent local edit.
+- Owner decision, 2026-10-21: the real Sync/MFA environment, live propagation and race checks,
+  and their recorded-session and live resource/authentication follow-ups are not acceptance gates.
+  These checks were not run; dependent tasks close by scope decision. Runtime rules do not change.
 - The golden-fixture corpus from the real Obsidian app, run against the server-side link rewrite.
 - The scenarios in the specs of OBS-023 and OBS-024.
 

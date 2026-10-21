@@ -67,7 +67,9 @@ Spike results so far (2026-10-13; evidence in `openspec/changes/add-notes-vault-
 - The engine of Obsidian 1.14.4 indexes links inside `%% comments %%`, prefers a file in the linking
   file's own folder over the shortest path, and never resolves an alias. On desktop,
   `app.secretStorage` keeps a plugin secret outside the vault.
-- Not run yet: the 24-hour run and the conflict test with a real Sync account (3.1, 3.3), and iOS.
+- Owner decision, 2026-10-21: real Sync/MFA, 24-hour runs, propagation and race checks, and
+  dependent recording/resource/authentication rechecks are not acceptance gates. They were not
+  run. The physical iOS part of 3.5 remains separate open work.
 
 ## 3. Components
 

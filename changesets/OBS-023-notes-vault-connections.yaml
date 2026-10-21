@@ -1,5 +1,5 @@
 id: OBS-023
-state: planned
+state: implementing
 goal: Connect Obsidian vaults to Ratatoskr through exactly one channel each (Obsidian Headless Sync on the host, an Obsidian plugin, or the macOS export agent with the Obsidian CLI), index their files with Obsidian's link rules, and give note changes to Knowledge. Read path only.
 openspec_change: add-notes-vault-connections
 # DPL-022 provides the Ansible tree, Molecule, the freeze guard, services.json and deploy_inventory.rs
@@ -355,7 +355,7 @@ security:
   freeze: The real host is not touched until the owner lifts the freeze in docs/DEPLOYMENT_TARGET.md.
 privacy: Note content is user content. It leaves ratatoskr-notes only as BlobRefs that Knowledge resolves read-only. Disconnect removes the working tree, the client state, the ciphertext and all Knowledge-derived data.
 rollout:
-  - Run the spike (tasks group 3) and record the results in design.md and ADR-0010. If the terms of use rule out the sync channel, revise this change with openspec update and move the sync work into a new change before any later group starts.
+  - Apply the owner acceptance decision of 2026-10-21; only spike tasks 3.4 and 3.5 remain open. If the terms of use rule out the sync channel, revise this change with openspec update and move the sync work into a new change before any later group starts.
   - Merge contracts, then ratatoskr-notes, then Platform, then Knowledge.
   - Merge the plugin, the export agent and the web client in any order.
   - Add the two repositories to the fleet, advance the pins, and land deploy, harness and integration changes.
@@ -363,14 +363,23 @@ rollback:
   - Nothing has shipped. Revert each repository's commit. Disconnect any test connection first, which stops its unit and deletes its tree, state and ciphertext.
 verification:
   - tools/contractsc tests fixtures.rs and live_message_types.rs in ratatoskr-contracts
-  - the connection, secret custody, sync supervisor (including pull_only_connection_never_pushes_a_local_edit), blob root, index, file event, read API and device channel tests in ratatoskr-notes
+  - the connection, secret custody, sync supervisor (existing local tests; the real-session replay pair 6.5/6.6 is not required by the owner decision of 2026-10-21), blob root, index, file event, read API and device channel tests in ratatoskr-notes
   - notes_routes.rs (device_claim_names_the_device_kind, connect_body_is_not_persisted_or_logged), report_authority.rs and nats_permissions.rs in ratatoskr-platform
   - credential.test.ts (credential_never_written_to_data_json) in ratatoskr-obsidian-plugin
   - the Molecule verify cases notes_sync_unit, notes_blob_read_group, notes_trees_and_clients and notes_journal_namespace in ratatoskr-workspace
   - notes_intake.rs in ratatoskr-knowledge
   - committed_snapshot.rs and bus_acl.rs in ratatoskr-workspace
-  - integration/tests/notes_sync_connect.sh and notes_channel_equivalence.sh
+  - Existing local integration and Molecule checks; the real-session pair 15.1/15.2 is not required by the owner decision of 2026-10-21
 residual_risks:
   - Obsidian Headless is an open beta with no declared license; the spike checks the terms of use.
   - ratatoskr-notes becomes the sixth producer of evt.platform.operation.reported.v1, so the forgery and metadata limits of fleet-bus-topology apply to it.
 evidence: {}
+
+acceptance_decision_20261021:
+  authority: Explicit owner instruction; real Sync with MFA and race checks is removed from acceptance.
+  closed_aggregates: ["1.2", "1.8"]
+  removed_tasks: ["3.1", "3.3", "5.11", "6.5", "6.6", "6.23", "6.24", "6.25", "6.26", "15.1", "15.2"]
+  disposition: Removed tasks are closed by scope decision, not by execution or new implementation.
+  remaining_open_tasks: ["3.4", "3.5"]
+  remaining_scope: Written support answers and physical iOS; no message or device action is authorized by this decision.
+  product_and_automated_gates: unchanged

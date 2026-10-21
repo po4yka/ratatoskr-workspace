@@ -15,4 +15,8 @@
 ## 3. Verification and publication
 
 - [x] 3.1 Run applicable workspace checks, strict current and archived OpenSpec, deterministic lock, manifest, doctor and final diff review. Check all baseline submodules and protected user files. No RED: validation only.
-- [x] 3.2 Publish the scoped record, wait for exact-commit CI, then update the primary checkout and verify its lock, pins and cleanliness. Keep OBS-024 6.7 and aggregate 1.2 open until real Sync evidence exists. No RED: publication metadata.
+- [x] 3.2 Publish the scoped record, wait for exact-commit CI, then update the primary checkout and verify its lock, pins and cleanliness. OBS-024 6.7 and aggregate 1.2 are complete under the owner acceptance decision of 2026-10-21; no real Sync evidence is required. No RED: publication metadata.
+
+## 4. Owner acceptance criteria update
+
+- [x] 4.1 Apply the owner decision of 2026-10-21 across the three active plans, task lists, changesets and current acceptance records. Remove the real Sync/MFA and race gate; close dependent tasks by scope decision and retain the original evidence limits. Check strict current and archived OpenSpec, YAML, exact task dispositions, unchanged pins and lock, protected files and the final diff. No RED: documentation and owner acceptance criteria only.

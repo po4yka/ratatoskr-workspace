@@ -1,7 +1,7 @@
 id: OBS-031
 state: complete
 openspec_change: complete-local-obsidian-acceptance
-parent: OBS-024 remaining local acceptance; OBS-023 dependent live checks remain deferred
+parent: OBS-024 complete under the owner criteria of 2026-10-21; OBS-023 support and iOS work remains separate
 goal: Resolve available local CLI and Keychain evidence gaps without Sync or MFA.
 authorization: Owner requests OpenSpec, TDD for confirmed defects, local checks, CI, scoped commits and pushes. Owner separately
   approved the existing Keychain test with fixture values.
@@ -24,8 +24,6 @@ rollback: Additive record correction; no runtime release planned. A confirmed pr
 pin_policy: Keep exact current pins unless a reviewed, tested and CI-green child fix is required. Never advance an unchanged
   pin for metadata only.
 retained_open:
-- 'OBS-024 6.7 and aggregate 1.2: real Sync propagation and races'
-- OBS-023 real Sync/MFA, 24-hour resources, expired-token and recorded-session checks
 - OBS-023 physical iOS protected storage
 - OBS-023 five written support answers; no message authorized
 verification:
@@ -135,7 +133,7 @@ verification:
       real-obsidian-cli: be0ad43f38a1c5ed971e8d680d0226e7c574fb2a3373f5996353a0f9d2ff85b5
 topology_note: The fresh child checkout was first placed under the baseline by a relative worktree path. It was moved with
   git worktree move to the assigned absolute task path before any implementation edit; no baseline tracked file changed.
-open_task_inventory:
+historical_open_task_inventory_20261018:
   OBS-024:
     '6.7': Real Sync pull-only/bidirectional propagation, watcher ACK and races; needs OBS-023 3.3.
     '1.2': Aggregate Notes item; held open by 6.7 only.
@@ -175,4 +173,24 @@ completion:
   child_commits_changed: false
   workspace_pins_changed: false
   primary_verification: evidence/obs031-local-acceptance/primary-first-checks.json
-  remaining_parent_tasks: OBS-024 6.7 and aggregate 1.2 remain open; real Sync is excluded from this wave.
+  remaining_parent_tasks: None in OBS-024 under the owner criteria of 2026-10-21; OBS-023 3.4 and 3.5 remain separate.
+
+acceptance_decision_20261021:
+  authority: Explicit owner instruction; real Sync with MFA and race checks is removed from acceptance.
+  writer: root
+  worktree: .workspaces/obs031-acceptance/workspace
+  branch: remove-sync-acceptance
+  base: 8012207926318544b4ca5c5f83991378e9544e83
+  scope: Documentation and acceptance criteria only; no RED is applicable.
+  supersedes: Real Sync blockers in the historical inventory and the acceptance records dated 2026-10-16 to 2026-10-18.
+  OBS-024: All tasks complete; 6.7 is not required and aggregate 1.2 is complete.
+  OBS-023: All tasks except 3.4 and 3.5 complete under the revised criteria.
+  evidence_boundary: Removed checks were not run; no live test result or TDD sequence is fabricated.
+  runtime_contracts_pins_lock: unchanged
+  local_validation:
+    openspec_version: 1.10.0; same pin as the repository CI
+    current_items: 48 passed
+    archived_items: 19 passed
+    workspace: Deterministic lock, lock check, manifest check, doctor, status and all 21 clean baseline pins passed.
+    evidence: evidence/acceptance-policy-20261021/local-checks.json
+    tool_drift: Global 1.14.2 raised new warnings in unchanged specs; no CI pin or spec requirement was changed.

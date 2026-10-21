@@ -1,5 +1,7 @@
 # Sites and Obsidian acceptance, 2026-10-16
 
+> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. OBS-023 tasks 3.4 (written support answers) and 3.5 (physical iOS) remain separate open work.
+
 ## Decisions and scope
 
 The owner accepted an explicit exception for OBS-024 tasks 14.1 and 14.2 and SITE-026 task 10.8.
@@ -150,6 +152,12 @@ The real macOS Keychain round-trip and delete test ran with the owner-approved U
 
 The local harness setup failures remain recorded in OBS-031. They do not establish product RED history. The final checks used normal core plugins, Sync/Publish disabled, and explicit source-file readiness. No product implementation changed and no new test-order exception was used. Results and boundaries are in changesets/OBS-031-local-obsidian-acceptance.yaml and the verification record of complete-local-obsidian-acceptance.
 
-OBS-029 already closed contracts tasks 3.13–3.16. OBS-024 still has only real Sync task 6.7 and its aggregate Notes item 1.2 open. The linked OBS-023 real Sync/MFA, resource, recorded-session, physical iOS and written-support checks stay open. Local desktop evidence cannot close them. All 21 child pins stay at the existing verified commits because no child implementation changed. The verified publication is recorded below.
+OBS-029 already closed contracts tasks 3.13–3.16. At this publication, OBS-024 retained real Sync task 6.7 and aggregate Notes item 1.2; the owner decision of 2026-10-21 closes both. The linked OBS-023 real Sync/MFA, resource, recorded-session, physical iOS and written-support checks stay open. Local desktop evidence cannot close them. All 21 child pins stay at the existing verified commits because no child implementation changed. The verified publication is recorded below.
 
-OBS-031 publication passed at workspace cb3a4e9e465b64940b01391fe556d6586de4a1b7: all eight expected and observed CI checks succeeded, including Sites integration and Molecule. The primary checkout passed repeated deterministic lock, manifest, doctor and status checks with all 21 unchanged baseline pins clean. The scoped status follow-up requires its own CI before final handoff. OBS-024 6.7 and aggregate 1.2 remain open.
+OBS-031 publication passed at workspace cb3a4e9e465b64940b01391fe556d6586de4a1b7: all eight expected and observed CI checks succeeded, including Sites integration and Molecule. The primary checkout passed repeated deterministic lock, manifest, doctor and status checks with all 21 unchanged baseline pins clean. The scoped status follow-up requires its own CI before final handoff. The former open status of OBS-024 6.7 and aggregate 1.2 is superseded by the owner decision of 2026-10-21.
+
+## Owner acceptance criteria, 2026-10-21
+
+The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. OBS-023 tasks 3.4 (written support answers) and 3.5 (physical iOS) remain separate open work.
+
+This decision supersedes the open real Sync statuses in the dated sections above. It closes OBS-024 6.7 and aggregate 1.2. The related OBS-023 task dispositions are in its current checklist and changeset. The 307 local tests, 16 CLI comparisons, approved Keychain check and production-adapter result remain the observed acceptance evidence. No new product code or child pin is required.

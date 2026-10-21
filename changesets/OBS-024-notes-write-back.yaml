@@ -1,5 +1,5 @@
 id: OBS-024
-state: implementing
+state: complete
 acceptance_follow_up:
   date: 2026-10-16
   writer: root
@@ -438,3 +438,12 @@ contracts_follow_up:
   state: complete; tasks 3.13-3.16 passed their observed TDD, consumer, integration, provisioning and publication checks.
   workspace_snapshot: 282fc0c34edf72c23df78ac362bfcb97dcf8a999
   ci: https://github.com/po4yka/ratatoskr-workspace/commit/282fc0c34edf72c23df78ac362bfcb97dcf8a999/checks
+
+acceptance_decision_20261021:
+  authority: Explicit owner instruction; real Sync with MFA and race checks is removed from acceptance.
+  state: complete under the revised criteria
+  closed_tasks: ["1.2", "6.7"]
+  disposition: Task 6.7 was not run and is not required; aggregate 1.2 is complete.
+  evidence_boundary: No live Sync result or new TDD exception is claimed. Existing local tests and recorded exceptions stand.
+  snapshot: 8012207926318544b4ca5c5f83991378e9544e83
+  pins_changed: false

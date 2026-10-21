@@ -1,6 +1,8 @@
 # Local Obsidian acceptance
 
-## Scope and open tasks
+> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. OBS-023 tasks 3.4 (written support answers) and 3.5 (physical iOS) remain separate open work.
+
+## Original scope and task inventory, 2026-10-18
 
 At workspace `d1963abf88ff2134d141d2210b95a47d814e9aa7`, OBS-024 has only tasks 6.7 and aggregate 1.2 open. Task 6.7 requires real Sync propagation, watcher acknowledgements and local/remote races from OBS-023 spike 3.3. The owner excludes Sync/MFA from this wave, so these two tasks stay open. The separate contracts tasks 3.13–3.16 are complete through OBS-029.
 
@@ -59,4 +61,4 @@ Strict validation passed for all 48 current OpenSpec items and all 19 archived c
 
 Commit cb3a4e9e465b64940b01391fe556d6586de4a1b7 was pushed to main. All eight expected and observed checks completed successfully: dependency policy, OpenSpec, Sites integration, snapshot, release-artifact self-test, workflow audit, fleet invariants and Molecule. Exact job links are in the OBS-031 changeset. The primary checkout was fast-forwarded to this commit. Lock generation was repeated twice and matched the committed lock byte for byte; lock check, manifest check, doctor and status all passed. All 21 baseline submodules retained their exact detached pins and were clean. Both protected user files retained their recorded hashes.
 
-OBS-031 is complete at this verified snapshot. No product source or child commit changed, so no new pin can be promoted. OBS-024 6.7 and aggregate 1.2 remain open for real Sync evidence. The status-only follow-up is also subject to full exact-commit CI and final primary verification before handoff. No archived change was modified.
+OBS-031 is complete at this verified snapshot. No product source or child commit changed, so no new pin can be promoted. OBS-024 6.7 and aggregate 1.2 were open at publication; the owner decision of 2026-10-21 closes them without real Sync evidence. The status-only follow-up is also subject to full exact-commit CI and final primary verification before handoff. No archived change was modified.
