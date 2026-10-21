@@ -1,6 +1,6 @@
 # Sites and Obsidian acceptance, 2026-10-16
 
-> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. OBS-023 tasks 3.4 (written support answers) and 3.5 (physical iOS) remain separate open work.
+> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. The owner also removed physical iOS checks and written support answers from acceptance. Those iOS checks were not run and the replies were not received. Tasks 3.4 and 3.5 close by this decision, and OBS-023 is complete.
 
 ## Decisions and scope
 
@@ -158,6 +158,14 @@ OBS-031 publication passed at workspace cb3a4e9e465b64940b01391fe556d6586de4a1b7
 
 ## Owner acceptance criteria, 2026-10-21
 
-The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. OBS-023 tasks 3.4 (written support answers) and 3.5 (physical iOS) remain separate open work.
+The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. The owner also removed physical iOS checks and written support answers from acceptance. Those iOS checks were not run and the replies were not received. Tasks 3.4 and 3.5 close by this decision, and OBS-023 is complete.
 
 This decision supersedes the open real Sync statuses in the dated sections above. It closes OBS-024 6.7 and aggregate 1.2. The related OBS-023 task dispositions are in its current checklist and changeset. The 307 local tests, 16 CLI comparisons, approved Keychain check and production-adapter result remain the observed acceptance evidence. No new product code or child pin is required.
+
+## Final owner acceptance decision, 2026-10-21
+
+The owner also removed physical iOS checks and written Obsidian support answers from acceptance,
+and requested closure of OBS-023. Tasks 3.4 and 3.5 close under that scope decision. OBS-023 and
+OBS-024 now have no open tasks. No physical iOS run or support reply was obtained. Existing
+local evidence, the historical TDD exceptions, runtime behavior and all 21 child pins remain intact.
+The earlier dated references to open iOS or support work are superseded by this decision.

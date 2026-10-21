@@ -132,7 +132,7 @@ Development status rules apply: no migrations, one version.
 - The golden-fixture corpus from the real Obsidian app, run against the server-side link rewrite.
 - The scenarios in the specs of OBS-023 and OBS-024.
 
-## Terms of use (spike 3.4, open)
+## Terms of use (historical spike 3.4; acceptance closed by owner)
 
 Obsidian's Terms of Service have no clause about automation or servers. Obsidian's own
 documentation names this use: Headless Sync is "useful for CI pipelines, agents, and automated
@@ -144,9 +144,11 @@ follow from the Terms and from Obsidian staff are:
 - the client logs in once and backs off on errors. The supervisor never repeats a login by itself:
   a `login_expired` connection waits for the owner.
 
-No commercial licence is needed, and a Sync subscription is. Five points need written confirmation
-from Obsidian support before this ADR is accepted. One of them is whether note text may go to the
-LLM provider that Knowledge uses. The evidence and a draft email are in
+No commercial licence is needed, and a Sync subscription is. Five points were left without written
+support replies in the investigation of 2026-10-13. The owner removed those replies and physical iOS checks from
+acceptance on 2026-10-21 and closed OBS-023. No support confirmation or physical iOS run is
+claimed. One retained question is whether note text may go to the LLM provider that Knowledge
+uses. The evidence and a draft email are in
 `openspec/changes/add-notes-vault-connections/spike/3.4-obsidian-terms.md`.
 
 The Sync plan limits apply to the host as to any device. Sync Standard allows one vault, 5 MB per
@@ -161,5 +163,6 @@ forbid this use, the `sync` channel stops and the `plugin` and `cli` channels re
 
 ## Follow-up
 
-- Accept this ADR after the spike confirms the external facts in `docs/NOTES_AND_SITES.md`.
+- OBS-023 is complete under the owner criteria of 2026-10-21. Physical iOS checks and written
+  support answers are not prerequisites for that completion; their evidence limits remain recorded.
 - Decide whether `ratatoskr-vault` backs up the notes blob root as one more target.

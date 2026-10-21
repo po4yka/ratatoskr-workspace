@@ -1,7 +1,7 @@
 id: OBS-031
 state: complete
 openspec_change: complete-local-obsidian-acceptance
-parent: OBS-024 complete under the owner criteria of 2026-10-21; OBS-023 support and iOS work remains separate
+parent: OBS-023 and OBS-024 complete under the final owner criteria of 2026-10-21
 goal: Resolve available local CLI and Keychain evidence gaps without Sync or MFA.
 authorization: Owner requests OpenSpec, TDD for confirmed defects, local checks, CI, scoped commits and pushes. Owner separately
   approved the existing Keychain test with fixture values.
@@ -23,9 +23,7 @@ rollout: Record observed local results, publish scoped workspace changes, requir
 rollback: Additive record correction; no runtime release planned. A confirmed product fix needs its own rollback before implementation.
 pin_policy: Keep exact current pins unless a reviewed, tested and CI-green child fix is required. Never advance an unchanged
   pin for metadata only.
-retained_open:
-- OBS-023 physical iOS protected storage
-- OBS-023 five written support answers; no message authorized
+retained_open: []
 verification:
   local_cli:
     state: passed
@@ -173,7 +171,7 @@ completion:
   child_commits_changed: false
   workspace_pins_changed: false
   primary_verification: evidence/obs031-local-acceptance/primary-first-checks.json
-  remaining_parent_tasks: None in OBS-024 under the owner criteria of 2026-10-21; OBS-023 3.4 and 3.5 remain separate.
+  remaining_parent_tasks: None in OBS-023 or OBS-024 under the final owner criteria of 2026-10-21.
 
 acceptance_decision_20261021:
   authority: Explicit owner instruction; real Sync with MFA and race checks is removed from acceptance.
@@ -184,7 +182,7 @@ acceptance_decision_20261021:
   scope: Documentation and acceptance criteria only; no RED is applicable.
   supersedes: Real Sync blockers in the historical inventory and the acceptance records dated 2026-10-16 to 2026-10-18.
   OBS-024: All tasks complete; 6.7 is not required and aggregate 1.2 is complete.
-  OBS-023: All tasks except 3.4 and 3.5 complete under the revised criteria.
+  OBS-023: All tasks complete under the final owner criteria; physical iOS and support answers are also excluded.
   evidence_boundary: Removed checks were not run; no live test result or TDD sequence is fabricated.
   runtime_contracts_pins_lock: unchanged
   local_validation:
@@ -194,3 +192,11 @@ acceptance_decision_20261021:
     workspace: Deterministic lock, lock check, manifest check, doctor, status and all 21 clean baseline pins passed.
     evidence: evidence/acceptance-policy-20261021/local-checks.json
     tool_drift: Global 1.14.2 raised new warnings in unchanged specs; no CI pin or spec requirement was changed.
+
+final_acceptance_decision_20261021:
+  authority: Explicit owner instruction; physical iOS and support answers are not acceptance gates.
+  OBS-023: complete
+  remaining_parent_tasks: []
+  tasks_closed: ["3.4", "3.5"]
+  evidence_boundary: No physical iOS run or support reply was obtained; completion follows the revised criteria.
+  evidence: evidence/obs023-close

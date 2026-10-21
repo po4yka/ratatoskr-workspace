@@ -1,6 +1,6 @@
 ## Why
 
-> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. OBS-023 tasks 3.4 (written support answers) and 3.5 (physical iOS) remain separate open work.
+> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. The owner also removed physical iOS checks and written support answers from acceptance. Those iOS checks were not run and the replies were not received. Tasks 3.4 and 3.5 close by this decision, and OBS-023 is complete.
 
 At the start of OBS-031, OBS-024 retained real Sync check 6.7 and aggregate Notes item 1.2. The local CLI and Keychain gaps were closed at snapshot 8012207. The owner decision of 2026-10-21 removes the real Sync criterion and completes OBS-024.
 
@@ -25,4 +25,4 @@ None. Existing product contracts and requirements stay in force.
 
 Repositories: Export Agent is the subject of local validation; workspace owns the cross-repository acceptance record. A confirmed child fix must pass its local gates, review and exact-commit CI before workspace pins. With no child fix, the verified pins stay at their current SHAs. No dependency, database, protocol or deployment change is planned.
 
-Outside scope: Sync/MFA, physical iOS, support messages, personal credentials and vaults, production hosts and the independent OBS-023 deferred work. Nothing has shipped in this wave. Documentation rollback is an additive correction; any later product fix must define its rollback before implementation.
+Outside scope: Sync/MFA, physical iOS, support messages, personal credentials and vaults, production hosts and the excluded external acceptance activities. Nothing has shipped in this wave. Documentation rollback is an additive correction; any later product fix must define its rollback before implementation.

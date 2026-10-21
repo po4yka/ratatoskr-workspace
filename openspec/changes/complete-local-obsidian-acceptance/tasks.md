@@ -20,3 +20,5 @@
 ## 4. Owner acceptance criteria update
 
 - [x] 4.1 Apply the owner decision of 2026-10-21 across the three active plans, task lists, changesets and current acceptance records. Remove the real Sync/MFA and race gate; close dependent tasks by scope decision and retain the original evidence limits. Check strict current and archived OpenSpec, YAML, exact task dispositions, unchanged pins and lock, protected files and the final diff. No RED: documentation and owner acceptance criteria only.
+
+- [x] 4.2 Apply the final owner acceptance decision of 2026-10-21: remove physical iOS and written support replies as completion gates, close OBS-023 3.4 and 3.5, and set OBS-023 complete. Reconcile the three plans, changesets, ADR, historical spike and acceptance records. Verify strict OpenSpec, YAML, no open tasks in OBS-023/024, unchanged pins and deterministic lock, protected files and the final diff. No RED: documentation and owner acceptance criteria only.

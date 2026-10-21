@@ -1,7 +1,7 @@
 # Obsidian vaults and independent sites
 
 > Status: Write path and sites implemented; local composed checks passed; production host frozen
-> Last reviewed: 2026-10-16
+> Last reviewed: 2026-10-21
 > Decisions: [ADR-0010](adr/0010-notes-and-obsidian-vault-connections.md),
 > [ADR-0011](adr/0011-independent-sites-on-the-single-host.md)  
 > Changes: `add-notes-vault-connections` (OBS-023), `add-notes-write-back` (OBS-024),
@@ -22,15 +22,18 @@ is tracked by SITE-025, SITE-026 and SITE-027. The composed scenario in
 `integration/run-site-owner-editing.sh` checks the write path with fake device and Sync peers, and
 checks site owner editing with the real services. Its completed results, not this architecture text,
 are the integration evidence. The host remains frozen; implementation does not mean deployment.
-The OpenSpec changes above hold the remaining tasks and acceptance records.
+The OpenSpec changes above hold the task and acceptance records. OBS-023 and OBS-024 are
+complete under the owner criteria of 2026-10-21; real Sync/MFA, physical iOS and written support
+replies are not completion gates.
 
 ## 1. Current state
 
 On 2026-10-16 the Notes service implements connections, indexing, revisions, ordered write
 delivery, acknowledgement and conflicts. Platform accepts writes through Edge and publishes a
 command that carries blob references and hashes. The plugin and export agent implement their
-device channels. A real Obsidian Sync server and production host operation remain separate
-acceptance checks; the workspace scenario uses an explicit fake Sync tree and fake device.
+device channels. A real Obsidian Sync server was not used for this
+evidence; the owner removed that acceptance gate on 2026-10-21. The workspace scenario uses an
+explicit fake Sync tree and fake device. Production host operation remains frozen and separate.
 
 The word "vault" already has a meaning in the fleet: `ratatoskr-vault` is the Git backup service.
 This document therefore calls the new domain **notes**, and calls a connected Obsidian vault a
@@ -63,13 +66,15 @@ Spike results so far (2026-10-13; evidence in `openspec/changes/add-notes-vault-
   expired login does not stop `ob sync`, which tries again for ever. It waits 5 seconds after the
   first failure, and the wait grows up to 5 minutes.
 - Obsidian's documentation names server and agent use of Headless Sync. The Terms of Service are
-  silent, so a confirmation from Obsidian support is still open.
+  silent. No support confirmation was received; the owner removed written replies from acceptance
+  on 2026-10-21.
 - The engine of Obsidian 1.14.4 indexes links inside `%% comments %%`, prefers a file in the linking
   file's own folder over the shortest path, and never resolves an alias. On desktop,
   `app.secretStorage` keeps a plugin secret outside the vault.
 - Owner decision, 2026-10-21: real Sync/MFA, 24-hour runs, propagation and race checks, and
   dependent recording/resource/authentication rechecks are not acceptance gates. They were not
-  run. The physical iOS part of 3.5 remains separate open work.
+  run. The owner also removed physical iOS and written support replies from acceptance. OBS-023
+  is complete; no physical iOS run or support reply is claimed.
 
 ## 3. Components
 

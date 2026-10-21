@@ -50,6 +50,7 @@ Absolute paths in the outputs are replaced with `<spike>`.
 
 ## Not covered
 
-- iOS: deferred by the owner, so design D5 has no mobile storage yet.
+- Physical iOS was not covered. The owner removed it from acceptance on 2026-10-21;
+  the absence of device evidence is retained and no longer leaves task 3.5 open.
 - Output of the Obsidian CLI: not available with installer 1.8.10. The engine JSON carries the same
   data.

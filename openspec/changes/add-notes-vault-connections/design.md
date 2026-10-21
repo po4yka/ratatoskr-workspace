@@ -1,6 +1,6 @@
 # Design
 
-> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. OBS-023 tasks 3.4 (written support answers) and 3.5 (physical iOS) remain separate open work.
+> **Owner acceptance decision, 2026-10-21.** The owner removed real Obsidian Sync acceptance from the completion criteria on 2026-10-21. This includes the MFA test environment, live propagation and race checks, recorded-session replay, and the resource, login, token and directory-mode checks that require that environment. Affected tasks close by this scope decision. These checks were not run. Product behavior, authentication, existing automated tests and the recorded TDD exceptions do not change. OBS-024 is complete under these criteria. The owner also removed physical iOS checks and written support answers from acceptance. Those iOS checks were not run and the replies were not received. Tasks 3.4 and 3.5 close by this decision, and OBS-023 is complete.
 
 ## Context
 
@@ -182,8 +182,8 @@ operating system protects. On desktop, spike 3.5 found `app.secretStorage` in Ob
 `safeStorage`, the macOS Keychain format `v10`, into the app profile's Local Storage outside the
 vault, scoped to the vault id. On an older app, the fallback is `remote.safeStorage`, with the
 ciphertext kept through `saveLocalStorage`. `saveData` writes `data.json` inside the vault and is
-never used for the credential. Mobile storage is not measured yet (the iOS part of 3.5 is
-deferred). It never writes the credential into `data.json` or any other file in the
+never used for the credential. Mobile storage has no physical iOS measurement. The owner removed that part of 3.5
+from acceptance on 2026-10-21. It never writes the credential into `data.json` or any other file in the
 vault, because the vault itself syncs to other devices and services. If a platform has no protected
 storage, the plugin keeps the credential in memory only, and the owner pairs again after a restart.
 
@@ -327,13 +327,13 @@ already use plain modes.
   against the text that `xr-021-fleet-round-5` leaves after archive, with its 23 service durables,
   its five deletion-acknowledgement durables and its stream-API rule. That change must be archived
   first, and the delta's first line says so.
-- [Obsidian Headless is an open beta with no declared license] → The spike reads the terms of use
-  and records the result in ADR-0010 before any other group starts. The `plugin` and `cli` channels
+- [Obsidian Headless is an open beta with no declared license] → The earlier public-source terms investigation
+  remains in ADR-0010. The owner removed written support replies from acceptance on 2026-10-21. The `plugin` and `cli` channels
   do not depend on it, so a vault that uses Sync can still connect through the plugin if `ob` must
   be dropped. The version is pinned and upgraded only through a reviewed change.
-- [Node.js and one `ob` process per connection on the Pi] → The spike measures resident memory of
-  one continuous sync with a 1 GiB fixture vault. The unit sets `MemoryMax=` from that measurement
-  plus 50 %. `DEPLOYMENT_TARGET.md` records the per-connection budget.
+- [Node.js and one `ob` process per connection on the Pi] → The unit keeps its provisional
+  `MemoryMax=`; no real continuous Sync measurement is claimed. The owner removed that
+  measurement from acceptance on 2026-10-21. `DEPLOYMENT_TARGET.md` records the per-connection budget.
 - [Secrets in argv] → D4 steps 2 and 3. Spike 3.2 chose standard input, so only the one-time MFA
   code is in argv. The notes test
   `no_secret_in_any_cmdline` asserts that no process of another user can read a secret from

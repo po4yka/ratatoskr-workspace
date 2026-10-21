@@ -1,5 +1,5 @@
 id: OBS-023
-state: implementing
+state: complete
 goal: Connect Obsidian vaults to Ratatoskr through exactly one channel each (Obsidian Headless Sync on the host, an Obsidian plugin, or the macOS export agent with the Obsidian CLI), index their files with Obsidian's link rules, and give note changes to Knowledge. Read path only.
 openspec_change: add-notes-vault-connections
 # DPL-022 provides the Ansible tree, Molecule, the freeze guard, services.json and deploy_inventory.rs
@@ -355,7 +355,7 @@ security:
   freeze: The real host is not touched until the owner lifts the freeze in docs/DEPLOYMENT_TARGET.md.
 privacy: Note content is user content. It leaves ratatoskr-notes only as BlobRefs that Knowledge resolves read-only. Disconnect removes the working tree, the client state, the ciphertext and all Knowledge-derived data.
 rollout:
-  - Apply the owner acceptance decision of 2026-10-21; only spike tasks 3.4 and 3.5 remain open. If the terms of use rule out the sync channel, revise this change with openspec update and move the sync work into a new change before any later group starts.
+  - The owner acceptance decisions of 2026-10-21 close the live Sync, physical iOS and written-support gates. OBS-023 is complete; no external account, device or support reply is required for its completion.
   - Merge contracts, then ratatoskr-notes, then Platform, then Knowledge.
   - Merge the plugin, the export agent and the web client in any order.
   - Add the two repositories to the fleet, advance the pins, and land deploy, harness and integration changes.
@@ -376,10 +376,27 @@ residual_risks:
 evidence: {}
 
 acceptance_decision_20261021:
-  authority: Explicit owner instruction; real Sync with MFA and race checks is removed from acceptance.
+  authority: Explicit owner instructions; real Sync with MFA and race checks, physical iOS checks and written support replies are removed from acceptance.
   closed_aggregates: ["1.2", "1.8"]
-  removed_tasks: ["3.1", "3.3", "5.11", "6.5", "6.6", "6.23", "6.24", "6.25", "6.26", "15.1", "15.2"]
+  removed_tasks: ["3.1", "3.3", "5.11", "6.5", "6.6", "6.23", "6.24", "6.25", "6.26", "15.1", "15.2", "3.4", "3.5"]
   disposition: Removed tasks are closed by scope decision, not by execution or new implementation.
-  remaining_open_tasks: ["3.4", "3.5"]
-  remaining_scope: Written support answers and physical iOS; no message or device action is authorized by this decision.
+  remaining_open_tasks: []
+  remaining_scope: None. The owner accepts completion without physical iOS checks or support replies; their absence remains an evidence limit.
   product_and_automated_gates: unchanged
+
+closure_follow_up_20261021:
+  authority: The owner explicitly excludes physical iOS and support answers and requests OBS-023 closure, validation, commit and push.
+  writer: root
+  worktree: .workspaces/obs023-close/workspace
+  branch: close-obs023-acceptance
+  base: 4f625a65bc2e0e459ab584c668022475eb6bdb37
+  state: complete under the revised owner criteria
+  task_disposition: Tasks 3.4 and 3.5 are closed by scope decision; no new device run or external reply is claimed.
+  evidence: Historical desktop and public-source records remain intact.
+  contracts_product_pins_lock: unchanged
+  local_validation:
+    openspec_version: 1.10.0; same pin as CI
+    current_items: 48 passed
+    archived_items: 19 passed
+    workspace: Deterministic lock, lock check, manifest check, doctor, status and all 21 clean baseline pins passed.
+    evidence: evidence/obs023-close/local-checks.json
